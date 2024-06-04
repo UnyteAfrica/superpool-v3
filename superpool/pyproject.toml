@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "superpool"
+version = "0.1"
+description = "Insurance Aggregation Platform for Financial Institutions"
+authors = ["unyte-africa <support@unyte.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.11.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
