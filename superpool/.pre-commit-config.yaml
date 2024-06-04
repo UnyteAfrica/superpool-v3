@@ -1,4 +1,8 @@
-default_language_version: python3
+default_language_version:
+  python: python3
+
+stages: [pull_request, push]
+
 exclude: "^$"
 fail_fast: false
 
@@ -15,7 +19,3 @@ repos:
     rev: v2.26.0
     hooks:
       - id: pyupgrade
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.790
-    hooks:
-      - id: mypy
