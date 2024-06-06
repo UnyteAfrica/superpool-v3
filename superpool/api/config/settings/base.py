@@ -11,7 +11,16 @@ from .environment import env
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = env.str("SECRET_KEY")
+if "SECRET_KEY" in os.environ:
+    SECRET_KEY = env.str("SECRET_KEY")
+else:
+    # TODO: Create a management command that can help users bootstrap
+    # SECRET_KEY generation directly from the terminal, in development
+    # mode.
+    print(
+        "Please provide a SECRET_KEY to startup application \n"
+        "This can be generated using the helper management command"
+    )
 
 # DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
