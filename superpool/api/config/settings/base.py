@@ -4,6 +4,7 @@ Settings for Superpool API project
 For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 """
 
+import os
 from pathlib import Path
 
 from .environment import env
@@ -67,9 +68,16 @@ ASGI_APPLICATION = "config.asgi.application"
 # psql://{user}:{pass}@{host}:{port}/{database_name}
 # Raises Improperly configured if a database url
 # is not provided.
-DATABASES = {
-    "default": env.db("DATABASE_URL"),
-}
+
+DATABASES = {}
+if "DATABASE_URL" in os.environ:
+    DATABASES = {
+        "default": env.db("DATABASE_URL"),
+    }
+else:
+    DATABASES["default"]["engine"] = os.getenv(
+        "DATABASE_ENGINE", default="django.db.backends.postgresql"
+    )
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -86,7 +94,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 
 TIME_ZONE = "UTC"
 
@@ -94,7 +102,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
