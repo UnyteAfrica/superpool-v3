@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = env.str("SECRET_KEY")
 
-DEBUG = env.bool("DJANGO_DEBUG", default=False)
+# DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"] + env.list("SUPERPOOL_ALLOWED_HOSTS")
 
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     # Local apps
+    "core",
 ]
 
 MIDDLEWARE = [
@@ -66,7 +67,9 @@ ASGI_APPLICATION = "config.asgi.application"
 # psql://{user}:{pass}@{host}:{port}/{database_name}
 # Raises Improperly configured if a database url
 # is not provided.
-DATABASES = {"default": env.db()}
+DATABASES = {
+    "default": env.db("DATABASE_URL"),
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
