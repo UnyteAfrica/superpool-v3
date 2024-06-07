@@ -22,8 +22,6 @@ else:
         "This can be generated using the helper management command"
     )
 
-# DEBUG = env.bool("DJANGO_DEBUG", default=False)
-
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"] + env.list("SUPERPOOL_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
@@ -84,10 +82,22 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES["default"]["engine"] = os.getenv(
-        "DATABASE_ENGINE", default="django.db.backends.postgresql"
+    DATABASES["default"]["ENGINE"] = env.str(
+        "DATABASE_ENGINE",
     )
+    DATABASES["default"]["NAME"] = env.str("DATABASE_NAME", default="superpool")
+    DATABASES["default"]["USER"] = env.str("DATABASE_USER", default="superpool")
+    DATABASES["default"]["PASSWORD"] = env.str("DATABASE_PASSWORD", default="superpool")
+    DATABASES["default"]["HOST"] = env.str("DATABASE_HOST")
+    DATABASES["default"]["PORT"] = env.str("DATABASE_PORT")
 
+    if "DATABASE_OPTIONS" in os.environ:
+        DATABASES["default"]["OPTIONS"] = env.dict("DATABASE_OPTIONS", default={})
+
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("DATABASE_CONN_MAX_AGE", default=500)
+
+
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -116,3 +126,5 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 APPEND_SLASH = False
+
+AUTH_USER_MODEL = "core.User"
