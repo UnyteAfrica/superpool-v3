@@ -12,3 +12,6 @@ clear_migrations:
 make_migrations:
 	python manage.py makemigrations
 
+clear_py_cache:
+	find . -name "**/*.pyc" -delete
+	find . -name "**/__pycache__" -delete
