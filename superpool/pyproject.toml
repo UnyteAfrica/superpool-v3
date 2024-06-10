@@ -14,6 +14,7 @@ djangorestframework-api-key = "^3.0.0"
 django-two-factor-auth = "^1.16.0"
 django-environ = "^0.11.2"
 drf-spectacular = "^0.27.2"
+django-storages = {extras = ["google"], version = "^1.14.3"}
 
 
 [tool.poetry.group.dev.dependencies]

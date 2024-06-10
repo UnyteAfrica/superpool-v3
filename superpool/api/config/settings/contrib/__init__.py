@@ -1,3 +1,3 @@
-from rest_framework import *
-
+from .rest_framework import *
+from .storages import *
 from .swagger import *
