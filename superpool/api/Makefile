@@ -13,5 +13,5 @@ make_migrations:
 	python manage.py makemigrations
 
 clear_py_cache:
-	find . -name "**/*.pyc" -delete
-	find . -name "**/__pycache__" -delete
+	find . -path "**/*.pyc" -delete
+	find . -path "**/__pycache__" -delete
