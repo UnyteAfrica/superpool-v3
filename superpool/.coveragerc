@@ -1,0 +1,19 @@
+[run]
+# disable tracking of branch coverage
+branch=False
+relative_files=True
+
+[report]
+# We don't want to run coverage for migrations and tests,
+# We only care about application logic only
+omit = */templates/*, */tests/*, **/migrations/*, **/__init__.py, */generated/*
+include=
+    api/**/*
+
+# Don't show files with 100% coverage and show missing lines
+skip_covered = True
+show_missing = True
+
+[html]
+directory = coverage_report
+
