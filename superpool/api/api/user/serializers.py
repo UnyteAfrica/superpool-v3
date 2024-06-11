@@ -1,5 +1,6 @@
 from core.user.models import UserProfile
 from django.contrib.auth import get_user_model
+from django.db.models.functions import FirstValue
 from rest_framework import serializers
 
 User = get_user_model()
@@ -47,3 +48,23 @@ class ScopedUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "id": {"read_only": True},
         }
+
+
+class UserSignupSerializer(serializers.Serializer):
+    """
+    This serializer is used to validate the data sent by the user when signing up.
+    """
+
+    first_name = serializers.CharField(
+        min_length=2, max_length=40, help_text="First name or given name of the user"
+    )
+    last_name = serializers.CharField(
+        min_length=2, max_length=40, help_text="Surname or Family name of the user"
+    )
+    email = serializers.EmailField(
+        help_text="By default, email address is going to be the username"
+    )
+
+    has_read_terms = serializers.BooleanField(
+        help_text="User must agree to the terms and conditions, and privacy policy"
+    )
