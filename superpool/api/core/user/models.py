@@ -14,6 +14,11 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
     Represent a given user model
     """
 
+    class USER_TYPES(models.TextChoices):
+        CUSTOMER = "customer", _("Customer")
+        ADMIN = "admin", _("Admin")
+        SUPPORT = "support", _("Support")
+
     id = models.UUIDField(
         primary_key=True,
         editable=False,
@@ -43,6 +48,14 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
         null=False,
         help_text="Designates the username of a given user",
     )
+    role = models.CharField(
+        _("Role"),
+        max_length=20,
+        choices=USER_TYPES.choices,
+        default=USER_TYPES.CUSTOMER,
+        help_text="Designates the role of a given user on the platform",
+    )
+
     email = models.EmailField(unique=True, blank=False, null=False)
 
     date_joined = models.DateTimeField(auto_now_add=True, help_text="Date user joined")
