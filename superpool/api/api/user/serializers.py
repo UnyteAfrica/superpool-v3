@@ -1,6 +1,7 @@
 from core.user.models import UserProfile
 from django.contrib.auth import get_user_model
 from django.db.models.functions import FirstValue
+from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
 User = get_user_model()
@@ -68,3 +69,21 @@ class UserSignupSerializer(serializers.Serializer):
     has_read_terms = serializers.BooleanField(
         help_text="User must agree to the terms and conditions, and privacy policy"
     )
+
+
+class UserAccountSerializer(serializers.Serializer):
+    """
+    This serializer is used to validate the user data displayed on the user account page.
+
+    Note: THis should be kept in sync with `UserSerializer`
+    """
+
+    first_name = serializers.CharField(
+        min_length=2, max_length=40, help_text="First name of the user"
+    )
+
+    has_completed_verification = serializers.BooleanField(
+        help_text="User must complete KYC verification, before they can access the platform"
+    )
+
+    phone_number = PhoneNumberField(region="NG", help_text="Phone number of the user")
