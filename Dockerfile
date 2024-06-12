@@ -14,10 +14,12 @@ COPY superpool/pyproject.toml superpool/poetry.lock* /app/
 
 RUN pip install --no-cache-dir poetry
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev --no-interaction --no-ansi
+RUN poetry lock --no-update \
+    && poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
 
-# Production image (no dev dependencies)
+
+# Now We are going to create the final image
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED 1
@@ -33,7 +35,6 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY . /app
 
-# Collect static files
 RUN python superpool/manage.py collectstatic --noinput
 
 EXPOSE 8000
