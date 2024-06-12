@@ -15,7 +15,7 @@ COPY superpool/pyproject.toml superpool/poetry.lock* /app/
 RUN pip install --no-cache-dir poetry
 
 RUN poetry lock --no-update \
-    && poetry config virtualenvs.create false \
+    && poetry config virtualenvs.create true \
     && poetry install --no-interaction --no-ansi
 
 
