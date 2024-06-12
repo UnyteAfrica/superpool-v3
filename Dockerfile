@@ -19,7 +19,7 @@ RUN poetry lock --no-update \
     && poetry install --no-interaction --no-ansi
 
 
-# Now We are going to create the final image
+# Final image
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED 1
@@ -35,9 +35,9 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY . /app
 
-RUN python superpool/manage.py collectstatic --noinput
+RUN python superpool/api/manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--chdir", "superpool", "--workers", "3", "--bind", ":8000", "superpool.config.wsgi:application"]
+CMD ["gunicorn", "--chdir", "superpool/api", "--workers", "3", "--bind", ":8000", "superpool.config.wsgi:application"]
 
