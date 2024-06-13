@@ -319,6 +319,7 @@ files = [
 
 [package.dependencies]
 Django = ">=3.2"
+phonenumberslite = {version = ">=7.0.2", optional = true, markers = "extra == \"phonenumberslite\""}
 
 [package.extras]
 phonenumbers = ["phonenumbers (>=7.0.2)"]
@@ -925,6 +926,17 @@ files = [
 
 [package.dependencies]
 ptyprocess = ">=0.5"
+
+[[package]]
+name = "phonenumberslite"
+version = "8.13.38"
+description = "Python version of Google's common library for parsing, formatting, storing and validating international phone numbers."
+optional = false
+python-versions = "*"
+files = [
+    {file = "phonenumberslite-8.13.38-py2.py3-none-any.whl", hash = "sha256:20e821bb9b9e2fcaa10cd3618e7606264ed0cf4b04877c938ec5d6211ba9efa6"},
+    {file = "phonenumberslite-8.13.38.tar.gz", hash = "sha256:ebad5c1df879de316899e93b8ea9730a822e1b2ec6d83230f0aa1946a5900153"},
+]
 
 [[package]]
 name = "pluggy"
@@ -1534,4 +1546,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.1"
-content-hash = "e5897ba3ec27f130d17ff573b990ca8a0842217e3b444209e040205d8a0883b6"
+content-hash = "07abbc42f93e95d8904b8833185bcbdbdd9107dde9da5b1b64198fed91a85fc9"

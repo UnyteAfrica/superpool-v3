@@ -34,8 +34,10 @@ INSTALLED_APPS = [
     # Third-party apps
     "rest_framework",
     "drf_spectacular",
+    "phonenumber_field",
     # Local apps
     "core",
+    "api.user",
 ]
 
 MIDDLEWARE = [
