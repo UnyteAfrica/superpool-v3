@@ -1,7 +1,6 @@
 import uuid
 
-from api.core.mixins import TimestampMixin
-from api.core.models import Address
+from core.mixins import TimestampMixin
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
@@ -15,8 +14,13 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
     Represent a given user model
     """
 
+    class USER_TYPES(models.TextChoices):
+        CUSTOMER = "customer", _("Customer")
+        ADMIN = "admin", _("Admin")
+        SUPPORT = "support", _("Support")
+
     id = models.UUIDField(
-        primary=True,
+        primary_key=True,
         editable=False,
         default=uuid.uuid4,
         help_text="ID of the user",
@@ -44,7 +48,15 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
         null=False,
         help_text="Designates the username of a given user",
     )
-    email = models.EmailField(unique=True, blank=False, null=False, index=True)
+    role = models.CharField(
+        _("Role"),
+        max_length=20,
+        choices=USER_TYPES.choices,
+        default=USER_TYPES.CUSTOMER,
+        help_text="Designates the role of a given user on the platform",
+    )
+
+    email = models.EmailField(unique=True, blank=False, null=False)
 
     date_joined = models.DateTimeField(auto_now_add=True, help_text="Date user joined")
     last_active = models.DateTimeField(
@@ -58,13 +70,13 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
     )
     is_staff = models.BooleanField(default=False)
 
-    REQUIRED_FIELDS = ["first_name", "last_name", "email"]
-    USERNAME = email
+    REQUIRED_FIELDS = ["first_name", "last_name"]
+    USERNAME_FIELD = "email"
 
     objects = UserManager()
 
     class Meta:
-        ordering = ["first_name", "last_name", -"date_joined"]
+        ordering = ["first_name", "last_name", "date_joined"]
         indexes = [
             models.Index(fields=["first_name", "last_name", "date_joined"]),
         ]
@@ -96,13 +108,6 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-    address = models.ForeignKey(
-        Address,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        help_text="Permanent residence address of the user",
-    )
     date_of_birth = models.DateField(null=True, blank=True)
 
     class Meta:

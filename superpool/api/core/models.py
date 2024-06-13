@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractBaseUser
+from core.user.models import User  # noqa: F401
 from django.db import models
 
 
