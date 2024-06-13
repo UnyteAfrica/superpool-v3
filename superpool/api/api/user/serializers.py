@@ -87,3 +87,13 @@ class UserAccountSerializer(serializers.Serializer):
     )
 
     phone_number = PhoneNumberField(region="NG", help_text="Phone number of the user")
+
+
+class UserAuthSerializer(serializers.Serializer):
+    """
+    Authentication Serializer that should only be used for authentication purposes only
+    """
+
+    name = serializers.CharField(min_length=2, max_length=30)
+    email = serializers.EmailField()
+    password = serializers.CharField()
