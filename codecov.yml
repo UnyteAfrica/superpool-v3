@@ -1,0 +1,53 @@
+# coverage.yml
+#
+# Created: 2024-06-11 18:35
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        paths:
+          - "superpool/api/"
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+ignore:
+  - "tests/"
+  - "superpool/api/tests/"
+  - "**/__pycache__/"
+  - "**/*.pyc"
+  - "superpool/api/config/"
+  - "superpool/api/settings/"
+  - "superpool/api/migrations/"
+
+# Helps logs a formatted output to the stdout
+comment:
+  layout: "reach, diff, files, footer"
+  behavior: default
+  require_changes: true
+
+codecov:
+  notify:
+    after_n_builds: 1
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+yaml:
+  # paths to include or exclude for the coverage report
+  whitelist:
+    - "superpool/api/"
+  blacklist:
+    - "**/__pycache__/"
+    - "**/*.pyc"
+    - "superpool/api/config/"
+    - "superpool/api/settings/"
+    - "superpool/api/migrations/"
+    - "superpool/api/tests/"
+    - "tests/"
+
