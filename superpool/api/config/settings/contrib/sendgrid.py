@@ -1,4 +1,5 @@
 from config.settings.environment import env
+from django.conf import settings
 
 if "SUPERPOOL_ENABLE_SMTP_EMAIL" in env:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -7,18 +8,15 @@ if "SUPERPOOL_ENABLE_SMTP_EMAIL" in env:
     )
     EMAIL_PORT = 587 if not env.int("EMAIL_PORT") else env.int("EMAIL_PORT")
     EMAIL_USE_TLS = True if EMAIL_PORT == 587 else False
-    EMAIL_HOST_USER = env.str("SENDGRID_USERNAME")
-    EMAIL_HOST_PASSWORD = env.str("SENDGRID_PASSWORD")
+    EMAIL_HOST_USER = env.str("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
 
     if "SENDGRID_API_KEY" in env:
         SENDGRID_API_KEY = env.str("SENDGRID_API_KEY")
 
-    DEFAULT_FROM_EMAIL = (
-        env.str("DEFAULT_FROM_EMAIL")
-        if env.str("DEFAULT_FROM_EMAIL")
-        else EMAIL_HOST_USER
-    )
-else:
+    DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@unyte.com")
+
+if settings.DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     EMAIL_HOST = "localhost"
     EMAIL_PORT = env.int("EMAIL_PORT", default=1025)

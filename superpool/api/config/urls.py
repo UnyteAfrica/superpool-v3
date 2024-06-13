@@ -30,7 +30,7 @@ api_v1_urlpatterns = [
         TokenVerifyView.as_view(),
         name="token_verify",
     ),
-    path(f"{ROUTE_PREFIX}/v1/users/", include("user.urls")),
+    path(f"{ROUTE_PREFIX}/v1/users/", include("api.urls")),
 ]
 
 
