@@ -37,7 +37,7 @@ COPY . /app
 
 RUN python superpool/api/manage.py collectstatic --noinput
 
-EXPOSE 8000
+EXPOSE 8080
 
-CMD ["gunicorn", "--chdir", "superpool/api", "--workers", "3", "--bind", ":8000", "superpool.config.wsgi:application"]
+CMD ["gunicorn", "--chdir", "superpool/api", "--workers", "3", "--bind", ":8080", "superpool.config.wsgi:application"]
 
