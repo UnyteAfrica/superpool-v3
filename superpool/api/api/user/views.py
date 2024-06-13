@@ -19,16 +19,17 @@ class SignUpView(APIView):
         description="Create a new user with the provided data, and a new profile is created for the user.",
         responses={201: ScopedUserSerializer},
     )
-    def post(self, request, data):
+    def post(self, request):
         serializer = UserAuthSerializer(data=request.data)
         if serializer.is_valid():
             user = User.objects.create(**serializer.validated_data)
+            refresh_token = RefreshToken.for_user(user=user)
             return Response(
                 {
                     "message": "User created successfully",
                     "user": UserAuthSerializer(user).data,
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
+                    "refresh": str(refresh_token),
+                    "access": str(refresh_token.access_token),
                 },
                 status=status.HTTP_201_CREATED,
             )

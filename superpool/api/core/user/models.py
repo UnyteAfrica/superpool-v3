@@ -70,7 +70,7 @@ class User(PermissionsMixin, TimestampMixin, AbstractBaseUser):
     )
     is_staff = models.BooleanField(default=False)
 
-    REQUIRED_FIELDS = ["first_name", "last_name", "email"]
+    REQUIRED_FIELDS = ["first_name", "last_name"]
     USERNAME_FIELD = "email"
 
     objects = UserManager()
