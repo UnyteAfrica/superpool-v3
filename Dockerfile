@@ -3,20 +3,28 @@
 # Created: 2024-06-12
 FROM python:3.11-slim as builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+ENV POETRY_VERSION=1.8.3
+ENV POETRY_VIRTUALENVS_CREATE=false
 
 WORKDIR /app
 
-COPY superpool/pyproject.toml superpool/poetry.lock* /app/
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir poetry
+RUN pip install --no-cache-dir poetry==$POETRY_VERSION \
+    && poetry config virtualenvs.create $POETRY_VIRTUALENVS_CREATE
 
-RUN poetry lock --no-update \
-    && poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
+
+# Copy the project files to the container
+COPY superpool/pyproject.toml superpool/poetry.lock /app/
+
+RUN poetry lock --no-update && \
+    poetry install --no-root
 
 
 # Final image
@@ -24,6 +32,8 @@ FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
+
+# ENV PYTHONPATH=/app/superpool/api
 
 RUN mkdir /app
 
@@ -35,9 +45,7 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY . /app
 
-RUN python superpool/api/manage.py collectstatic --noinput
-
 EXPOSE 8080
 
-CMD ["gunicorn", "--chdir", "superpool/api", "--workers", "3", "--bind", ":8080", "superpool.config.wsgi:application"]
+CMD ["gunicorn", "--chdir", "/app/superpool/api", "--workers", "3", "--bind", ":8080", "config.wsgi:application"]
 
