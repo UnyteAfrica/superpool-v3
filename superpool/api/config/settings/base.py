@@ -28,7 +28,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
-] + env.list("SUPERPOOL_ALLOWED_HOSTS")
+] + env.list("SUPERPOOL_ALLOWED_HOSTS", default=[])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -154,4 +154,7 @@ CORS_ALLOWED_ORIGINS = [
     "127.0.0.1",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
 ]
-CORS_ALLOWED_ORIGIN_REGEXES = [""].extend(env.str("SUPERPOOL_ALLOWED_ORIGIN_REGEXES"))
+
+CORS_ALLOWED_ORIGIN_REGEXES = [""]
+if "CORS_ALLOWED_ORIGIN_REGEXES" in os.environ:
+    CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
