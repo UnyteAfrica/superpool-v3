@@ -87,9 +87,7 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES["default"]["ENGINE"] = env.str(
-        "DATABASE_ENGINE",
-    )
+    DATABASES["default"]["ENGINE"] = ("django.db.backends.postgresql",)
     DATABASES["default"]["NAME"] = env.str("DATABASE_NAME", default="superpool")
     DATABASES["default"]["USER"] = env.str("DATABASE_USER", default="superpool")
     DATABASES["default"]["PASSWORD"] = env.str("DATABASE_PASSWORD", default="superpool")
