@@ -24,7 +24,9 @@ else:
         "This can be generated using the helper management command"
     )
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"] + env.list("SUPERPOOL_ALLOWED_HOSTS")
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "*.run.app"] + env.list(
+    "SUPERPOOL_ALLOWED_HOSTS"
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -37,6 +39,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "phonenumber_field",
+    "corsheaders",
     # Local apps
     "core",
     "api",
@@ -44,6 +47,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -87,9 +91,7 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES["default"]["ENGINE"] = env.str(
-        "DATABASE_ENGINE",
-    )
+    DATABASES["default"]["ENGINE"] = env.str("DATABASE_ENGINE")
     DATABASES["default"]["NAME"] = env.str("DATABASE_NAME", default="superpool")
     DATABASES["default"]["USER"] = env.str("DATABASE_USER", default="superpool")
     DATABASES["default"]["PASSWORD"] = env.str("DATABASE_PASSWORD", default="superpool")
@@ -144,3 +146,10 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+CORS_ALLOWED_ORIGIN = [
+    "http://localhost",
+    "127.0.0.1",
+    "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+] + env("SUPERPOOL_ALLOWED_HOSTS")
+CORS_ALLOWED_ORIGIN_REGEXES = [""].extend(env.str("SUPERPOOL_ALLOWED_ORIGIN_REGEXES"))
