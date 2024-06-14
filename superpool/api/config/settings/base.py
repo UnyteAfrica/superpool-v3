@@ -24,9 +24,11 @@ else:
         "This can be generated using the helper management command"
     )
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "*.run.app"] + env.list(
-    "SUPERPOOL_ALLOWED_HOSTS"
-)
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+] + env.list("SUPERPOOL_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -147,9 +149,9 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-CORS_ALLOWED_ORIGIN = [
+CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "127.0.0.1",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
-] + env("SUPERPOOL_ALLOWED_HOSTS")
+]
 CORS_ALLOWED_ORIGIN_REGEXES = [""].extend(env.str("SUPERPOOL_ALLOWED_ORIGIN_REGEXES"))
