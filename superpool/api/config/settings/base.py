@@ -153,5 +153,5 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "127.0.0.1",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
-] + env("SUPERPOOL_ALLOWED_HOSTS")
+]
 CORS_ALLOWED_ORIGIN_REGEXES = [""].extend(env.str("SUPERPOOL_ALLOWED_ORIGIN_REGEXES"))
