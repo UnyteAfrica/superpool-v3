@@ -5,9 +5,10 @@ For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 """
 
 import os
+import pdb
 from pathlib import Path
 
-from django.contrib.admin.filters import datetime
+from django.contrib.admin.filters import datetime  # type: ignore
 
 from .environment import env
 
@@ -45,13 +46,12 @@ INSTALLED_APPS = [
     # Local apps
     "core",
     "api",
-    "api.user",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -134,7 +134,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
 MEDIA_URL = "/ls/files/"
-MEDIA_ROOT = BASE_DIR / "uploads"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -151,7 +151,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
-    "127.0.0.1",
+    "http://127.0.0.1",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
 ]
 

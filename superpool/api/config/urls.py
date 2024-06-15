@@ -1,20 +1,17 @@
+from typing import Union
+
 from django.contrib import admin
-from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-)
+from django.urls import URLPattern, URLResolver, include, path
+from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
+                                   SpectacularSwaggerView)
+from rest_framework_simplejwt.views import (TokenObtainPairView,
+                                            TokenRefreshView, TokenVerifyView)
 
 ROUTE_PREFIX = "api"
 DOCS_PREFIX = "docs"
 
-urlpatterns = [
+urlpatterns: list[Union[URLPattern, URLResolver]] = [
     path("admin/", admin.site.urls),
-]
-
-api_v1_urlpatterns = [
     path(
         f"{ROUTE_PREFIX}/token/",
         TokenObtainPairView.as_view(),
@@ -30,6 +27,9 @@ api_v1_urlpatterns = [
         TokenVerifyView.as_view(),
         name="token_verify",
     ),
+]
+
+api_v1_urlpatterns = [
     path(f"{ROUTE_PREFIX}/v1/users/", include("api.urls")),
 ]
 
@@ -45,11 +45,11 @@ swagger_urlpatterns = [
     path(
         f"{ROUTE_PREFIX}/{DOCS_PREFIX}/swagger/",
         SpectacularSwaggerView.as_view(url_name="schema"),
-        name="v1-swagger-ui",
+        name="swagger",
     ),
     path(
         f"{ROUTE_PREFIX}/{DOCS_PREFIX}/redoc/",
-        SpectacularSwaggerView.as_view(),
+        SpectacularRedocView.as_view(),
         name="redoc",
     ),
 ]

@@ -1,5 +1,6 @@
-from config.settings.environment import env
 from django.conf import settings
+
+from ..environment import env
 
 if "SUPERPOOL_ENABLE_SMTP_EMAIL" in env:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
