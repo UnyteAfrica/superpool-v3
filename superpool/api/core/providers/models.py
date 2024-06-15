@@ -1,36 +1,39 @@
-from api.core.mixins import TimestampMixin
-from api.core.models import Address
-from django.db import models
-from django.utils.translation import gettext_lazy as _
+import uuid
+
+from django.db import models  # type: ignore
+from django.utils.translation import gettext_lazy as _  # type: ignore
+from django_stubs_ext.db.models import TypedModelMeta
 
 
-class Provider(TimestampMixin, models.Model):
+class Provider(models.Model):
     """
-    A provider is a company that provides insurance services to our clients (merchants)
+    Business or company that provide insurance coverage for our clients
+
     """
 
-    business_name = models.CharField(
-        _("Business Name"),
-        max_length=255,
-        null=False,
-        blank=False,
-        help_text=_("The name of the insurance provider"),
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the provider",
     )
-    business_email = models.EmailField(
-        _("Business Email"), unique=True, null=False, blank=False
+    name: models.CharField = models.CharField(
+        max_length=80,
+        unique=True,
+        help_text="Name of the Insurance Provider. This could be a short form of the company name",
     )
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    tax_identification_number = models.CharField(
-        _("TIN"), max_length=40, null=True, blank=True
-    )
-    registration_number = models.CharField(
-        _("Registration Number"), max_length=40, null=True, blank=True
+    short_code: models.CharField = models.CharField(
+        max_length=10,
+        unique=True,
+        help_text="This is used in the system to identify the provider. It should be unique, example includes: AXA-XXXX, "
+        "HEIR-XXXX, UNYT-XXXX, LEAD-XXXX, etc.",
     )
 
-    class Meta:
-        verbose_name = _("Insurance Provider")
-        verbose_name_plural = _("Insurance Providers")
+    support_email: models.EmailField
+    support_phone: models.CharField
 
-        indexes = [
-            models.Index(fields=["business_name", "business_email"]),
-        ]
+    def __str__(self) -> str:
+        return f"Provider: {self.name}"
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = _("Providers")
