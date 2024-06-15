@@ -17,7 +17,7 @@ drf-spectacular = "^0.27.2"
 django-storages = {extras = ["google"], version = "^1.14.3"}
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "^7.3.0"}
 gunicorn = "^22.0.0"
-
+psycopg = "^3.1.19"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -29,8 +29,17 @@ ipdb = "^0.13.13"
 watchman = "^0.0.1"
 django-debug-toolbar = "^4.4.2"
 rich = "^13.7.1"
-psycopg = "^3.1.19"
 psycopg2-binary = "^2.9.9"
+pytest-django = "^4.8.0"
+django-stubs = {extras = ["compatible-mypy"], version = "^5.0.2"}
+django-types = "^0.19.1"
+djangorestframework-stubs = {extras = ["compatible-mypy"], version = "^3.15.0"}
+
+[tool.pytest.ini_options]
+# addopts = "-p no:warnings"
+DJANGO_SETTINGS_MODULE = 'api.config.settings'
+python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
+
 
 [build-system]
 requires = ["poetry-core"]
