@@ -33,7 +33,7 @@ class Provider(models.Model):
     support_phone: models.CharField
 
     def __str__(self) -> str:
-        return f"Provider: {self.name}"
+        return f"{self.name}"
 
     class Meta(TypedModelMeta):
         verbose_name_plural = _("Providers")
