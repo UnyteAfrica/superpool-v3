@@ -29,7 +29,12 @@ class Provider(models.Model):
         "HEIR-XXXX, UNYT-XXXX, LEAD-XXXX, etc.",
     )
 
-    support_email: models.EmailField
+    support_email: models.EmailField = models.EmailField(
+        _("Business email"),
+        help_text="Email address is used to track their support team during integrations",
+        blank=True,
+        null=True,
+    )
     support_phone: models.CharField
 
     def __str__(self) -> str:
