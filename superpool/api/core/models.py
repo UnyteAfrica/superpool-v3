@@ -1,5 +1,6 @@
 from core.user.models import User  # noqa: F401
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class Operation:
@@ -11,6 +12,40 @@ class Operation:
 
     def __str__(self) -> str:
         return f"<Operation: {self.name}>"
+
+
+class Coverage(models.Model):
+    """
+    Represents a structure to help track complex coverage information
+    """
+
+    coverage_name: models.CharField = models.CharField(
+        _("Coverage Name"),
+        max_length=100,
+        help_text=_("Name of the coverage e.g collision, hospitalization, etc."),
+    )
+    coverage_id: models.CharField = models.CharField(
+        _("Coverage ID"),
+        max_length=100,
+        help_text=_("unique identifier to track coverage details"),
+    )
+    coverage_limit: models.DecimalField = models.DecimalField(
+        _("Coverage Limit"),
+        max_digits=10,
+        decimal_places=2,
+        help_text=_(
+            "This is the maximum amount that the insurance company will pay for a claim"
+        ),
+    )  # TODO: Add currency field here
+    description: models.TextField = models.TextField(
+        _("Description"), help_text=_("Description of the coverage")
+    )
+    product_id: models.ForeignKey = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        related_name="coverages",
+        help_text=_("Product to which the coverage belongs"),
+    )
 
 
 class Address(models.Model):
