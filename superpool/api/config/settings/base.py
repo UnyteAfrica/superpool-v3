@@ -25,6 +25,8 @@ else:
         "This can be generated using the helper management command"
     )
 
+INTERNAL_IPS = env.list("INTERNAL_IPS", default=[])
+
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
@@ -149,6 +151,8 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+SECURE
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
@@ -158,3 +162,6 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOWED_ORIGIN_REGEXES = [""]
 if "CORS_ALLOWED_ORIGIN_REGEXES" in os.environ:
     CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
