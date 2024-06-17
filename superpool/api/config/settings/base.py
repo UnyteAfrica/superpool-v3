@@ -30,6 +30,7 @@ INTERNAL_IPS = env.list("SUPERPOOL_INTERNAL_IPS", default=[])
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
+    "*.unyte.com",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
 ] + env.list("SUPERPOOL_ALLOWED_HOSTS", default=[])
 
