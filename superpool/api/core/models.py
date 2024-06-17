@@ -1,7 +1,8 @@
-from core.mixins import TimestampMixin, TrashableModelMixir
+from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner  # noqa: F401
 from core.user.models import User  # noqa: F401
 from django.db import models
+from django_stubs_ext.db.models import TypedModelMeta
 
 
 class Operation:
@@ -79,7 +80,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     def __str__(self) -> str:
         return f"Product: {self.product_name}, Provider: {self.provider.name}"
 
-    class Meta:
+    class Meta(TypedModelMeta):
         db_table = "products"
         verbose_name = "Product"
         verbose_name_plural = "Products"
