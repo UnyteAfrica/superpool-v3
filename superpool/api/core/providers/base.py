@@ -7,7 +7,7 @@ from typing import Optional, Protocol
 from api.core.providers.exceptions import ProviderNotFound
 
 
-class Provider(Protocol):
+class Provider(ABC):
     """
     Interface for Insurance Providers/Partners
 
@@ -23,6 +23,7 @@ class Provider(Protocol):
         """
         ...
 
+    @abstractmethod
     def validate_provider(self) -> None:
         """
         Validate the provider instance by its short code
@@ -30,8 +31,9 @@ class Provider(Protocol):
         Raises:
             ValidationError: If the provider instance is invalid
         """
-        ...
+        pass
 
+    @abstractmethod
     def has_policy(self, policy: str) -> bool:
         """
         Check if the provider has a policy by its unique identifier or name
@@ -42,10 +44,10 @@ class Provider(Protocol):
         Returns:
             bool: True if the policy exists, False otherwise
         """
-        ...
+        pass
 
 
-class BaseProvider(ABC, Provider):
+class BaseProvider(Provider):
     """
     Extensible base class for Insurance Providers/Partners
 
