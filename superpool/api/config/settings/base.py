@@ -25,7 +25,7 @@ else:
         "This can be generated using the helper management command"
     )
 
-INTERNAL_IPS = env.list("INTERNAL_IPS", default=[])
+INTERNAL_IPS = env.list("SUPERPOOL_INTERNAL_IPS", default=[])
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -150,8 +150,6 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
-
-SECURE
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
