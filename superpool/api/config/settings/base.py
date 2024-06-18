@@ -5,9 +5,10 @@ For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 """
 
 import os
+import pdb
 from pathlib import Path
 
-from django.contrib.admin.filters import datetime
+from django.contrib.admin.filters import datetime  # type: ignore
 
 from .environment import env
 
@@ -24,7 +25,14 @@ else:
         "This can be generated using the helper management command"
     )
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"] + env.list("SUPERPOOL_ALLOWED_HOSTS")
+INTERNAL_IPS = env.list("SUPERPOOL_INTERNAL_IPS", default=[])
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "*.unyte.com",
+    "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+] + env.list("SUPERPOOL_ALLOWED_HOSTS", default=[])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -37,15 +45,16 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "phonenumber_field",
+    "corsheaders",
     # Local apps
     "core",
     "api",
-    "api.user",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -87,9 +96,7 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES["default"]["ENGINE"] = env.str(
-        "DATABASE_ENGINE",
-    )
+    DATABASES["default"]["ENGINE"] = ("django.db.backends.postgresql",)
     DATABASES["default"]["NAME"] = env.str("DATABASE_NAME", default="superpool")
     DATABASES["default"]["USER"] = env.str("DATABASE_USER", default="superpool")
     DATABASES["default"]["PASSWORD"] = env.str("DATABASE_PASSWORD", default="superpool")
@@ -130,7 +137,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 
 MEDIA_URL = "/ls/files/"
-MEDIA_ROOT = BASE_DIR / "uploads"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -144,3 +151,16 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost",
+    "http://127.0.0.1",
+    "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [""]
+if "CORS_ALLOWED_ORIGIN_REGEXES" in os.environ:
+    CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
