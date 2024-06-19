@@ -153,11 +153,13 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost",
-    "http://127.0.0.1",
-    "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost",
+#     "http://127.0.0.1",
+#     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+# ]
+
+CORS_ALLOWED_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGIN_REGEXES = [""]
 if "CORS_ALLOWED_ORIGIN_REGEXES" in os.environ:
