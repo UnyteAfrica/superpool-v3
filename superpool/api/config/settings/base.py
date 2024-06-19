@@ -33,6 +33,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "*.unyte.com",
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
+    ".a.run.app",
 ] + env.list("SUPERPOOL_ALLOWED_HOSTS", default=[])
 
 INSTALLED_APPS = [
@@ -97,18 +98,19 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES["default"]["ENGINE"] = ("django.db.backends.postgresql",)
-    DATABASES["default"]["NAME"] = env.str("DATABASE_NAME", default="superpool")
-    DATABASES["default"]["USER"] = env.str("DATABASE_USER", default="superpool")
-    DATABASES["default"]["PASSWORD"] = env.str("DATABASE_PASSWORD", default="superpool")
-    DATABASES["default"]["HOST"] = env.str("DATABASE_HOST")
-    DATABASES["default"]["PORT"] = env.str("DATABASE_PORT")
-
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env.str("DATABASE_NAME", default="superpool"),
+            "USER": env.str("DATABASE_USER", default="superpool"),
+            "PASSWORD": env.str("DATABASE_PASSWORD", default="superpool"),
+            "HOST": env.str("DATABASE_HOST"),
+            "PORT": env.str("DATABASE_PORT"),
+            "CONN_MAX_AGE": env.int("DATABASE_CONN_MAX_AGE", default=500),
+        }
+    }
     if "DATABASE_OPTIONS" in os.environ:
         DATABASES["default"]["OPTIONS"] = env.dict("DATABASE_OPTIONS", default={})
-
-    DATABASES["default"]["CONN_MAX_AGE"] = env.int("DATABASE_CONN_MAX_AGE", default=500)
-
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -135,9 +137,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "static"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-MEDIA_URL = "/ls/files/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
@@ -159,9 +161,13 @@ CORS_ALLOWED_ORIGINS = [
     "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app",
 ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [""]
-if "CORS_ALLOWED_ORIGIN_REGEXES" in os.environ:
-    CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://\w+\.a\.run\.app$",
+]
+
+# Additional CORS origins or regexes in environment variables
+CORS_ALLOWED_ORIGINS += env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
