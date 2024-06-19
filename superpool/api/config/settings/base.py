@@ -25,6 +25,7 @@ else:
         "This can be generated using the helper management command"
     )
 
+
 INTERNAL_IPS = env.list("SUPERPOOL_INTERNAL_IPS", default=[])
 
 ALLOWED_HOSTS = [
