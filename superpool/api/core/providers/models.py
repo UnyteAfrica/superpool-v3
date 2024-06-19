@@ -1,5 +1,4 @@
-from api.core.mixins import TimestampMixin
-from api.core.models import Address
+from core.mixins import TimestampMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -19,7 +18,6 @@ class Provider(TimestampMixin, models.Model):
     business_email = models.EmailField(
         _("Business Email"), unique=True, null=False, blank=False
     )
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
     tax_identification_number = models.CharField(
         _("TIN"), max_length=40, null=True, blank=True
     )

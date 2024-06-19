@@ -1,5 +1,5 @@
-from api.core.mixins import TimestampMixin
-from api.core.models import Address
+from core.mixins import TimestampMixin
+from core.models import Address
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
