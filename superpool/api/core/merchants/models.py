@@ -1,39 +1,41 @@
-from core.mixins import TimestampMixin
-from core.models import Address
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_stubs_ext.db.models import TypedModelMeta
 
 
-class Merchant(TimestampMixin, models.Model):
+class Merchant(models.Model):
     """
-    A merchant is a client that uses our services
+    A merchant is a client or an entrity that embed our services into their platform.
 
     At this moment, we are only providing insurance services to businesses (organizations; banks, schools, online marts, etc)
     """
 
-    name = models.CharField(
-        _("Name"),
+    business_name = models.CharField(
         max_length=255,
-        null=False,
-        blank=False,
-        help_text=_("The name of the merchant"),
+        verbose_name=_("Business Name"),
+        help_text=_("The name of the business"),
     )
-    business_email = models.EmailField(_("Email"), unique=True, null=False, blank=False)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    internal_id = models.CharField(
+        _("Internal ID"),
+        max_length=40,
+        help_text=_(
+            "Unique short code indentifier used internally to identify a merchant or distributor"
+        ),
+        unique=True,
+    )
+    support_email = models.EmailField(
+        _("Business Email"), help_text=_("The contact email address of the business")
+    )
     tax_identification_number = models.CharField(
-        _("TIN"), max_length=40, null=True, blank=True
+        _("TIN"), unique=True, max_length=40, null=True, blank=True
     )
     registration_number = models.CharField(
-        _("Registration Number"), max_length=40, null=True, blank=True
+        _("Registration Number"), max_length=40, null=True, blank=True, unique=True
     )
 
-    class Meta:
+    class Meta(TypedModelMeta):
         verbose_name = _("Merchant")
         verbose_name_plural = _("Merchants")
 
-        indexes = [
-            models.Index(fields=["name", "business_email"]),
-        ]
-
     def __str__(self):
-        return self.name
+        return f"Merchant: {self.business_name}"

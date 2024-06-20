@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # Local apps
     "core",
+    "core.merchants",
     "api",
 ]
 
