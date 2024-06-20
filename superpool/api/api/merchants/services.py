@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from .exceptions import ApplicationCreationError
 
 
-class AppicationService:
+class ApplicationService:
     """
     Handler for the manging and working with application instances
     """
