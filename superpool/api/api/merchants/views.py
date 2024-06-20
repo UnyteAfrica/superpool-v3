@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.decorators import action
+from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -14,7 +14,7 @@ from .services import ApplicationService
     request=CreateApplicationSerializer,
     responses={201: CreateApplicationSerializer},
 )
-@action(methods=["POST"], detail=False, url_path="create-application")
+@api_view(["POST"])
 def create_application_view(request: Request) -> Response:
     """
     Create a new application instance for a given merchant

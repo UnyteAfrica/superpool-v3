@@ -21,7 +21,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ["pk"]
 
 
-def CreateApplicationSerializer(serliazers.Serializer):
+class CreateApplicationSerializer(serializers.Serializer):
     """
     Serializer for creating a new application
 
@@ -31,5 +31,6 @@ def CreateApplicationSerializer(serliazers.Serializer):
             "name": "My Application",
         }
     """
+
     merchant_id = serializers.CharField()
     name = serializers.CharField()
