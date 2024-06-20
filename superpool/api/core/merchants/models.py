@@ -20,6 +20,7 @@ class Merchant(models.Model):
         max_length=40,
         help_text=_(
             "Unique short code indentifier used internally to identify a merchant or distributor"
+            "e.g. UBA-X224, GTB-3X2, KON-001, SLOT-001, WEMA-2286, etc."
         ),
         unique=True,
     )
