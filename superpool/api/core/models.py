@@ -1,3 +1,5 @@
+# Utility models that does not fit into domain-specific parts of the application
+
 from core.merchants.models import Merchant  # noqa: F401
 from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner  # noqa: F401
@@ -124,9 +126,9 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
 
 class Application(models.Model):
     """
-    An application is a sandbox needed for interacting with Unyte's APIs
+    An application is a sandbox environment needed for interacting with Unyte's APIs
 
-    Merchants can only have one application
+    Merchants can only have ONE application instance
     """
 
     merchant = models.ForeignKey(
