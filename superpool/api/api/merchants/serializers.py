@@ -1,36 +1,41 @@
-from core.models import Application
+from api.serializers import LimitedScopeSerializer
+from core.merchants.models import Merchant
 from rest_framework import serializers
+from rest_framework.serializers import Serializer
 
 
-class ApplicationSerializer(serializers.ModelSerializer):
+class MerchantSerializer(serializers.ModelSerializer):
     """
-    Serializer for the Application model
-
-    e.g:
-
-        {
-            "merchant_id": 1,
-            "name": "My Application",
-            "test_mode": false,
-        }
+    Serializer for Merchant model
     """
 
     class Meta:
-        model = Application
-        exclude = ["pk"]
-        read_only_fields = ["pk"]
+        model = Merchant
+        fields = "__all__"
 
 
-class CreateApplicationSerializer(serializers.Serializer):
+class MerchantLimitedSerializer(LimitedScopeSerializer):
     """
-    Serializer for creating a new application
-
-    e.g:
-        {
-            "merchant_id": 1,
-            "name": "My Application",
-        }
+    Serializer to display Merchant model with limited fields
     """
 
-    merchant_id = serializers.CharField()
-    name = serializers.CharField()
+    model_class = Merchant
+    fields = [
+        "name",
+        "short_code",
+        "support_email",
+    ]
+
+
+class CreateMerchantSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating a Merchant
+    """
+
+    class Meta:
+        model = Merchant
+        fields = (
+            "merchant_name",
+            "short_code",
+            "test_mode",
+        )
