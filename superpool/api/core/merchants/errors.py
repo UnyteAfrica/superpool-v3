@@ -1,9 +1,12 @@
-class MerchantDoesNotExist(Exception):
+from django.core.exceptions import ObjectDoesNotExist
+
+
+class MerchantDoesNotExist(ObjectDoesNotExist):
     """
     Raised when a merchant does not exist in the database
     """
 
-    pass
+    message = "Merchant does not exisit"
 
 
 class MerchantAlreadyExists(Exception):
@@ -11,15 +14,15 @@ class MerchantAlreadyExists(Exception):
     Raised when a merchant already exists in the database
     """
 
-    pass
+    message = "This Merchant already exisit in the database"
 
 
-class MerchantAlreadyDeactivatedError(Exception):
+class MerchantAccountDeactivated(Exception):
     """
     Raised when a merchant is deactivated
     """
 
-    pass
+    message = "The provided merchant has been deactivated from the platform"
 
 
 class InvalidMerchantCredentials(Exception):
@@ -27,4 +30,4 @@ class InvalidMerchantCredentials(Exception):
     Raised when invalid merchant credentials are provided
     """
 
-    pass
+    message = "Invalid merchant credential details, please provide valid credentials"
