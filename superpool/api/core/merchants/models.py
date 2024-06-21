@@ -1,11 +1,12 @@
 from uuid import uuid4
 
+from core.mixins import TimestampMixin, TrashableModelMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
 
 
-class Merchant(models.Model):
+class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     """
     A merchant is a client or an entrity that embed our services into their platform.
 
@@ -15,7 +16,7 @@ class Merchant(models.Model):
     id = models.UUIDField(
         _("Merchant ID"), primary_key=True, unique=True, default=uuid4
     )
-    business_name = models.CharField(
+    name = models.CharField(
         max_length=255,
         verbose_name=_("Business Name"),
         help_text=_("The name of the business"),
@@ -32,11 +33,22 @@ class Merchant(models.Model):
     support_email = models.EmailField(
         _("Business Email"), help_text=_("The contact email address of the business")
     )
+    is_active = models.BooleanField()
     tax_identification_number = models.CharField(
-        _("TIN"), unique=True, max_length=40, null=True, blank=True
+        _("TIN"),
+        unique=True,
+        max_length=40,
+        null=True,
+        blank=True,
+        help_text="Unique tax identification number issued by federal or inland revenue service",
     )
     registration_number = models.CharField(
-        _("Registration Number"), max_length=40, null=True, blank=True, unique=True
+        _("Registration Number"),
+        max_length=40,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Government-issued registration number with the CAC",
     )
     address = models.TextField(
         _("Business Address"),
@@ -49,10 +61,29 @@ class Merchant(models.Model):
         max_length=80,
         help_text="Unique key generated on the platform for use in subsequent request",
     )
+    kyc_verified = models.BooleanField(
+        _("KYC Verified"),
+        default=False,
+        help_text="Designates if the business has been verified by the platform",
+        blank=True,
+    )
 
     class Meta(TypedModelMeta):
         verbose_name = _("Merchant")
         verbose_name_plural = _("Merchants")
 
     def __str__(self):
-        return f"Merchant: {self.business_name}"
+        return f"Merchant: {self.name}"
+
+    def delete(self, *args, **kwargs) -> None:
+        """
+        Trash the merchant instance
+        """
+        super(TrashableModelMixin).delete()
+
+    @property
+    def has_completed_kyc(self) -> bool:
+        """
+        Check if the merchant has completed KYC
+        """
+        return self.kyc_verified
