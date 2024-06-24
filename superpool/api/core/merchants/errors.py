@@ -1,7 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 
 
-class MerchantDoesNotExist(ObjectDoesNotExist):
+class MerchantObjectDoesNotExist(ObjectDoesNotExist):
     """
     Raised when a merchant does not exist in the database
     """
@@ -27,7 +27,15 @@ class MerchantAccountDeactivated(Exception):
 
 class InvalidMerchantCredentials(Exception):
     """
-    Raised when invalid merchant credentials are provided
-    """
+    Raised when invalid merchant credentials are provided"""
 
     message = "Invalid merchant credential details, please provide valid credentials"
+
+
+class MerchantUpdateError(Exception):
+    """
+    Raised when an error occurs while updating a merchant
+    """
+
+    message = "An error occurred while updating the merchant"
+    errors = None

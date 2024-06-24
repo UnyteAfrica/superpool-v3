@@ -23,15 +23,19 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     )
     short_code = models.CharField(
         _("Merchant Short code"),
-        max_length=40,
+        max_length=10,
         help_text=_(
             "Unique short code indentifier used internally to identify a merchant or distributor"
             "e.g. UBA-X224, GTB-3X2, KON-001, SLOT-001, WEMA-2286, etc."
         ),
         unique=True,
     )
+    business_email = models.EmailField(
+        _("Business Email"), help_text=_("Company registration email address")
+    )
     support_email = models.EmailField(
-        _("Business Email"), help_text=_("The contact email address of the business")
+        _("Support Email"),
+        help_text=_("The contact email address of the business, for support if any"),
     )
     is_active = models.BooleanField()
     tax_identification_number = models.CharField(
@@ -60,6 +64,7 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         _("API Key"),
         max_length=80,
         help_text="Unique key generated on the platform for use in subsequent request",
+        null=True,
     )
     kyc_verified = models.BooleanField(
         _("KYC Verified"),
@@ -71,6 +76,11 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     class Meta(TypedModelMeta):
         verbose_name = _("Merchant")
         verbose_name_plural = _("Merchants")
+
+    def save(self, *args: dict, **kwargs: dict) -> None:
+        if not self.short_code:
+            self.short_code = self.generate_shortcode()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Merchant: {self.name}"
@@ -87,3 +97,18 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         Check if the merchant has completed KYC
         """
         return self.kyc_verified
+
+    def generate_shortcode(self) -> str:
+        """
+        Generate a unique short code for the merchant
+
+        The short code is a combination of the first three characters of the merchant name and a random 4 character string
+
+        e.g
+            Merchant: UBA
+            Short code: UBA-3X24
+
+            Merchant: GTB
+            Short code: GTB-2X3F
+        """
+        return f"{self.name[:3].upper()}-{uuid4().hex[:4].upper()}"

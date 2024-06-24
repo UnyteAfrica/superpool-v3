@@ -5,6 +5,7 @@ from rest_framework.request import Request
 from .models import Merchant
 
 
+@admin.register(Merchant)
 class MerchantModelAdmin(admin.ModelAdmin):
     """
     Admin model for Merchant model

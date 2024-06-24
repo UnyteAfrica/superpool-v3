@@ -1,51 +1,80 @@
+import abc
+from collections.abc import Mapping, MutableMapping
+
+from api.merchants.serializers import CreateMerchantSerializer, MerchantSerializer
+from core.merchants.errors import (
+    MerchantAlreadyExists,
+    MerchantObjectDoesNotExist,
+    MerchantUpdateError,
+)
 from core.merchants.models import Merchant
-from core.models import Application
-from core.registries import ApplicationRegistry
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
-
-from .exceptions import ApplicationCreationError
+from rest_framework.serializers import Serializer
 
 
-class ApplicationService:
-    """
-    Handler for the manging and working with application instances
-    """
-
-    registry = ApplicationRegistry()
-
-    @classmethod
-    def create_application(cls, merchant: Merchant) -> tuple[Application, str]:
+class IMerchantRegistry(abc.ABC):
+    @abc.abstractmethod
+    def register(self, data: dict, *kwargs: Mapping) -> Merchant:
         """
-        Create a new application instance
+        Interface method to register a new merchant
         """
+        pass
 
-        application_id = cls.registry.generate_uuid()
+    def deactivate(self, merchant_id: Merchant):
+        """
+        Interface to deactivate a given merchant
+        """
+        pass
+
+    def update_profile(self, merchant_id: str, data: MutableMapping) -> Merchant:
+        """
+        Interface to update a merchant details
+        """
+        pass
+
+
+class MerchantService(IMerchantRegistry):
+    def register(
+        self, data: dict, **kwargs: Mapping
+    ) -> Merchant | tuple[Merchant, dict]:
+        """
+        Registers a new merchant on the platform
+        """
+        serializer_class = kwargs.pop("serializer_class", CreateMerchantSerializer)
+        serializer = serializer_class(data=data)
+        if serializer.is_valid():
+            merchant = serializer.save()
+
+            # TODO: Implement/Call email verification logic here
+            return merchant, {"message": "Merchant registered successfully"}
+        return MerchantAlreadyExists, serializer.errors
+
+    def update_profile(
+        self, merchant_id: str, data: MutableMapping
+    ) -> Merchant | tuple[Merchant, dict]:
+        """
+        Updates a merchant profile with the given data
+        """
         try:
-            application = Application.objects.create(
-                merchant=merchant, application_id=application_id
-            )
-        except (IntegrityError, ValidationError, Exception) as e:
-            raise ApplicationCreationError(
-                "An error occurred while creating the application for this merchant", e
-            )
-        cls.registry.set_application_instance(
-            merchant_id=merchant.internal_id, instance=application
-        )
-        return application, application_id
+            # grab the merchant instance
+            merchant = Merchant.objects.get(id=merchant_id)
+        except Merchant.DoesNotExist:
+            raise MerchantObjectDoesNotExist
 
-    @classmethod
-    def get_application(cls, merchant: Merchant) -> Application:
-        """
-        Get the application instance for a merchant
-        """
-        return cls.registry.get_application_instance(merchant.internal_id)
+        serializer_class = MerchantSerializer
+        serializer = serializer_class(merchant, data=data, partial=True)
+        if serializer.is_valid():
+            updated_merchant = serializer.save()
+            return updated_merchant
+        return MerchantUpdateError, serializer.errors
 
-    @classmethod
-    def set_test_mode(cls, application: Application, test_mode: bool) -> Application:
+    def deactivate(self, merchant_id: Merchant):
         """
-        Set the test mode for an application
+        Deactivates a given merchant
         """
-        application.test_mode = test_mode
-        application.save()
-        return application
+        try:
+            merchant = Merchant.objects.get(id=merchant_id)
+            merchant.is_active = False
+        except Merchant.DoesNotExist:
+            raise MerchantObjectDoesNotExist
+        merchant.save()
+        return merchant

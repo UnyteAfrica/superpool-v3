@@ -132,11 +132,15 @@ class Application(models.Model):
     """
 
     merchant = models.ForeignKey(
-        Merchant, on_delete=models.CASCADE, related_name="application"
+        Merchant, on_delete=models.CASCADE, related_name="applications"
     )
     # We are storing the application_id as a string because it is a UUID
     #
     # By storing it as string here, we move an expensive operation such as generating UUIDs
     # from the database to the application layer, which is more efficient
     application_id = models.CharField(max_length=100, unique=True)
+    api_token = models.CharField(max_length=80, unique=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
+
+    def __str__(self) -> str:
+        return f"Application: {self.application_id}, Merchant: {self.merchant.name}"

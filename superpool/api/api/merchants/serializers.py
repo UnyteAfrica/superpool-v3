@@ -1,7 +1,6 @@
 from api.serializers import LimitedScopeSerializer
 from core.merchants.models import Merchant
 from rest_framework import serializers
-from rest_framework.serializers import Serializer
 
 
 class MerchantSerializer(serializers.ModelSerializer):
@@ -21,9 +20,13 @@ class MerchantLimitedSerializer(LimitedScopeSerializer):
 
     model_class = Merchant
     fields = [
+        "id",
         "name",
         "short_code",
+        "business_email",
+        "is_active",  # noqa: E231
         "support_email",
+        "created_at",
     ]
 
 
@@ -35,7 +38,7 @@ class CreateMerchantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Merchant
         fields = (
-            "merchant_name",
-            "short_code",
-            "test_mode",
+            "name",
+            "business_email",
         )
+        read_only_fields = ("short_code",)
