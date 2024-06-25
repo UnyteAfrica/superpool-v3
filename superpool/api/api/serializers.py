@@ -1,8 +1,7 @@
 from typing import Any, ClassVar, NewType  # noqa
 
+from django.db.models import Model
 from rest_framework import serializers
-
-_Model = NewType("_Model", type)
 
 
 class LimitedScopeSerializer(serializers.ModelSerializer):
@@ -10,12 +9,12 @@ class LimitedScopeSerializer(serializers.ModelSerializer):
     Generic [Read-only] Serializer that only includes the specified fields
 
     Attributes:
-        model_class: ClassVar[type[_Model]] | None
-        fields: ClassVar[list[str]]
+        model_class: Model
+        fields: list[str]
     """
 
-    model_class: ClassVar[type[_Model]] | None = None
-    fields: ClassVar[list[str]] = []
+    model_class: Model = None
+    fields: list[str] = []
 
     def __init_subclass__(cls, **kwargs):
         if not cls.model_class:
@@ -24,10 +23,15 @@ class LimitedScopeSerializer(serializers.ModelSerializer):
             raise ValueError("fields is required")
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "LimitedScopeSerializer":
-        kwargs["Meta"].fields = cls.fields
-        return super().__new__(cls, *args, **kwargs)
+        # We also want to validate if the field specified actually exists in the model
+        for field in cls.fields:
+            if not hasattr(cls.models_class, cls.field):
+                raise ValueError(f"Field Error: Invalid Field, {field}")
 
-    class Meta:
-        model = cls.model_class
-        fields = None
-        read_only_fields = cls.fields
+        # Set the models and read_only_fields of the subclasses to the fields list
+        kwargs["Meta"] = {
+            "model": cls.model_class,
+            "fields": cls.fields,
+            "read_only_fields": cls.fields,
+        }
+        return super().__new__(cls, *args, **kwargs)
