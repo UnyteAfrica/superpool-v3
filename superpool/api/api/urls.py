@@ -8,4 +8,5 @@ urlpatterns = [
     path("", include(user_route), name="user"),
     path("sandbox/", ApplicationView.as_view(), name="sandbox_application"),
     path("sandbox/create/", create_application_view, name="sandbox_create_application"),
+    path("merchants/", include("api.merchants.urls"), name="merchants"),
 ]

@@ -36,8 +36,7 @@ urlpatterns: list[Union[URLPattern, URLResolver]] = [
 ]
 
 api_v1_urlpatterns = [
-    path(f"{ROUTE_PREFIX}/v1/users/", include("api.urls")),
-    path(f"{ROUTE_PREFIX}/v1/merchants/", include("api.merchants.urls")),
+    path(f"{ROUTE_PREFIX}/v1/", include("api.urls")),
 ]
 
 

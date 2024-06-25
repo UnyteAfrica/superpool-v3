@@ -1,6 +1,7 @@
 import uuid  # noqa: F401
 
 from core.models import Application  # noqa: F401
+from rest_framework_api_key.models import APIKey  # noqa: F401
 
 
 class ApplicationRegistry:
