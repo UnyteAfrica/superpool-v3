@@ -195,11 +195,12 @@ if REDIS_ENABLED:
 LOG_LEVEL = env.str("LOG_LEVEL").upper()
 # We should dyanmically store logs but keep them under the base directory
 LOG_FILE_NAME = env.str("SUPERPOOL_LOG_FILE_NAME", default="superpool.log")
-LOG_FILE_PATH = BASE_DIR / "logs" / LOG_FILE_NAME
-pprint.pprint(LOG_FILE_PATH)
+LOG_FILE_PATH = BASE_DIR.parent.parent / "logs" / LOG_FILE_NAME
 
-# Make sure our `logs` directory exists in the folder tree
-LOG_FILE_PATH.mkdir.parent(parents=True, exists_ok=True)
+# Check if a logs directory exists in the parent directory
+if not LOG_FILE_PATH.exists():
+    # If it doesn't exist, create it
+    LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 LOGGING = {
     "version": 1,
