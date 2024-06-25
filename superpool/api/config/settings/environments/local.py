@@ -1,6 +1,14 @@
 try:
-    from core.base import *
+    from core.settings.base import *  # noqa: F403
 except ImportError:
     pass
 
+DEBUG = True
+
 TESTS = True
+
+DATABASES = {}
+
+STORAGES = {}
+
+CACHES = {}

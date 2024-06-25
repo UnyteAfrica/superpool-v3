@@ -2,10 +2,16 @@ from typing import Union
 
 from django.contrib import admin
 from django.urls import URLPattern, URLResolver, include, path
-from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
-                                   SpectacularSwaggerView)
-from rest_framework_simplejwt.views import (TokenObtainPairView,
-                                            TokenRefreshView, TokenVerifyView)
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 
 ROUTE_PREFIX = "api"
 DOCS_PREFIX = "docs"
@@ -30,7 +36,7 @@ urlpatterns: list[Union[URLPattern, URLResolver]] = [
 ]
 
 api_v1_urlpatterns = [
-    path(f"{ROUTE_PREFIX}/v1/users/", include("api.urls")),
+    path(f"{ROUTE_PREFIX}/v1/", include("api.urls")),
 ]
 
 

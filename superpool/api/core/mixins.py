@@ -20,7 +20,7 @@ class TimestampMixin(models.Model):
 
 class TrashableModelMixin(models.Model):
     """
-    Mixin class to add trashable functionality to models
+    Mixin class to add trashable functionality to models.
 
     Technically, we are not deleting the model instance, we are just marking it as trashed
     which could in turn be restored (let's say, an insurance provider temporarily stops offering a package, they can restore it later on, maybe due to regulations, mandates or downtimes)
@@ -30,6 +30,7 @@ class TrashableModelMixin(models.Model):
         is_trashed: BooleanField
         trashed_at: DateTimeField
         restored_at: DateTimeField
+        trash: Method
     """
 
     is_trashed: models.BooleanField = models.BooleanField(default=False)

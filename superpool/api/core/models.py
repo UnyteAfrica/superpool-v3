@@ -1,3 +1,6 @@
+# Utility models that does not fit into domain-specific parts of the application
+
+from core.merchants.models import Merchant  # noqa: F401
 from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner  # noqa: F401
 from core.user.models import User  # noqa: F401
@@ -119,3 +122,25 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         db_table = "products"
         verbose_name = "Product"
         verbose_name_plural = "Products"
+
+
+class Application(models.Model):
+    """
+    An application is a sandbox environment needed for interacting with Unyte's APIs
+
+    Merchants can only have ONE application instance
+    """
+
+    merchant = models.ForeignKey(
+        Merchant, on_delete=models.CASCADE, related_name="applications"
+    )
+    # We are storing the application_id as a string because it is a UUID
+    #
+    # By storing it as string here, we move an expensive operation such as generating UUIDs
+    # from the database to the application layer, which is more efficient
+    application_id = models.CharField(max_length=100, unique=True)
+    api_token = models.CharField(max_length=80, unique=True)
+    test_mode = models.BooleanField(help_text="Whether the application is in test mode")
+
+    def __str__(self) -> str:
+        return f"Application: {self.application_id}, Merchant: {self.merchant.name}"

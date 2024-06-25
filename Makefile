@@ -6,13 +6,13 @@
 # Created by: Eri A.
 # Created on: 09:50 2024-06-05
 
-.PHONY: help clear_migrations make_migrations clear_pycache run_server show_migrations shell test
+.PHONY: help clear_migrations migrations clear_pycache run_server show_migrations shell test
 
 help:
 	@echo "Superpool Makefile"
 	@echo "=================="
 	@echo "clear_migrations: 				Delete all migrations files"
-	@echo "make_migrations: 				Create new migrations files"
+	@echo "migrations: 				Create new migrations files"
 	@echo "clear_pycache: 					Delete all python cache files"
 	@echo "run_server: 						Run the development server"
 	@echo "show_migrations: 				Show all migrations"

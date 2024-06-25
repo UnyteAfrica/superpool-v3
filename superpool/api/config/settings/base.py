@@ -48,8 +48,10 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "phonenumber_field",
     "corsheaders",
+    "rest_framework_api_key",
     # Local apps
     "core",
+    "core.merchants",
     "api",
 ]
 

@@ -18,6 +18,7 @@ django-storages = {extras = ["google"], version = "^1.14.3"}
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "^7.3.0"}
 gunicorn = "^22.0.0"
 psycopg = "^3.1.19"
+django = "^5.0.6"
 
 
 [tool.poetry.group.dev.dependencies]

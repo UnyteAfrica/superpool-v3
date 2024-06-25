@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir poetry==$POETRY_VERSION \
 
 
 # Copy the project files to the container
-COPY superpool/pyproject.toml superpool/poetry.lock /app/
+COPY superpool/api/pyproject.toml superpool/api/poetry.lock /app/
 
 RUN poetry lock --no-update && \
     poetry install --no-root
