@@ -6,6 +6,7 @@ For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 
 import os
 import pdb
+import pprint
 from pathlib import Path
 
 from django.contrib.admin.filters import datetime  # type: ignore
@@ -25,6 +26,7 @@ else:
         "This can be generated using the helper management command"
     )
 
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 INTERNAL_IPS = env.list("SUPERPOOL_INTERNAL_IPS", default=[])
 
@@ -173,3 +175,61 @@ CORS_ALLOWED_ORIGIN_REGEXES += env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
+
+
+REDIS_ENABLED = env.bool("REDIS_ENABLED")
+if REDIS_ENABLED:
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": env("REDIS_URL"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        }
+    }
+
+LOG_LEVEL = env.str("LOG_LEVEL").upper()
+# We should dyanmically store logs but keep them under the base directory
+LOG_FILE_NAME = env.str("SUPERPOOL_LOG_FILE_NAME", default="superpool.log")
+LOG_FILE_PATH = BASE_DIR / "logs" / LOG_FILE_NAME
+pprint.pprint(LOG_FILE_PATH)
+
+# Make sure our `logs` directory exists in the folder tree
+LOG_FILE_PATH.mkdir.parent(parents=True, exists_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_FILE_PATH,
+            "formatter": "verbose",
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
