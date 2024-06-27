@@ -4,12 +4,13 @@ Settings for Superpool API project
 For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 """
 
+import datetime
 import os
 import pdb
 import pprint
 from pathlib import Path
 
-from django.contrib.admin.filters import datetime  # type: ignore
+from environ import ImproperlyConfigured  # type: ignore
 
 from .environment import env
 
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     "phonenumber_field",
     "corsheaders",
     "rest_framework_api_key",
+    "django_extensions",
     # Local apps
     "core",
     "core.merchants",
@@ -102,19 +104,26 @@ if "DATABASE_URL" in os.environ:
         "default": env.db("DATABASE_URL"),
     }
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": env.str("DATABASE_NAME", default="superpool"),
-            "USER": env.str("DATABASE_USER", default="superpool"),
-            "PASSWORD": env.str("DATABASE_PASSWORD", default="superpool"),
-            "HOST": env.str("DATABASE_HOST"),
-            "PORT": env.str("DATABASE_PORT"),
-            "CONN_MAX_AGE": env.int("DATABASE_CONN_MAX_AGE", default=500),
+    try:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": env.str("DATABASE_NAME"),
+                "USER": env.str("DATABASE_USER"),
+                "PASSWORD": env.str("DATABASE_PASSWORD"),
+                "HOST": env.str("DATABASE_HOST"),
+                "PORT": env.str("DATABASE_PORT"),
+                "CONN_MAX_AGE": env.int("DATABASE_CONN_MAX_AGE", default=500),
+            }
         }
-    }
-    if "DATABASE_OPTIONS" in os.environ:
-        DATABASES["default"]["OPTIONS"] = env.dict("DATABASE_OPTIONS", default={})
+        if "DATABASE_OPTIONS" in os.environ:
+            DATABASES["default"]["OPTIONS"] = env.dict("DATABASE_OPTIONS", default={})
+    except (KeyError, ValueError) as e:
+        raise ImproperlyConfigured(
+            f"Error loading database configuration: {e} \n",
+            "Please provide a DATABASE_URL or DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD,"
+            "DATABASE_HOST, DATABASE_PORT to startup application",
+        )
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
