@@ -65,3 +65,48 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         Override the delete method to trash the model instance
         """
         self.trash()
+
+
+class Policy(TimestampMixin, TrashableModelMixin, models.Model):
+    """
+    Insurance policy purchased by a user
+    """
+
+    policy_id: models.BigAutoField = models.BigAutoField(
+        primary_key=True, help_text="Unique identifier for the policy"
+    )
+    product: models.ForeignKey = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        help_text="Insurance package purchased by the user",
+    )
+    policy_holder: models.ForeignKey = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        help_text="User who purchased the policy",
+    )
+    effective_from: models.DateField = models.DateField(
+        help_text="Date the policy was purchased"
+    )
+    effective_to: models.DateField = models.DateField(
+        help_text="Date the policy expires"
+    )
+    premium: models.DecimalField = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Amount paid for the policy",
+    )
+    coverage: models.ForeignKey = models.ForeignKey(
+        "core.Coverage",
+        on_delete=models.CASCADE,
+        help_text="Coverage details for the policy",
+    )
+
+    def __str__(self) -> str:
+        return f"Policy: {self.policy_id} bought by User: {self.policy_holder.username}"
+
+    def delete(self, *args: dict, **kwargs: dict) -> None:
+        """
+        Override the delete method to trash the model instance
+        """
+        self.trash()
