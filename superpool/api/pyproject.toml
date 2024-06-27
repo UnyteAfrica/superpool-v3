@@ -46,27 +46,22 @@ python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
 
 [tool.mypy]
 ignore_missing_imports = true
-strict_optional = true
-check_untyped_defs = true
-disallow_incomplete_defs = true
 disallow_untyped_calls = true
-
-# [tool.mypy.files]
-# superpool/api/**/*.py = true
-
-[tool.mypy.plugins]
-mypy_django_plugin = "mypy_django_plugin.main"
-mypy_drf_plugin = "mypy_drf_plugin.main"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+strict_optional = true
+no_implicit_optional = true
+incremental = true # make mypy faster by rechecking only changed files
+follow_imports = "silent" # report missing imports, but don't fail
 
 [tool.mypy.mypy_django_plugin]
 ignore_missing_model_attributes = true
 
-[tool.mypy.django_stubs]
+[tool.django-stubs]
 django_settings_module = "config.settings"
-
-[tool.mypy.migrations]
-ignore_errors = true
-
+strict_settings = true
 
 [build-system]
 requires = ["poetry-core"]
