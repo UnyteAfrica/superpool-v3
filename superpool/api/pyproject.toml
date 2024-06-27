@@ -21,7 +21,6 @@ psycopg = "^3.1.19"
 django = "^5.0.6"
 django-redis = "^5.4.0"
 
-
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 faker = "^25.4.0"
@@ -44,6 +43,29 @@ DJANGO_SETTINGS_MODULE = 'config.settings'
 testpaths = ["superpool/api/tests", "tests"]
 norecursedirs = ["migrations", "__pycache__"]
 python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
+
+[tool.mypy]
+ignore_missing_imports = true
+strict_optional = true
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+
+[tool.mypy.files]
+superpool/api/**/*.py = True
+
+[tool.mypy.plugins]
+mypy_django_plugin = "mypy_django_plugin.main"
+mypy_drf_plugin = "mypy_drf_plugin.main"
+
+[tool.mypy.mypy_django_plugin]
+ignore_missing_model_attributes = true
+
+[tool.mypy.django_stubs]
+django_settings_module = "config.settings"
+
+[tool.mypy.migrations]
+ignore_errors = true
 
 
 [build-system]
