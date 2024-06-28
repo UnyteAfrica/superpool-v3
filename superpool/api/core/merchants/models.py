@@ -29,15 +29,22 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
             "e.g. UBA-X224, GTB-3X2, KON-001, SLOT-001, WEMA-2286, etc."
         ),
         unique=True,
+        null=True,
     )
     business_email = models.EmailField(
-        _("Business Email"), help_text=_("Company registration email address")
+        _("Business Email"),
+        help_text=_("Company registration email address"),
+        blank=True,
     )
     support_email = models.EmailField(
         _("Support Email"),
+        null=True,
+        blank=True,
         help_text=_("The contact email address of the business, for support if any"),
     )
-    is_active = models.BooleanField()
+    is_active = models.BooleanField(
+        default=False, help_text="Designates if the merchant is active"
+    )
     tax_identification_number = models.CharField(
         _("TIN"),
         unique=True,
