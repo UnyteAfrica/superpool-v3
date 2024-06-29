@@ -11,8 +11,8 @@ client = APIClient()
 
 URL = NewType("URL", str)
 
-REGISTRATION_URL: URL = reverse("merchant:register")
-LOGIN_URL: URL = reverse("merchant:login")
+# REGISTRATION_URL: URL = reverse("merchant:register")
+# LOGIN_URL: URL = reverse("merchant:login")
 
 
 @pytest.mark.django_db
