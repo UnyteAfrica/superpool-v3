@@ -243,3 +243,5 @@ LOGGING = {
         },
     },
 }
+
+BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
