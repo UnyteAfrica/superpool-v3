@@ -76,7 +76,8 @@ class Application(models.Model):
     """
 
     merchant = models.ForeignKey(
-        Merchant, on_delete=models.CASCADE, related_name="applications"
+        Merchant,
+        on_delete=models.CASCADE,
     )
     # We are storing the application_id as a string because it is a UUID
     #
