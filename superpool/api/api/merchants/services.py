@@ -8,6 +8,7 @@ from core.merchants.errors import (
     MerchantUpdateError,
 )
 from core.merchants.models import Merchant
+from core.utils import generate_verification_token, send_verification_email
 from rest_framework.serializers import Serializer
 
 
@@ -43,8 +44,9 @@ class MerchantService(IMerchantRegistry):
         serializer = serializer_class(data=data)
         if serializer.is_valid():
             merchant = serializer.save()
+            verification_token = generate_verification_token(merchant)
+            send_verification_email(merchant, verification_token)
 
-            # TODO: Implement/Call email verification logic here
             return merchant, {"message": "Merchant registered successfully"}
         return MerchantAlreadyExists, serializer.errors
 
