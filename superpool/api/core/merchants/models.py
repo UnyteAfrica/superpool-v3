@@ -13,9 +13,6 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     At this moment, we are only providing insurance services to businesses (organizations; banks, schools, online marts, etc)
     """
 
-    id = models.UUIDField(
-        _("Merchant ID"), primary_key=True, unique=True, default=uuid4
-    )
     name = models.CharField(
         max_length=255,
         verbose_name=_("Business Name"),
@@ -31,7 +28,10 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         unique=True,
     )
     business_email = models.EmailField(
-        _("Business Email"), help_text=_("Company registration email address")
+        _("Business Email"),
+        help_text=_("Company registration email address"),
+        null=True,
+        blank=True,
     )
     support_email = models.EmailField(
         _("Support Email"),

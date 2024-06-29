@@ -17,8 +17,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        exclude = ["pk"]
-        read_only_fields = ["pk"]
+        fields = "__all__"
 
 
 class CreateApplicationSerializer(serializers.Serializer):
