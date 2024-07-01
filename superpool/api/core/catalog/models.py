@@ -1,5 +1,7 @@
 import typing
+import uuid
 
+from core.user.models import Customer
 from django.db import models
 from django_stubs_ext.db.models import TypedModelMeta
 
@@ -28,8 +30,10 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
 
-    policy_id: models.BigAutoField = models.BigAutoField(
-        primary_key=True, help_text="Unique identifier for the package"
+    policy_id: models.UUIDField = models.UUIDField(
+        primary_key=True,
+        help_text="Unique identifier for the package",
+        default=uuid.uuid4,
     )
     provider: models.ForeignKey = models.ForeignKey(
         Partner,
@@ -81,7 +85,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Insurance package purchased by the user",
     )
     policy_holder: models.ForeignKey = models.ForeignKey(
-        "users.User",
+        Customer,
         on_delete=models.CASCADE,
         help_text="User who purchased the policy",
     )
