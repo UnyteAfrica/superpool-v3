@@ -25,7 +25,7 @@ class LimitedScopeSerializer(serializers.ModelSerializer):
     def __new__(cls, *args: Any, **kwargs: Any) -> "LimitedScopeSerializer":
         # We also want to validate if the field specified actually exists in the model
         for field in cls.fields:
-            if not hasattr(cls.models_class, cls.field):
+            if not hasattr(cls.model_class, field):
                 raise ValueError(f"Field Error: Invalid Field, {field}")
 
         # Set the models and read_only_fields of the subclasses to the fields list

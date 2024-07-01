@@ -1,22 +1,21 @@
 import logging
 from typing import Any
 
-from api.merchants.exceptions import (
-    MerchantDeactivationError,
-    MerchantNotFound,
-    MerchantRegistrationError,
-)
-from api.merchants.serializers import (
-    CreateMerchantSerializer,
-    MerchantLimitedSerializer,
-)
+from api.merchants.exceptions import (MerchantDeactivationError,
+                                      MerchantNotFound,
+                                      MerchantRegistrationError)
+from api.merchants.serializers import (CreateMerchantSerializer,
+                                       MerchantLimitedSerializer,
+                                       MerchantSerializer)
 from api.merchants.services import MerchantService
-from core.merchants.errors import MerchantAlreadyExists, MerchantUpdateError
+from core.merchants.errors import (MerchantAlreadyExists,
+                                   MerchantObjectDoesNotExist,
+                                   MerchantUpdateError)
 from core.merchants.models import Merchant
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
@@ -30,18 +29,19 @@ class MerchantViewList(ReadOnlyModelViewSet):
     """
 
     queryset = Merchant.objects.all()
-    serializer_class = MerchantLimitedSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = MerchantSerializer
 
 
-class MerchantViewset(ViewSet):
+class MerchantViewSet(ViewSet):
     """
     Viewset for Merchant model
     """
 
-    service = MerchantService()
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.service_class = MerchantService()
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         summary="Register a new merchant",
@@ -49,68 +49,69 @@ class MerchantViewset(ViewSet):
         request=CreateMerchantSerializer,
         responses={
             status.HTTP_201_CREATED: {"message": "Merchant registered successfully."},
-            status.HTTP_400_BAD_REQUEST: {"error": "It seems you fucked up!"},
+            status.HTTP_400_BAD_REQUEST: {"error": "Validation error."},
+            status.HTTP_409_CONFLICT: {"error": "Merchant already exists."},
             status.HTTP_500_INTERNAL_SERVER_ERROR: {
-                "message": "Internal server error. It appears, we are experiencing an outage. Please try again later or reach out to support team."
+                "message": "Internal server error. Please try again later or contact support."
             },
         },
     )
-    @action(detail=False, methods=["POST"], permission_classes=[AllowAny])
-    def register_merchant(self, request: Request) -> Response:
+    # @action(detail=False, methods=["post"], permission_classes=[AllowAny])
+    def create(self, request: Request) -> Response:
         """
         Register a new merchant
         """
         try:
-            merchant, response_data = self.service.register(request.data)
-            if merchant:
-                return Response(
-                    {
-                        "message": "Merchant registered successfully",
-                        "data": response_data,
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
-        except MerchantRegistrationError as err:
-            logger.error(err.message)
+            merchant = self.service_class.register_merchant(request.data)
             return Response(
-                {
-                    "error": err.message,
-                    "details": err.errors,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {"message": "Merchant registered successfully"},
+                status=status.HTTP_201_CREATED,
             )
         except MerchantAlreadyExists as err:
             return Response(
-                {
-                    "error": err.message,
-                },
+                {"error": str(err)},
                 status=status.HTTP_409_CONFLICT,
             )
-        # Catch all exceptions
-        return Response(
-            {
-                "message": f"Internal server error. It appears, we are experiencing an outage. \n"
-                "Please try again later or reach out to support team."
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        except ValidationError as err:
+            return Response(
+                {"error": err.detail},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as err:
+            logger.error(f"Unexpected error: {err}")
+            return Response(
+                {
+                    "message": "Internal server error. Please try again later or contact support."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
         summary="Update merchant profile",
         description="Update a merchant's profile",
         request=CreateMerchantSerializer,
+        responses={
+            status.HTTP_200_OK: MerchantSerializer,
+            status.HTTP_404_NOT_FOUND: {"error": "Merchant not found."},
+            status.HTTP_400_BAD_REQUEST: {"error": "Validation error."},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {
+                "message": "Internal server error. Please try again later or contact support."
+            },
+        },
     )
-    @action(detail=True, methods=["PUT"])
-    def update_merchant(self, request: Request, pk: Any = None):
+    # @action(detail=True, methods=["put"], permission_classes=[AllowAny])
+    def update(self, request: Request, pk: Any = None) -> Response:
         """
         Update a merchant's profile
         """
         try:
-            merchant = self.service.update_profile(pk, request.data)
-            return Response({"message": "Merchant details updated successfully"})
-        except MerchantNotFound:
+            merchant = self.service_class.update_merchant(pk, request.data)
             return Response(
-                {"error": MerchantNotFound.message}, status=status.HTTP_404_NOT_FOUND
+                MerchantSerializer(merchant).data, status=status.HTTP_200_OK
+            )
+        except MerchantObjectDoesNotExist:
+            return Response(
+                {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
             )
         except MerchantUpdateError as err:
             return Response(
@@ -127,30 +128,70 @@ class MerchantViewset(ViewSet):
             )
 
     @extend_schema(
-        summary="Deactivate a merchant",
-        description="Deactivate a merchant",
+        summary="Retrieve a single merchant",
+        description="Retrieve a single merchant",
         responses={
-            status.HTTP_200_OK: {"message": "Merchant deactivated successfully"},
-            status.HTTP_404_NOT_FOUND: {"error": "Merchant not found"},
+            status.HTTP_200_OK: MerchantLimitedSerializer,
+            status.HTTP_404_NOT_FOUND: {"error": "Merchant not found."},
             status.HTTP_500_INTERNAL_SERVER_ERROR: {
                 "message": "Internal server error. Please try again later or contact support."
             },
         },
     )
-    @action(detail=False, methods=["POST"])
-    def deactivate_merchant(self, request: Request, pk: Any = None) -> Response:
+    # @action(detail=True, methods=["get"], permission_classes=[AllowAny])
+    def retrieve(self, request: Request, pk: Any = None) -> Response:
+        """
+        Retrieve a single merchant
+        """
+        try:
+            merchant = self.service_class.retrieve_merchant(pk)
+            return Response(
+                MerchantSerializer(merchant).data, status=status.HTTP_200_OK
+            )
+        except MerchantObjectDoesNotExist:
+            return Response(
+                {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as err:
+            logger.error(f"Unexpected error: {err}")
+            return Response(
+                {
+                    "message": "Internal server error. Please try again later or contact support."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @extend_schema(
+        summary="Deactivate a merchant",
+        description="Deactivate a merchant",
+        responses={
+            status.HTTP_204_NO_CONTENT: {
+                "message": "Merchant deactivated successfully."
+            },
+            status.HTTP_404_NOT_FOUND: {"error": "Merchant not found."},
+            status.HTTP_400_BAD_REQUEST: {"error": "Deactivation error."},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {
+                "message": "Internal server error. Please try again later or contact support."
+            },
+        },
+    )
+    # @action(detail=True, methods=["delete"], permission_classes=[AllowAny])
+    def destroy(self, request: Request, pk: Any = None) -> Response:
         """
         Deactivate a merchant
         """
         try:
-            self.service.deactivate(pk)
-            return Response({"message": "Merchant deactivated successfully"})
-        except MerchantNotFound:
+            self.service_class.deactivate(pk)
             return Response(
-                {"error": MerchantNotFound.message}, status=status.HTTP_404_NOT_FOUND
+                {"message": "Merchant deactivated successfully"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except MerchantObjectDoesNotExist:
+            return Response(
+                {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
             )
         except MerchantDeactivationError as err:
-            return Response({"error": err.message}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as err:
             logger.error(f"Unexpected error: {err}")
             return Response(

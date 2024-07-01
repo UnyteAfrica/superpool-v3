@@ -47,6 +47,7 @@ class BaseEmailMessage(EmailMultiAlternatives):
         from_email = self.get_from_email()
         to = to
         super().__init__(subject=subject, from_email=from_email, to=to)
+        extra_kwargs["headers"]["Reply-To"] = from_email
 
         self.attach_alternative(self.get_template(), "text/html")
 
@@ -83,7 +84,14 @@ class PendingVerificationEmail(BaseEmailMessage):
 
     template = "emails/verify_email.html"
 
-    def __init__(self, confirm_url: str, *args: dict, **kwargs: dict) -> None:
+    def __init__(
+        self,
+        confirm_url: str,
+        to: str,
+        from_: str,
+        *args: dict,
+        **kwargs: dict,
+    ) -> None:
         """
         Initializes the email message instance.
 
@@ -94,7 +102,7 @@ class PendingVerificationEmail(BaseEmailMessage):
 
         """
         self.confirm_url = confirm_url
-        super().__init__(*args, **args)
+        super().__init__(to, from_, **kwargs)
 
     def get_subject(self) -> str:
         return _("Unyte - Verify your email address")
@@ -107,8 +115,14 @@ class OnboardingEmail(BaseEmailMessage):
 
     template = "emails/welcome_email.html"
 
-    def __init__(self, *args: dict, **kwargs: dict) -> None:
-        return super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        to: str | None = None,
+        from_: str | None = None,
+        *args: dict,
+        **kwargs: dict,
+    ) -> None:
+        super().__init__(to, from_, **kwargs)
 
     def get_subject(self) -> str:
         return _("Unyte - Welcome to the best insure-tech infrastructure!")

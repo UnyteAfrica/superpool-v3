@@ -1,16 +1,16 @@
 from core.merchants.models import Merchant
 
 
-def generate_verification_token(self, merchant: Merchant) -> str:
+def generate_verification_token() -> str:
     """
     Generates a verification token for email verification
     """
     from django.contrib.auth.tokens import default_token_generator
 
-    return default_token_generator.make_token(merchant)
+    return default_token_generator.make_token()
 
 
-def send_verification_email(self, merchant: Merchant, token: str):
+def send_verification_email(email: str, token: str) -> None:
     """
     Sends an email to the merchant to verify their email address
     """
@@ -19,5 +19,7 @@ def send_verification_email(self, merchant: Merchant, token: str):
 
     CONFIRMATION_URL = f"{settings.BACKEND_URL}/verify-email?token={token}"
 
-    email = PendingVerificationEmail(confirm_url=CONFIRMATION_URL)
-    email.send()
+    verification_email = PendingVerificationEmail(
+        confirm_url=CONFIRMATION_URL, to=email, from_=settings.FROM_EMAIL
+    )
+    verification_email.send()
