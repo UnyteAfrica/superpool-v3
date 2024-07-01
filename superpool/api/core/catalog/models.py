@@ -70,6 +70,12 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         """
         self.trash()
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["product_type"]),
+        ]
+
 
 class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     """
