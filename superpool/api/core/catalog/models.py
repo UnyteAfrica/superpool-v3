@@ -1,6 +1,7 @@
 import typing
 import uuid
 
+from core.merchants.models import Merchant
 from core.user.models import Customer
 from django.db import models
 from django_stubs_ext.db.models import TypedModelMeta
@@ -30,17 +31,17 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
 
-    policy_id: models.UUIDField = models.UUIDField(
+    id: models.UUIDField = models.UUIDField(
         primary_key=True,
         help_text="Unique identifier for the package",
         default=uuid.uuid4,
     )
     provider: models.ForeignKey = models.ForeignKey(
         Partner,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         help_text="Insurance provider offering the package",
     )
-    product_name: models.CharField = models.CharField(
+    name: models.CharField = models.CharField(
         max_length=100,
         help_text="Name of the package offered by the insurance provider",
     )
@@ -60,9 +61,12 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         decimal_places=2,
         help_text="Base price of the package prior to any modifications or adjustments",
     )  # TODO: We want to add a proper currency field here, we would probably need to create a custom field for this or use a  third-party package
+    is_live = models.BooleanField(
+        default=True, help_text="Indicates if the package is live"
+    )
 
     def __str__(self) -> str:
-        return f"Product: {self.product_name}, Provider: {self.provider.name}"
+        return f"Product: {self.name}, Provider: {self.provider.name}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
@@ -82,8 +86,10 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     Insurance policy purchased by a user
     """
 
-    policy_id: models.BigAutoField = models.BigAutoField(
-        primary_key=True, help_text="Unique identifier for the policy"
+    policy_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        help_text="Unique identifier for the policy",
     )
     product: models.ForeignKey = models.ForeignKey(
         Product,
@@ -98,7 +104,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     effective_from: models.DateField = models.DateField(
         help_text="Date the policy was purchased"
     )
-    effective_to: models.DateField = models.DateField(
+    effective_through: models.DateField = models.DateField(
         help_text="Date the policy expires"
     )
     premium: models.DecimalField = models.DecimalField(
@@ -107,7 +113,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Amount paid for the policy",
     )
     coverage: models.ForeignKey = models.ForeignKey(
-        "core.Coverage",
+        Coverage,
         on_delete=models.CASCADE,
         help_text="Coverage details for the policy",
     )
