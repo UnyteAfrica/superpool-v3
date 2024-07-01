@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import (TokenObtainPairView,
+                                            TokenRefreshView)
 
 from .serializers import ScopedUserSerializer, UserAuthSerializer
 
@@ -62,5 +63,6 @@ class SignInView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+            {"error": "Invalid authentication credentials"},
+            status=status.HTTP_401_UNAUTHORIZED,
         )

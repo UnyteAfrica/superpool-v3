@@ -2,6 +2,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.utils.translation import gettext as _
 
 _EmailType = str | list[str]
 
@@ -46,6 +47,7 @@ class BaseEmailMessage(EmailMultiAlternatives):
         from_email = self.get_from_email()
         to = to
         super().__init__(subject=subject, from_email=from_email, to=to)
+        extra_kwargs["headers"]["Reply-To"] = from_email
 
         self.attach_alternative(self.get_template(), "text/html")
 
@@ -73,3 +75,54 @@ class BaseEmailMessage(EmailMultiAlternatives):
 
         Super = super()
         transaction.on_commit(lambda: Super.send(fail_silently=silent))
+
+
+class PendingVerificationEmail(BaseEmailMessage):
+    """
+    Email message class for sending an email to a merchant who has not yet verified their email address.
+    """
+
+    template = "emails/verify_email.html"
+
+    def __init__(
+        self,
+        confirm_url: str,
+        to: str,
+        from_: str,
+        *args: dict,
+        **kwargs: dict,
+    ) -> None:
+        """
+        Initializes the email message instance.
+
+        Argments:
+            confirm_url: The URL to the email verification page.
+            *args: Additional positional arguments to pass to the parent class.
+            **kwargs: Additional keyword arguments to pass to the parent class.
+
+        """
+        self.confirm_url = confirm_url
+        super().__init__(to, from_, **kwargs)
+
+    def get_subject(self) -> str:
+        return _("Unyte - Verify your email address")
+
+
+class OnboardingEmail(BaseEmailMessage):
+    """
+    Email message class for welcoming a newly verified merchant on he platform.
+    """
+
+    template = "emails/welcome_email.html"
+
+    def __init__(
+        self,
+        to: str | None = None,
+        from_: str | None = None,
+        *args: dict,
+        **kwargs: dict,
+    ) -> None:
+        super().__init__(to, from_, **kwargs)
+
+    def get_subject(self) -> str:
+        return _("Unyte - Welcome to the best insure-tech infrastructure!")
