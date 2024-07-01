@@ -41,7 +41,7 @@ class User(AbstractUser, TimestampMixin):
     username = models.CharField(
         unique=True,
         blank=True,
-        null=False,
+        null=True,
         help_text="Designates the username of a given user",
     )
     role = models.CharField(
@@ -54,8 +54,7 @@ class User(AbstractUser, TimestampMixin):
 
     email = models.EmailField(unique=True)
 
-    REQUIRED_FIELDS = ["first_name", "last_name"]
-    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name", "email"]
 
     class Meta:
         ordering = ["first_name", "last_name", "last_login", "date_joined"]
