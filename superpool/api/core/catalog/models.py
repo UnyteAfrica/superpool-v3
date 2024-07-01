@@ -2,15 +2,11 @@ import typing
 import uuid
 
 from core.merchants.models import Merchant
+from core.mixins import TimestampMixin, TrashableModelMixin
+from core.providers.models import Provider as Partner
 from core.user.models import Customer
 from django.db import models
 from django_stubs_ext.db.models import TypedModelMeta
-
-if typing.TYPE_CHECKING:
-    from core.models import Coverage  # noqa: F401
-    from core.models import TimestampMixin, TrashableModelMixin  # noqa: F401
-    from core.providers.models import Provider as Partner  # noqa: F401
-    from django.db import models
 
 
 class Product(TimestampMixin, TrashableModelMixin, models.Model):
@@ -113,7 +109,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Amount paid for the policy",
     )
     coverage: models.ForeignKey = models.ForeignKey(
-        Coverage,
+        "core.Coverage",
         on_delete=models.CASCADE,
         help_text="Coverage details for the policy",
     )

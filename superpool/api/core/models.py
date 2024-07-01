@@ -1,5 +1,6 @@
 # Utility models that does not fit into domain-specific parts of the application
 
+from core.catalog.models import Product  # noqa: F401
 from core.merchants.models import Merchant  # noqa: F401
 from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner  # noqa: F401
@@ -47,7 +48,7 @@ class Coverage(models.Model):
         _("Description"), help_text=_("Description of the coverage")
     )
     product_id: models.ForeignKey = models.ForeignKey(
-        "Product",
+        Product,
         on_delete=models.CASCADE,
         related_name="coverages",
         help_text=_("Product to which the coverage belongs"),
