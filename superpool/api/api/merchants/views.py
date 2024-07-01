@@ -56,7 +56,6 @@ class MerchantViewSet(ViewSet):
             },
         },
     )
-    # @action(detail=False, methods=["post"], permission_classes=[AllowAny])
     def create(self, request: Request) -> Response:
         """
         Register a new merchant
@@ -99,7 +98,6 @@ class MerchantViewSet(ViewSet):
             },
         },
     )
-    # @action(detail=True, methods=["put"], permission_classes=[AllowAny])
     def update(self, request: Request, pk: Any = None) -> Response:
         """
         Update a merchant's profile
@@ -131,14 +129,13 @@ class MerchantViewSet(ViewSet):
         summary="Retrieve a single merchant",
         description="Retrieve a single merchant",
         responses={
-            status.HTTP_200_OK: MerchantLimitedSerializer,
+            status.HTTP_200_OK: MerchantSerializer,
             status.HTTP_404_NOT_FOUND: {"error": "Merchant not found."},
             status.HTTP_500_INTERNAL_SERVER_ERROR: {
                 "message": "Internal server error. Please try again later or contact support."
             },
         },
     )
-    # @action(detail=True, methods=["get"], permission_classes=[AllowAny])
     def retrieve(self, request: Request, pk: Any = None) -> Response:
         """
         Retrieve a single merchant
@@ -175,7 +172,6 @@ class MerchantViewSet(ViewSet):
             },
         },
     )
-    # @action(detail=True, methods=["delete"], permission_classes=[AllowAny])
     def destroy(self, request: Request, pk: Any = None) -> Response:
         """
         Deactivate a merchant
