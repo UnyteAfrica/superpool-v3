@@ -105,6 +105,27 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         on_delete=models.CASCADE,
         help_text="Coverage details for the policy",
     )
+    merchant_id: models.ForeignKey = models.ForeignKey(
+        Merchant,
+        on_delete=models.CASCADE,
+        help_text="Merchant who sold the policy",
+    )
+    provider_id: models.ForeignKey = models.ForeignKey(
+        Partner,
+        on_delete=models.CASCADE,
+        help_text="Insurance provider for the policy",
+    )
+    renewable = models.BooleanField(
+        default=False, help_text="Indicates if the policy is renewable"
+    )
+    inspection_required = models.BooleanField(
+        default=False,
+        help_text="Indicates if an inspection is required before the policy can be purchased",
+    )
+    cerfication_required = models.BooleanField(
+        default=False,
+        help_text="Indicates if any certifications are required before the policy can be purchased",
+    )
 
     def __str__(self) -> str:
         return f"Policy: {self.policy_id} bought by User: {self.policy_holder.username}"
