@@ -1,11 +1,6 @@
-
 import uuid
 
 from core.mixins import TimestampMixin
-from django.db import models
-from django.utils.translation import gettext_lazy as _
-
-
 from django.db import models  # type: ignore
 from django.utils.translation import gettext_lazy as _  # type: ignore
 from django_stubs_ext.db.models import TypedModelMeta
@@ -33,7 +28,7 @@ class Provider(models.Model):
         max_length=10,
         unique=True,
         help_text="This is used in the system to identify the provider. It should be unique, example includes: AXA-XXXX, "
-        "HEIR-XXXX, UNYT-XXXX, LEAD-XXXX, etc."
+        "HEIR-XXXX, UNYT-XXXX, LEAD-XXXX, etc.",
     )
 
     tax_identification_number = models.CharField(
@@ -46,7 +41,12 @@ class Provider(models.Model):
         blank=True,
         null=True,
     )
-    support_phone: models.CharField
+    support_phone: models.CharField = models.CharField(
+        help_text="Phone number of the insurance provider's support team",
+        max_length=20,
+        blank=True,
+        null=True,
+    )
 
     def __str__(self) -> str:
         return f"{self.name}"

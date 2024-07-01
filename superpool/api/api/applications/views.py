@@ -12,8 +12,7 @@ from rest_framework.views import APIView
 from .serializers import ApplicationSerializer, CreateApplicationSerializer
 
 
-
-def create_application_view(request: Request, *args: ..., **kwargs: ...) -> Response:
+def create_application_view(request: Request, *args: dict, **kwargs: dict) -> Response:
     """
     Create a new application instance for a given merchant
     """
