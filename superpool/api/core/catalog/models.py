@@ -135,3 +135,12 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         Override the delete method to trash the model instance
         """
         self.trash()
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["effective_from", "effective_through", "policy_id", "premium"]
+            ),
+            models.Index(fields=["policy_holder"]),
+            models.Index(fields=["provider_id"]),
+        ]
