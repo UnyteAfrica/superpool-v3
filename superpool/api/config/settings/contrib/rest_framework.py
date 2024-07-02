@@ -2,6 +2,7 @@ import os
 
 from ..environment import env
 
+
 DISABLE_AUTH = env.bool("DISABLE_AUTH")
 
 if "DISABLE_AUTH" in os.environ and DISABLE_AUTH:
