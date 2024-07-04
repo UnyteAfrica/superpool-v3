@@ -27,7 +27,6 @@ class UserManager(BaseUserManager):
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
 
-        user.is_active = False
         user.has_completed_verification = False
         user.save(using=self._db)
         return user

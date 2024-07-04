@@ -1,5 +1,5 @@
-from core.user.models import UserProfile
 from django.contrib.auth import get_user_model
+from django.db.models import fields
 from django.db.models.functions import FirstValue
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
@@ -16,25 +16,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = (
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "phone_number",
-            "username",
-            "date_joined",
-            "is_staff",
-            "is_active",
-        )
-
-    extra_kwargs = {
-        "id": {"read_only": True},
-        "password": {"write_only": True},
-        "is_staff": {"read_only": True},
-        "is_active": {"read_only": True},
-        "has_completed_verification": {"read_only": True},
-    }
+        exclude = ("password",)
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "password": {"write_only": True},
+            "is_staff": {"read_only": True},
+            "is_active": {"read_only": True},
+            "has_completed_verification": {"read_only": True},
+        }
 
 
 class ScopedUserSerializer(serializers.ModelSerializer):
