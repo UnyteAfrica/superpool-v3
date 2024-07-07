@@ -40,5 +40,13 @@ class CreateMerchantSerializer(serializers.ModelSerializer):
         fields = (
             "name",
             "business_email",
+            "support_email",
         )
-        read_only_fields = ("short_code",)
+        extra_kwargs = {
+            "name": {"required": True},
+            "business_email": {"required": True},
+            "support_email": {"required": False},
+        }
+
+    def get_short_code(self, obj):
+        return self.Meta.model.generate_short_code()

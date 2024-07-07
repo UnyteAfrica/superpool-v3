@@ -4,12 +4,12 @@ from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 
-router.register(r"", MerchantViewSet, basename="merchants")
+router.register(r"merchants", MerchantViewSet, basename="merchant")
 
 
 urlpatterns = [
     path(
-        "",
+        "merchants",
         MerchantViewList.as_view({"get": "list"}),
         name="list_merchants",
     ),

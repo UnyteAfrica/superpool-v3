@@ -4,7 +4,7 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Optional, Protocol
 
-from api.core.providers.exceptions import ProviderNotFound
+from core.providers.exceptions import ProviderNotFound
 
 
 class Provider(ABC):

@@ -1,6 +1,6 @@
 import typing
 
-from django.urls import path
+from django.urls import include, path
 
 from .views import PolicyListView, ProductListView
 
