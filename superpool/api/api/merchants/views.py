@@ -13,8 +13,11 @@ from core.merchants.errors import (MerchantAlreadyExists,
                                    MerchantUpdateError)
 from core.merchants.models import Merchant
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.mixins import (CreateModelMixin, RetrieveModelMixin,
+                                   UpdateModelMixin)
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -37,11 +40,8 @@ class MerchantViewSet(ViewSet):
     Viewset for Merchant model
     """
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.service_class = MerchantService()
-
     permission_classes = [permissions.AllowAny]
+    service_class = MerchantService()
 
     @extend_schema(
         summary="Register a new merchant",
@@ -56,19 +56,20 @@ class MerchantViewSet(ViewSet):
             },
         },
     )
-    def create(self, request: Request) -> Response:
+    def create(self, request: Request, *args: dict, **kwargs: dict) -> Response:
         """
         Register a new merchant
         """
         try:
             merchant = self.service_class.register_merchant(request.data)
-            return Response(
-                {"message": "Merchant registered successfully"},
-                status=status.HTTP_201_CREATED,
-            )
+            if merchant:
+                return Response(
+                    {"message": "Merchant registered successfully", "data": merchant},
+                    status=status.HTTP_201_CREATED,
+                )
         except MerchantAlreadyExists as err:
             return Response(
-                {"error": str(err)},
+                {"error": str(err.message)},
                 status=status.HTTP_409_CONFLICT,
             )
         except ValidationError as err:
@@ -80,7 +81,8 @@ class MerchantViewSet(ViewSet):
             logger.error(f"Unexpected error: {err}")
             return Response(
                 {
-                    "message": "Internal server error. Please try again later or contact support."
+                    "message": "Internal server error. Please try again later or contact support.",
+                    "detail": err,
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

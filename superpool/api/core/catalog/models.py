@@ -42,7 +42,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Name of the package offered by the insurance provider",
     )
     description: models.TextField = models.TextField(
-        help_text="Description of the package"
+        help_text="Description of the package", null=True, blank=True
     )
     product_type: models.CharField = models.CharField(
         max_length=15,

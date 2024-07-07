@@ -83,8 +83,7 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         verbose_name_plural = _("Merchants")
 
     def save(self, *args: dict, **kwargs: dict) -> None:
-        if not self.short_code:
-            self.short_code = self.generate_shortcode()
+        self.short_code = self.generate_shortcode()
         super().save(*args, **kwargs)
 
     def __str__(self):

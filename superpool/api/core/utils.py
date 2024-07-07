@@ -5,9 +5,15 @@ def generate_verification_token() -> str:
     """
     Generates a verification token for email verification
     """
-    from django.contrib.auth.tokens import default_token_generator
+    import random
+    import string
 
-    return default_token_generator.make_token()
+    return random.choice(
+        [
+            "".join(random.choices(string.ascii_letters + string.digits, k=1))
+            for _ in range(6)
+        ]
+    )
 
 
 def send_verification_email(email: str, token: str) -> None:
