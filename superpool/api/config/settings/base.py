@@ -245,7 +245,7 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
-            "propagate": False,
+            "propagate": True,
         },
     },
 }
@@ -255,5 +255,6 @@ BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
 # INSURANCE PARTNERS
 #
 # Heirs Holdings
-HEIRS_PRODUCTION_URL = "https://api.heirsinsurance.com/v1/"
-HEIRS_STAGING_URL = "https://pubic-api.staging.heirsinsurance.com/v1/"
+HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1/"
+HEIRS_ASSURANCE_STAGING_URL = "https://pubic-api.staging.heirsinsurance.com/v1/"
+HEIRS_ASSURANCE_API_KEY = env("HEIRS_API_KEY")
