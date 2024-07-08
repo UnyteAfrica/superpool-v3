@@ -2,6 +2,8 @@ import abc
 from dataclasses import dataclass
 from typing import Optional, TypedDict
 
+from api.integrations.heirs.client import HeirsLifeAssuranceClient
+
 
 class Policy(abc.ABC):
     id: str
@@ -30,3 +32,7 @@ class AutoPolicy(Policy):
     vehicle_designated_use: str
     vehicle_type: str
     value: int
+
+    def policy_information(self):
+        client = HeirsLifeAssuranceClient()
+        return client.get_policy_details(self.id)
