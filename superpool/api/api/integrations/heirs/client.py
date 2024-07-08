@@ -21,3 +21,9 @@ class HeirsLifeAssuranceClient(IClient):
         response = requests.post(url, headers=self.headers, json=data)
         response.raise_for_status()
         return response.json()
+
+    def get_policy_details(self, policy_id):
+        """
+        Returns information on a given policy ID
+        """
+        pass
