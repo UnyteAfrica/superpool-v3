@@ -26,4 +26,4 @@ class HeirsLifeAssuranceClient(IClient):
         """
         Returns information on a given policy ID
         """
-        pass
+        return self.get(f"/policies/{policy_id}")
