@@ -84,9 +84,9 @@ class Application(models.Model):
     #
     # By storing it as string here, we move an expensive operation such as generating UUIDs
     # from the database to the application layer, which is more efficient
-    application_id = models.CharField(max_length=100, unique=True)
+    application_id = models.CharField(max_length=100, primary_key=True, unique=True)
     api_token = models.CharField(max_length=80, unique=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
 
     def __str__(self) -> str:
-        return f"Application: {self.application_id}, Merchant: {self.merchant.name}"
+        return str(self.application_id)
