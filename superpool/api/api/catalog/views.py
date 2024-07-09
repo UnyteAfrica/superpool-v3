@@ -1,3 +1,4 @@
+from core.catalog.models import Product
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status, viewsets
@@ -95,4 +96,47 @@ class PolicyByProductTypeView(generics.ListAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductView(generics.RetrieveAPIView):
+    """
+    This endpoint lets you find one from the products list by the product's id.
+    """
+
+    serializer_class = ProductSerializer
+
+    def get_queryset(self, **kwargs: dict):
+        return ProductService.get_product_by_id(kwargs.get("product_id"))
+
+    @extend_schema(
+        summary="Retrieve a product by ID",
+        description="Retrieve a product by ID",
+        responses={
+            200: ProductSerializer,
+            404: {"error": "Product not found"},
+            500: {"error": "Internal server error"},
+        },
+    )
+    def retrieve(self, request: Request, *args: dict, **kwargs: dict) -> Response:
+        params = request.query_params.dict()
+        product_id = params.get("product_id")
+
+        try:
+            queryset = self.get_queryset(product_id=product_id)
+            serializer = self.get_serializer(queryset)
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Product.MultipleObjectsReturned:
+            return Response(
+                {"error": "Multiple products found"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception:
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(serializer.data, status=status.HTTP_200_OK)
