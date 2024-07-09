@@ -1,5 +1,5 @@
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import AutoPolicy
+from core.providers.integrations.heirs.registry import AutoPolicy, Quote
 
 
 class HeirsAssuranceService:
@@ -22,3 +22,12 @@ class HeirsAssuranceService:
             vehicle_type=policy_data["vehicle_type"],
             value=policy_data["value"],
         )
+
+    def retrieve_quotes(self, category: str = None, **params: dict):
+        if not category:
+            raise Exception("Policy category must be provided to retrieve quotes")
+
+        # do some pattern matching and return the quotes from the issurer
+
+        # update the database (or maybe call a celery task to update the database)
+        return
