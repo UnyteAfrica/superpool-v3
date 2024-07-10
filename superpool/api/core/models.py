@@ -6,6 +6,7 @@ from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner  # noqa: F401
 from core.user.models import User  # noqa: F401
 from django.db import models
+from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
 
@@ -85,8 +86,35 @@ class Application(models.Model):
     # By storing it as string here, we move an expensive operation such as generating UUIDs
     # from the database to the application layer, which is more efficient
     application_id = models.CharField(max_length=100, primary_key=True, unique=True)
-    api_token = models.CharField(max_length=80, unique=True)
+    api_key = models.OneToOneField(
+        "core.APIKey", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    name = models.CharField(max_length=255)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
 
     def __str__(self) -> str:
-        return str(self.application_id)
+        return f"{self.name} - {self.application_id}"
+
+    def save(self, *args, **kwargs):
+        if not self.api_key:
+            self.api_key = APIKey.objects.create(
+                key=get_random_string(32), merchant=self.merchant
+            )
+        super().save(*args, **kwargs)
+
+
+class APIKey(models.Model):
+    """
+    API Key
+    """
+
+    merchant = models.ForeignKey(
+        Merchant,
+        on_delete=models.CASCADE,
+        related_name="api_keys",
+    )
+    key = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"API Key for {self.merchant.name}"
