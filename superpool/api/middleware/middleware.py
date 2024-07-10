@@ -34,6 +34,6 @@ class APIKeyMiddleware:
             logger.error(f"{exc}")
             return Response("Invalid X-APP-ID", status=status.HTTP_403_FORBIDDEN)
 
-        response = self.get_response()
+        response = self.get_response(request)
 
         return response
