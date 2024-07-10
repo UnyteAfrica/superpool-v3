@@ -17,6 +17,7 @@ if "DISABLE_AUTH" in os.environ and DISABLE_AUTH:
 else:
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": [
+            "api.app_auth.authentication.APIKeyAuthentication",
             "rest_framework_simplejwt.authentication.JWTAuthentication",
         ],
         "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
