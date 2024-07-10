@@ -83,6 +83,5 @@ class UserAuthSerializer(serializers.Serializer):
     Authentication Serializer that should only be used for authentication purposes only
     """
 
-    name = serializers.CharField(min_length=2, max_length=30)
     email = serializers.EmailField()
     password = serializers.CharField()
