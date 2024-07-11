@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, Union
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.utils.translation import gettext as _
 
-_EmailType = str | list[str]
+_EmailType = Union[str, list[str]]
+
+from django.template.loader import render_to_string
 
 
 class BaseEmailMessage(EmailMultiAlternatives):
@@ -45,11 +47,20 @@ class BaseEmailMessage(EmailMultiAlternatives):
 
         subject = self.get_subject()
         from_email = self.get_from_email()
-        to = to
+        to = self._ensure_list(to)
         super().__init__(subject=subject, from_email=from_email, to=to)
+
+        if "headers" not in extra_kwargs:
+            extra_kwargs["headers"] = {}
+
         extra_kwargs["headers"]["Reply-To"] = from_email
 
         self.attach_alternative(self.get_template(), "text/html")
+
+    def _ensure_list(self, emails: _EmailType) -> list[str]:
+        if isinstance(emails, str):
+            return [emails]
+        return emails
 
     def get_subject(self) -> str:
         if not self.subject:
@@ -60,6 +71,9 @@ class BaseEmailMessage(EmailMultiAlternatives):
         if not self.template:
             raise NotImplementedError("Template attribute must be implemented")
         return self.template
+
+    def render_template(self, context: dict) -> str:
+        return render_to_string(self.get_template(), context)
 
     def get_from_email(self) -> str:
         """
@@ -102,7 +116,8 @@ class PendingVerificationEmail(BaseEmailMessage):
 
         """
         self.confirm_url = confirm_url
-        super().__init__(to, from_, **kwargs)
+        context = {"confirm_url": self.confirm_url}
+        super().__init__(to, from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
         return _("Unyte - Verify your email address")
@@ -117,8 +132,8 @@ class OnboardingEmail(BaseEmailMessage):
 
     def __init__(
         self,
-        to: str | None = None,
-        from_: str | None = None,
+        to: str | list[str],
+        from_: str | list[str],
         *args: dict,
         **kwargs: dict,
     ) -> None:

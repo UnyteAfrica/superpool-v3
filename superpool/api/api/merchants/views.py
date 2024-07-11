@@ -1,12 +1,11 @@
 import logging
 from typing import Any
 
-from api.merchants.exceptions import (MerchantDeactivationError,
-                                      MerchantNotFound,
-                                      MerchantRegistrationError)
+from api.app_auth.authentication import APIKeyAuthentication
+from api.merchants.exceptions import MerchantDeactivationError
 from api.merchants.serializers import (CreateMerchantSerializer,
-                                       MerchantLimitedSerializer,
-                                       MerchantSerializer)
+                                       MerchantSerializer,
+                                       MerchantWriteSerializerV2)
 from api.merchants.services import MerchantService
 from core.merchants.errors import (MerchantAlreadyExists,
                                    MerchantObjectDoesNotExist,
@@ -14,16 +13,78 @@ from core.merchants.errors import (MerchantAlreadyExists,
 from core.merchants.models import Merchant
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.mixins import (CreateModelMixin, RetrieveModelMixin,
-                                   UpdateModelMixin)
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 logger = logging.getLogger(__name__)
+
+
+class MerchantAPIViewsetV2(viewsets.ModelViewSet):
+    """
+    Updated vieewsets for handling with merchant data
+    """
+
+    queryset = Merchant.objects.all()
+    authentication_classes = [APIKeyAuthentication]
+
+    def get_serializer_class(self):
+        if self.action in ["create", "update"]:
+            return MerchantWriteSerializerV2
+        return MerchantSerializer
+
+    @extend_schema(
+        operation_id="create-new-merchant",
+        summary="Register a new merchant on Unyte",
+        description="Register a new merchant on the platform",
+        responses={
+            200: MerchantSerializer,
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        """
+        This action allows you to register a new merchant
+        """
+        from core.utils import (generate_verification_token,
+                                send_verification_email)
+
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as err:
+            logger.error(f"Validation error: {err}")
+            return Response(err.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.error(f"Unexpected error: {exc}")
+            return Response(
+                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        self.perform_create(serializer)
+
+        # generate and send a verification email to the merchant
+        merchant = serializer.instance
+        verification_token = generate_verification_token()
+        try:
+            send_verification_email(merchant.business_email, verification_token)
+        except Exception as email_exc:
+            logger.error(
+                f"Error sending verification email to this merchant email: {email_exc}"
+            )
+            return Response(
+                {"error": "Merchant created, but sending email verification failed."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "message": "Merchant successfully created.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 
 class MerchantViewList(ReadOnlyModelViewSet):

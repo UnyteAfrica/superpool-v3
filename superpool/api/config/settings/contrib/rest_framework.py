@@ -6,7 +6,9 @@ DISABLE_AUTH = env.bool("DISABLE_AUTH")
 
 if "DISABLE_AUTH" in os.environ and DISABLE_AUTH:
     REST_FRAMEWORK = {
-        "DEFAULT_AUTHENTICATION_CLASSES": [],
+        "DEFAULT_AUTHENTICATION_CLASSES": [
+            "api.app_auth.authentication.APIKeyAuthentication",
+        ],
         "DEFAULT_PERMISSION_CLASSES": [],
         "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
         "DEFAULT_RENDERER_CLASSES": [

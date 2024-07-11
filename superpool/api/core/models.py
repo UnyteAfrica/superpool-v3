@@ -89,7 +89,7 @@ class Application(models.Model):
     api_key = models.OneToOneField(
         "core.APIKey", on_delete=models.SET_NULL, null=True, blank=True
     )
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, blank=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
 
     def __str__(self) -> str:
