@@ -1,17 +1,11 @@
-from api.merchants.views import MerchantViewList, MerchantViewSet
+from api.merchants.views import MerchantAPIViewsetV2
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-router = DefaultRouter()
-
-router.register(r"merchants", MerchantViewSet, basename="merchant")
+v2_router = DefaultRouter()
+v2_router.register(r"merchants", MerchantAPIViewsetV2, basename="merchant-v2")
 
 
 urlpatterns = [
-    path(
-        "merchants",
-        MerchantViewList.as_view({"get": "list"}),
-        name="list_merchants",
-    ),
-    path("", include(router.urls)),
+    path("", include(v2_router.urls)),
 ]

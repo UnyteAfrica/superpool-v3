@@ -1,12 +1,20 @@
-# import pdb
-# import sys
-# from copy import deepcopy
-#
-# import pytest
-# from django.conf import settings
-# from django.test.utils import override_settings
-#
-#
+import pdb
+import sys
+from copy import deepcopy
+
+import pytest
+from django.conf import settings
+from django.test.utils import override_settings
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_test_db():
+    settings.DATABASES["default"] = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+
+
 # @pytest.fixture(scope="session", autouse=True)
 # def configure_tests_db():
 #     """
