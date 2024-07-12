@@ -58,6 +58,6 @@ def test_fetch_all_products(service):
         company = "Heirs%20Insurance"
         products_by_class_resource_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{test_product_class}/product"
 
-        response = service.product_queryset()
+        response = service.product_queryset(test_product_class)
         assert response.status_code == 200
         assert len(response.data) >= 1
