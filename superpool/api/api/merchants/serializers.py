@@ -16,6 +16,16 @@ class MerchantSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class MerchantSerializerV2(serializers.ModelSerializer):
+    """
+    Serializer for Merchant model
+    """
+
+    class Meta:
+        model = Merchant
+        exclude = ("id",)
+
+
 class MerchantLimitedSerializer(LimitedScopeSerializer):
     """
     Serializer to display Merchant model with limited fields

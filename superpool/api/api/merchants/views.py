@@ -5,15 +5,19 @@ from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
 from api.merchants.serializers import (CreateMerchantSerializer,
                                        MerchantSerializer,
+                                       MerchantSerializerV2,
                                        MerchantWriteSerializerV2)
 from api.merchants.services import MerchantService
 from core.merchants.errors import (MerchantAlreadyExists,
                                    MerchantObjectDoesNotExist,
                                    MerchantUpdateError)
 from core.merchants.models import Merchant
+from django.http.response import Http404
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
@@ -32,7 +36,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def get_serializer_class(self):
         if self.action in ["create", "update"]:
             return MerchantWriteSerializerV2
-        return MerchantSerializer
+        return MerchantSerializerV2
 
     @extend_schema(
         operation_id="create-new-merchant",
@@ -85,6 +89,50 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
+
+    @extend_schema(
+        operation_id="retrieve-a-single-merchant",
+        summary="Retrieve a merchant instance by its unique short code",
+        description="Retrieve a single merchant using its short code",
+        responses={
+            status.HTTP_200_OK: MerchantSerializer,
+            status.HTTP_404_NOT_FOUND: {
+                "error": "Merchant with the provided short code not found."
+            },
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {
+                "error": "An unexpected error occured. Please contact support"
+            },
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="(?P<short_code>[^/.]+)")
+    def retrieve_by_short_code(self, request, short_code=None):
+        """
+        This action allows you to retrieve a single merchant by its unique
+        short code
+
+        e.g AXA-5G36, WEM-GLE2, etc
+        """
+        try:
+            merchant = get_object_or_404(Merchant, short_code=short_code)
+        except Http404:
+            return Response(
+                {"error": "Merchant with the provided short code not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as exc:
+            logger.error(
+                f"An unexpected error occured while retrieving merchant: {exc}"
+            )
+            return Response(
+                {
+                    "error": "An unexpected error occured. Please contact support",
+                    "detail": str(exc),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        serializer = self.get_serializer(merchant)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MerchantViewList(ReadOnlyModelViewSet):
