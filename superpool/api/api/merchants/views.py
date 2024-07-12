@@ -12,7 +12,7 @@ from core.merchants.errors import (MerchantAlreadyExists,
                                    MerchantUpdateError)
 from core.merchants.models import Merchant
 from drf_spectacular.utils import extend_schema
-from rest_framework import permissions, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -21,7 +21,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 logger = logging.getLogger(__name__)
 
 
-class MerchantAPIViewsetV2(viewsets.ModelViewSet):
+class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
     Updated vieewsets for handling with merchant data
     """
