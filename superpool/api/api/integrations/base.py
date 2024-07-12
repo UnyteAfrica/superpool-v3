@@ -23,7 +23,7 @@ class IClient(abc.ABC):
 
 class BaseClient(IClient):
     def __init__(self, base_url: str, api_key: str):
-        super().__init__(self.base_url, self.api_key)
+        super().__init__(base_url, api_key)
 
     def get(self, url: str):
         response = requests.get(f"{self.base_url}/{url}", headers=self.headers)
