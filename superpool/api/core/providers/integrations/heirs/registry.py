@@ -90,3 +90,11 @@ class CustomerInfo(TypedDict):
     number: str
     expiry: str
     type: str
+
+
+class Product(TypedDict):
+    productId: str
+    productName: str
+    imageUrl: Optional[str]
+    canBuyByUssd: Optional[bool]
+    canRenewByUssd: Optional[bool]

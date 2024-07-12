@@ -1,9 +1,10 @@
 import json
 import uuid
-from typing import Union
+from typing import List, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import AutoPolicy, CustomerInfo
+from core.providers.integrations.heirs.registry import (AutoPolicy,
+                                                        CustomerInfo, Product)
 from django.conf import settings
 
 
@@ -57,4 +58,17 @@ class HeirsAssuranceService:
         response = self.client.post(
             url=register_policy_holder_url, data=beneficiary_data
         )
+        return response
+
+    def product_queryset(self, product_class: str) -> List[Product]:
+        """
+        Get Insurance products that belongs to a product class
+
+        Fetches all subproducts offered under a product class
+
+        A product class, can also be reffered, as the product category
+        """
+        company = "Heirs%20Insurance"
+        fetch_products_url = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{product_class}/product"
+        response = self.client.get(fetch_products_url)
         return response

@@ -50,3 +50,15 @@ def test_register_policy_holder(service, data_fixture):
             "message": "Policy holder registered successfully"
         }
         assert mock_post.assert_called_once_with(policy_holder_endpoint, data_fixture)
+
+
+def test_fetch_all_products(service):
+    test_product_class = "Motor"
+    with patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
+        company = "Heirs%20Insurance"
+        products_by_class_resource_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{test_product_class}/product"
+
+        response = service.product_queryset(test_product_class)
+        assert response.status_code == 200
+        assert len(response.data) >= 1
+        assert mock_get.assert_called_once_with(products_by_class_resource_endpoint)
