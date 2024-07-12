@@ -1,8 +1,14 @@
 import typing
 
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from .views import PolicyListView, ProductListView, ProductView
+from .views import (PolicyAPIViewSet, PolicyListView, ProductListView,
+                    ProductView)
+
+router = DefaultRouter()
+
+router.register(r"policies")
 
 if typing.TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver
@@ -15,4 +21,24 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         name="product-detail",
     ),
     path("policies", PolicyListView.as_view(), name="policy-list"),
+    # path(
+    #     "policies/<uuid:pk>/",
+    #     PolicyAPIViewSet.as_view({"get": "retrieve"}),
+    #     name="policy-detail",
+    # ),
+    # path(
+    #     "policies/search/",
+    #     PolicyAPIViewSet.as_view({"get": "list"}),
+    #     name="policy-search",
+    # ),
+    # path(
+    #     "policies/purchase/",
+    #     PolicyAPIViewSet.as_view({"post": "purchase"}),
+    #     name="policy-purchase",
+    # ),
+    # path(
+    #     "policies/renew/",
+    #     PolicyAPIViewSet.as_view({"post": "renew"}),
+    #     name="policy-renew",
+    # ),
 ]

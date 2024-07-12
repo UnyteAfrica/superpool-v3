@@ -1,7 +1,8 @@
 import logging
+import uuid
 
 from api.app_auth.authentication import APIKeyAuthentication
-from core.catalog.models import Product
+from core.catalog.models import Policy, Product, Quote
 from django.db import transaction
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
@@ -149,7 +150,9 @@ class ProductView(generics.RetrieveAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class PolicyAPIViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class PolicyAPIViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     queryset = PolicyService.list_policies()
     authentication_classes = [APIKeyAuthentication]
 
@@ -168,14 +171,28 @@ class PolicyAPIViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
+        customer_details = validated_data["customer_details"]
+
         try:
             with transaction.atomic():
-                # generate a new policy for the customer and
-                # send it to the merchant
+                # generate a new policy for the customer
+                # Construct a new policy object, and return both the policy number and the policy ID
 
-                # emit a signal that post the information to the insurer
+                # emit a policy purchased signal that fires up a background task to notify the admins
+                # of the platform
 
-                # returrn the policy ID, and the status to the user
+                # fires off a background process that post (actually register the customer info) and
+                # the policy information to the insurer endpoint
+                # (we should just call a function in a service that would integrate the Insurer APIs)
+
+                # returrn the policy ID, Policy Number, and the status of the policy to the merchant
+                return Response(
+                    {
+                        "message": "Policy successfully purchased.",
+                        "data": policy_serializer.data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
                 pass
         except Exception as exc:
             logger.error(f"An exception occured during policy purchase: {exc}")
@@ -189,6 +206,19 @@ class PolicyAPIViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         This action allows you as a merchant to submit a renewal
         request for your customer
         """
+        # This should grab the policy instance from the database
+
+        # It should should check if update a policy  is renewable
+        # if it is, it should update the details of a policy with
+        # new set of information: specifically, the effective_from
+        # and the effective to
+
+        # Return the updated policy from the database to the user
+
+        # NOTE: ALTHOUGH WE HAVE A FIELD, renewable in our django models for Policy,
+        # WE SHOULD PROBABLY ADD RENEWED or IS_RENEWED TO CHECK IF A POLICY HAS BEEN
+        # RENEWED AND TO DIFFERENTIATE IT FROM NON-RENEWED POLICIES
+
         pass
 
     def retrieve(self, request, pk=None):
@@ -217,6 +247,16 @@ class ProductAPIViewSet(viewsets.GenericViewSet):
     pass
 
 
-class QuoteView(views.APIView):
-    # endpoint to get a quote from the database
+class QuoteView(generics.RetrieveAPIView):
+    # endpoint to get a quote on a Policy from the database or cache,
+    # if it exists it retrieves it, otherwise it call the Insurer's API
+    # to retrieve new quotes and save it to the database
+
+    # update endpoint that updates our local database at the end of every day with
+    # realtime prices from the insurers a quote should be associated with a policy, under
+    # a product and an associated insurer
+    # NOTE: UPDATE: THIS SHOULD NOT BE AN ENDPOINT IT SHOULD BE A CELERY TASK OR SOMETHING
+    # THIS COULD INFACT BE DESIGNED IN SOLID_PRINCIPLES, EACH INSURER WOULD HAVE THEIR OWN
+    # QUOTE UPDATER THAT WOULD UPDATE THE DATABASE, HENCE EASIER FOR DEBUGGING AND TROBULESHOOTING
+
     pass
