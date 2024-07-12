@@ -15,6 +15,7 @@ client = APIClient()
 
 REGISTRATION_V1_URL = reverse("merchant-list")
 REGISTRATION_URL = reverse("merchant-v2-list")
+RETRIEVE_ENDPOINT = reverse("merchant-v2-retrieve")
 # LOGIN_URL = reverse("merchant:login")
 
 
@@ -145,3 +146,20 @@ def test_create_merchant_successful(mock_send_email, mock_generate_token):
     mock_send_email.assert_called_with(
         payload["business_email"], mock_generate_token.return_value
     )
+
+
+@pytest.mark.django_db
+def test_retrieve_merchant_by_valid_short_code():
+    payload = MerchantFactory()
+    payload["short_code"] = "TES-LE09"
+
+    # Create the merchant
+    response = client.post(REGISTRATION_URL, payload, format="json")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["message"] == "Merchant created successfully."
+
+    # Retrieve the merchant
+    response = client.get(RETRIEVE_ENDPOINT, data=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    # Do some checking of the short code here
