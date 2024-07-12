@@ -1,13 +1,20 @@
+import logging
+
+from api.app_auth.authentication import APIKeyAuthentication
 from core.catalog.models import Product
+from django.db import transaction
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, mixins, status, views, viewsets
+from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
-from .serializers import PolicySerializer, ProductSerializer
+from .serializers import PolicyPurchaseSerializer, PolicySerializer, ProductSerializer
 from .services import PolicyService, ProductService
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyListView(generics.ListAPIView):
@@ -140,3 +147,76 @@ class ProductView(generics.RetrieveAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PolicyAPIViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = PolicyService.list_policies()
+    authentication_classes = [APIKeyAuthentication]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return PolicyPurchaseSerializer
+        return PolicySerializer
+
+    @action(detail=False, methods=["post"])
+    def purchase(self, request, *args, **kwargs):
+        """
+        This action allows you to generate a new policy for your
+        customer
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        try:
+            with transaction.atomic():
+                # generate a new policy for the customer and
+                # send it to the merchant
+
+                # emit a signal that post the information to the insurer
+
+                # returrn the policy ID, and the status to the user
+                pass
+        except Exception as exc:
+            logger.error(f"An exception occured during policy purchase: {exc}")
+            return Response(
+                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=["post"])
+    def renew(self, request, *args, **kwargs):
+        """
+        This action allows you as a merchant to submit a renewal
+        request for your customer
+        """
+        pass
+
+    def retrieve(self, request, pk=None):
+        """
+        Retrieve a specific policy by its ID
+        """
+        pass
+
+    @action(details=False, methods=["post"])
+    def search(self, request, **extra_kwargs):
+        """
+        Action that allows you to search or filter for a policy based on
+        certain parameters.
+
+        Params are not limited to, customer details, status of the policy,
+        policy category
+        """
+        # We want to do a pattern match here, depending on query params
+        pass
+
+
+class ProductAPIViewSet(viewsets.GenericViewSet):
+    # endpoint to search and filter for product based on query parameters
+
+    # endpoint to get a product belonging to a specific insurer
+    pass
+
+
+class QuoteView(views.APIView):
+    # endpoint to get a quote from the database
+    pass

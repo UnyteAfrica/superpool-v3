@@ -70,3 +70,18 @@ class CreatePolicySerializer(ModelSerializer):
             "renewable",
         )
         exclude = ("cerfication_required", "inspection_required")
+
+
+class QuoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Policy
+        fields = ("id", "base_price")
+
+
+class PolicyPurchaseSerializer(serializers.ModelSerializer):
+    """
+    Issues a new policy based on CustomerDetails,
+    """
+
+    class Meta:
+        model = Policy
