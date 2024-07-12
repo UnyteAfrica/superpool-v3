@@ -61,3 +61,4 @@ def test_fetch_all_products(service):
         response = service.product_queryset(test_product_class)
         assert response.status_code == 200
         assert len(response.data) >= 1
+        assert mock_get.assert_called_once_with(products_by_class_resource_endpoint)
