@@ -1,5 +1,10 @@
+import json
+import uuid
+from typing import Union
+
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import AutoPolicy, Quote
+from core.providers.integrations.heirs.registry import AutoPolicy, CustomerInfo
+from django.conf import settings
 
 
 class HeirsAssuranceService:
@@ -31,3 +36,25 @@ class HeirsAssuranceService:
 
         # update the database (or maybe call a celery task to update the database)
         return
+
+    def register_policy(self, policy_id: Union[str, int, uuid], reciever: object):
+        """
+        Register a policy given its policy and the reciever class on Heirs API
+        """
+        pass
+
+    def register_policy_holder(self, beneficiary_data: CustomerInfo):
+        """
+        Register a customer as a policy holder on Heirs platform
+        """
+        register_policy_holder_url = (
+            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/policy_holder"
+        )
+
+        if not isinstance(beneficiary_data, dict):
+            raise TypeError("Policy holder object must be of type dict")
+
+        response = self.client.post(
+            url=register_policy_holder_url, data=beneficiary_data
+        )
+        return response
