@@ -22,7 +22,6 @@ class Quote(TypedDict):
 @dataclass
 class AutoPolicy(Policy):
     id: str
-    policy_num: Optional[str]
     owner: str
     vehicle_make: str
     vehicle_model: str
@@ -33,6 +32,7 @@ class AutoPolicy(Policy):
     vehicle_designated_use: str
     vehicle_type: str
     value: int
+    policy_num: Optional[str]
 
     def policy_information(self):
         client = HeirsLifeAssuranceClient()
@@ -68,3 +68,25 @@ class TravelPolicy(Policy):
     policy_holder_id: str
     premium: int
     policy_status: str
+
+
+class CustomerInfo(TypedDict):
+    firstName: str
+    lastName: str
+    dateOfBirth: str
+    gender: str
+    phone: str
+    occupation: str
+    email: str
+    idCardImgUrl: str
+    utilityImgUrl: str
+    city: str
+    state: str
+    address: str
+    country: str
+    street: str
+    streetNumber: str
+    postCode: str
+    number: str
+    expiry: str
+    type: str
