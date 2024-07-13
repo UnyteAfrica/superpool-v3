@@ -98,3 +98,13 @@ class Product(TypedDict):
     imageUrl: Optional[str]
     canBuyByUssd: Optional[bool]
     canRenewByUssd: Optional[bool]
+
+
+class PolicyInfo(TypedDict):
+    policyName: str
+    policyStatus: str
+    policyNumber: str
+    policyStartDate: str
+    policyExpiryDate: str
+    premium: str
+    issueDate: str
