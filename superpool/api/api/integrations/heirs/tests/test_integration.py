@@ -62,3 +62,33 @@ def test_fetch_all_products(service):
         assert response.status_code == 200
         assert len(response.data) >= 1
         assert mock_get.assert_called_once_with(products_by_class_resource_endpoint)
+
+
+def test_fetch_policy_information_with_policy_number_is_successful(service):
+    company = "Heirs%20Insurance"
+
+    with patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
+        policy_number = "POLICYX256"
+        policy_info_endpoint = (
+            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/policy/{policy_number}"
+        )
+
+        response = service.get_policy_details(policy_number)
+        assert response.status_code == 200
+        assert response.data is not None
+        assert mock_get.assert_called_once_with(policy_info_endpoint)
+
+
+def test_fetch_policy_information_with_invalid_policy_number_is_unsuccessful(service):
+    company = "Heirs%20Insurance"
+
+    with patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
+        policy_number = ""
+        policy_info_endpoint = (
+            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/policy/{policy_number}"
+        )
+
+        response = service.get_policy_details(policy_number)
+        assert response.status_code != 200
+        assert response.status_code in (401, 403, 404)
+        assert mock_get.assert_called_once_with(policy_info_endpoint)

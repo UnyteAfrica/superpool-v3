@@ -4,7 +4,8 @@ from typing import List, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from core.providers.integrations.heirs.registry import (AutoPolicy,
-                                                        CustomerInfo, Product)
+                                                        CustomerInfo,
+                                                        PolicyInfo, Product)
 from django.conf import settings
 
 
@@ -71,4 +72,18 @@ class HeirsAssuranceService:
         company = "Heirs%20Insurance"
         fetch_products_url = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{product_class}/product"
         response = self.client.get(fetch_products_url)
+        return response
+
+    def get_policy_details(self, policy_num: str) -> PolicyInfo:
+        """
+        Retrieves information about a Policy from the Heirs API
+
+        Args:
+            policyNumber string unique reference used to identify a policy
+        """
+        company = "Heirs%20Insurance"
+        fetch_policy_info_url = (
+            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/policy/{policy_num}"
+        )
+        response = self.client.get(fetch_policy_info_url)
         return response
