@@ -3,12 +3,16 @@ import uuid
 from typing import List, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (APIErrorResponse,
-                                                        AutoPolicy,
-                                                        CustomerInfo, Policy,
-                                                        PolicyInfo, Product,
-                                                        QuoteAPIResponse,
-                                                        QuoteDefinition)
+from core.providers.integrations.heirs.registry import (
+    APIErrorResponse,
+    AutoPolicy,
+    CustomerInfo,
+    Policy,
+    PolicyInfo,
+    Product,
+    QuoteAPIResponse,
+    QuoteDefinition,
+)
 from django.conf import settings
 
 
@@ -57,7 +61,7 @@ class HeirsAssuranceService:
             return ValueError(
                 "Product category must be one of auto, travel, biker or personal accident categories."
             )
-        endpoint = self._get_endpoint_by_category(category, params)
+        endpoint = self._get_endpoint_by_category(category, **params)
         return self.client.get(endpoint)
 
     def register_policy(self, policy_id: Union[str, int, uuid], reciever: object):
