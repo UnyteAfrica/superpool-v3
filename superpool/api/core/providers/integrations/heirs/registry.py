@@ -1,7 +1,7 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
@@ -119,3 +119,32 @@ class PolicyInfo(TypedDict):
     policyExpiryDate: str
     premium: str
     issueDate: str
+
+
+class TravelQuoteParams(TypedDict):
+    userAge: str
+    startDate: str
+    endDate: str
+    categoryName: str
+
+
+class MotorQuoteParams(TypedDict):
+    productId: str
+    motorValue: str
+    motorClass: str
+    motorType: str
+
+
+class BikerQuoteParams(TypedDict):
+    productId: str
+    motorValue: str
+    motorClass: str
+
+
+class PersonalAccidentQuoteParams(TypedDict):
+    productId: str
+
+
+QuoteDefinition = Union[
+    TravelQuoteParams, PersonalAccidentQuoteParams, MotorQuoteParams, BikerQuoteParams
+]

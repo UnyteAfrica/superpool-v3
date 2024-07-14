@@ -7,7 +7,8 @@ from core.providers.integrations.heirs.registry import (APIErrorResponse,
                                                         AutoPolicy,
                                                         CustomerInfo, Policy,
                                                         PolicyInfo, Product,
-                                                        QuoteAPIResponse)
+                                                        QuoteAPIResponse,
+                                                        QuoteDefinition)
 from django.conf import settings
 
 
@@ -33,7 +34,7 @@ class HeirsAssuranceService:
         )
 
     def get_quote(
-        self, category: str = None, **params: dict
+        self, category: str = None, **params: QuoteDefinition
     ) -> Union[QuoteAPIResponse, APIErrorResponse]
         """
         Retrieve an Insurance Quotation from the Heirs API
@@ -108,7 +109,7 @@ class HeirsAssuranceService:
         response = self.client.get(fetch_policy_info_url)
         return response
 
-    def _get_endpoint_by_category(self, category: str, params: dict) -> str:
+    def _get_endpoint_by_category(self, category: str, params: QuoteDefinition) -> str:
         """
         Contruct the API endpoint based on the category and parameters
 
@@ -118,8 +119,10 @@ class HeirsAssuranceService:
 
         """
         match category:
-            case "auto" | "motor" | "biker":
+            case "auto" | "motor":
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}/{params.get('motor_type')}'
+            case 'biker':
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}'
             case "travel":
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get('user_age')}/{params.get('start_date')}/{params.get('end_date')}/{params.get('category_name')}'
             case "personal_accident":
