@@ -15,6 +15,13 @@ class Policy(abc.ABC):
         pass
 
 
+class APIErrorResponse(TypedDict, total=False):
+    type: str
+    title: str
+    detail: str
+    status: str
+
+
 class Quote(TypedDict):
     product_id: str
 
