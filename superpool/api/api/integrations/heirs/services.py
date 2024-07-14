@@ -35,7 +35,7 @@ class HeirsAssuranceService:
 
     def get_quote(
         self, category: str = None, **params: QuoteDefinition
-    ) -> Union[QuoteAPIResponse, APIErrorResponse]
+    ) -> Union[QuoteAPIResponse, APIErrorResponse, ValueError]:
         """
         Retrieve an Insurance Quotation from the Heirs API
 
@@ -50,11 +50,11 @@ class HeirsAssuranceService:
             "personal_accident",
         )
         if not category:
-            raise Exception(
+            raise ValueError(
                 "Policy category must be provided in order to retrieve quotes"
             )
         if category not in RECOGNIZED_INSURANCE_CATEGORIES:
-            return Exception(
+            return ValueError(
                 "Product category must be one of auto, travel, biker or personal accident categories."
             )
         endpoint = self._get_endpoint_by_category(category, params)
@@ -121,7 +121,7 @@ class HeirsAssuranceService:
         match category:
             case "auto" | "motor":
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}/{params.get('motor_type')}'
-            case 'biker':
+            case "biker":
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}'
             case "travel":
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get('user_age')}/{params.get('start_date')}/{params.get('end_date')}/{params.get('category_name')}'
