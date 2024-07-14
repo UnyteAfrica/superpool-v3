@@ -1,11 +1,13 @@
 import json
 import uuid
-from typing import List, Union
+from typing import List, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (AutoPolicy,
-                                                        CustomerInfo,
-                                                        PolicyInfo, Product)
+from core.providers.integrations.heirs.registry import (APIErrorResponse,
+                                                        AutoPolicy,
+                                                        CustomerInfo, Policy,
+                                                        PolicyInfo, Product,
+                                                        QuoteAPIResponse)
 from django.conf import settings
 
 
@@ -30,14 +32,32 @@ class HeirsAssuranceService:
             value=policy_data["value"],
         )
 
-    def retrieve_quotes(self, category: str = None, **params: dict):
+    def get_quote(
+        self, category: str = None, **params: dict
+    ) -> Union[QuoteAPIResponse, APIErrorResponse]
+        """
+        Retrieve an Insurance Quotation from the Heirs API
+
+        Arguments:
+            category Product category
+            params Additional parameters passed unto the API call
+        """
+        RECOGNIZED_INSURANCE_CATEGORIES = (
+            "auto",
+            "travel",
+            "biker",
+            "personal_accident",
+        )
         if not category:
-            raise Exception("Policy category must be provided to retrieve quotes")
-
-        # do some pattern matching and return the quotes from the issurer
-
-        # update the database (or maybe call a celery task to update the database)
-        return
+            raise Exception(
+                "Policy category must be provided in order to retrieve quotes"
+            )
+        if category not in RECOGNIZED_INSURANCE_CATEGORIES:
+            return Exception(
+                "Product category must be one of auto, travel, biker or personal accident categories."
+            )
+        endpoint = self._get_endpoint_by_category(category, params)
+        return self.client.get(endpoint)
 
     def register_policy(self, policy_id: Union[str, int, uuid], reciever: object):
         """
@@ -87,3 +107,22 @@ class HeirsAssuranceService:
         )
         response = self.client.get(fetch_policy_info_url)
         return response
+
+    def _get_endpoint_by_category(self, category: str, params: dict) -> str:
+        """
+        Contruct the API endpoint based on the category and parameters
+
+        Arguments:
+            category: Product category
+            params: Additional parameters passed unto the API call
+
+        """
+        match category:
+            case "auto" | "motor" | "biker":
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}/{params.get('motor_type')}'
+            case "travel":
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get('user_age')}/{params.get('start_date')}/{params.get('end_date')}/{params.get('category_name')}'
+            case "personal_accident":
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get('product_id')}'
+            case _:
+                return "Unsupported category"

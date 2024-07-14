@@ -15,6 +15,10 @@ class Policy(abc.ABC):
         pass
 
 
+class QuoteAPIResponse(TypedDict):
+    premium: str
+
+
 class APIErrorResponse(TypedDict, total=False):
     type: str
     title: str
