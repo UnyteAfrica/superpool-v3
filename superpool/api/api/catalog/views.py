@@ -12,7 +12,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
-from .serializers import PolicyPurchaseSerializer, PolicySerializer, ProductSerializer
+from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
+                          ProductSerializer)
 from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
@@ -208,7 +209,7 @@ class PolicyAPIViewSet(
         """
         pass
 
-    @action(details=False, methods=["post"])
+    @action(detail=False, methods=["post"])
     def search(self, request, **extra_kwargs):
         """
         Action that allows you to search or filter for a policy based on
