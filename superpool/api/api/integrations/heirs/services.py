@@ -3,14 +3,21 @@ import uuid
 from typing import List, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (APIErrorResponse,
-                                                        AutoPolicy,
-                                                        CustomerInfo,
-                                                        InsuranceProduct,
-                                                        Policy, PolicyInfo,
-                                                        Product,
-                                                        QuoteAPIResponse,
-                                                        QuoteDefinition)
+from core.providers.integrations.heirs.registry import (
+    APIErrorResponse,
+    AutoPolicy,
+    BikerPolicy,
+    CustomerInfo,
+    InsuranceProduct,
+    MotorPolicy,
+    PersonalAccidentPolicy,
+    Policy,
+    PolicyInfo,
+    Product,
+    QuoteAPIResponse,
+    QuoteDefinition,
+    TravelPolicyClass,
+)
 from django.conf import settings
 
 
@@ -153,7 +160,7 @@ class HeirsAssuranceService:
             return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/{product_id}/policy"
         elif isinstance(product_class, BikerPolicy):
             return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/{product_id}/policy"
-        elif isinstance(product_class, TravelPolicy):
+        elif isinstance(product_class, TravelPolicyClass):
             return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/{product_id}/policy"
         elif isinstance(product_class, PersonalAccidentPolicy):
             return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/{product_id}/policy"
