@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import List, Optional, TypedDict, Union
 
+from _typeshed import StrEnum
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
 
@@ -194,6 +195,19 @@ class PersonalAccidentPerson(TypedDict, total=False):
     gender: str
     phone: str
     occupation: str
+
+
+class MotorParticulars(TypedDict, total=False):
+    owner: str
+    make: str
+    model: str
+    year: int
+    chassis: str
+    registrationNumber: str
+    engineNumber: str
+    value: int
+    use: str  # could be private or commercial
+    type: str  # could be saloon, suv, light truck or heavy duty truck
 
 
 class PersonalAccidentPolicyRequest(TypedDict):
