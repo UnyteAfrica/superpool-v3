@@ -33,7 +33,7 @@ def data_fixture():
 
 @pytest.fixture
 def service():
-    service = HeirsAssuranceService()
+    return HeirsAssuranceService()
 
 
 def test_register_policy_holder(service, data_fixture):
@@ -92,3 +92,13 @@ def test_fetch_policy_information_with_invalid_policy_number_is_unsuccessful(ser
         assert response.status_code != 200
         assert response.status_code in (401, 403, 404)
         assert mock_get.assert_called_once_with(policy_info_endpoint)
+
+
+def test_fetch_personal_accident_quotes(mocker):
+    params = {}
+    with mocker.patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
+        params["product_id"] = "1234Heirs"
+        personal_accident_quotes_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get('product_id')}"
+        response = service.get_quote("personal_accident", params)
+
+        assert response.status_code == 200
