@@ -3,16 +3,14 @@ import uuid
 from typing import List, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (
-    APIErrorResponse,
-    AutoPolicy,
-    CustomerInfo,
-    Policy,
-    PolicyInfo,
-    Product,
-    QuoteAPIResponse,
-    QuoteDefinition,
-)
+from core.providers.integrations.heirs.registry import (APIErrorResponse,
+                                                        AutoPolicy,
+                                                        CustomerInfo,
+                                                        InsuranceProduct,
+                                                        Policy, PolicyInfo,
+                                                        Product,
+                                                        QuoteAPIResponse,
+                                                        QuoteDefinition)
 from django.conf import settings
 
 
@@ -64,11 +62,19 @@ class HeirsAssuranceService:
         endpoint = self._get_endpoint_by_category(category, **params)
         return self.client.get(endpoint)
 
-    def register_policy(self, policy_id: Union[str, int, uuid], reciever: object):
+    def register_policy(self, product_id: str | int, product_class: InsuranceProduct):
         """
-        Register a policy given its policy and the reciever class on Heirs API
+        Register a policy given its product ID and the product class on Heirs API
+
+        Arguments:
+            product_id: The ID of the product to register
+            product_class: An instance of an InsuranceProduct subclass containing policy details passed to the request body
+
+        Returns:
+            APIResponse or APIErrorResponse
         """
-        pass
+        endpoint = self._get_policy_endpoint(product_id, product_class)
+        return self.client.post(endpoint, data=product_class.to_dict())
 
     def register_policy_holder(self, beneficiary_data: CustomerInfo):
         """
@@ -133,3 +139,23 @@ class HeirsAssuranceService:
                 return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get('product_id')}'
             case _:
                 return "Unsupported category"
+
+    def _get_policy_endpoint(
+        self, product_id: str | int, product_class: InsuranceProduct
+    ) -> str:
+        """
+        Construct a string representation of the API endpoint for the specific policy based
+        on the provided Product Class and Policy ID
+        """
+        if isinstance(product_class, MotorPolicy) or isinstance(
+            product_class, AutoPolicy
+        ):
+            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/{product_id}/policy"
+        elif isinstance(product_class, BikerPolicy):
+            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/{product_id}/policy"
+        elif isinstance(product_class, TravelPolicy):
+            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/{product_id}/policy"
+        elif isinstance(product_class, PersonalAccidentPolicy):
+            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/{product_id}/policy"
+        else:
+            return "Unsupported Policy/Product Class"

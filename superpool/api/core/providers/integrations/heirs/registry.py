@@ -148,3 +148,5 @@ class PersonalAccidentQuoteParams(TypedDict):
 QuoteDefinition = Union[
     TravelQuoteParams, PersonalAccidentQuoteParams, MotorQuoteParams, BikerQuoteParams
 ]
+
+# POLICIES IMPLEMENTATION
