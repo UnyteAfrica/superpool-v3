@@ -260,3 +260,4 @@ BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
 HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1/"
 HEIRS_ASSURANCE_STAGING_URL = "https://pubic-api.staging.heirsinsurance.com/v1/"
 HEIRS_ASSURANCE_API_KEY = env("HEIRS_API_KEY")
+HEIRS_ASSURANCE_APP_ID = env("HEIRS_APP_ID")
