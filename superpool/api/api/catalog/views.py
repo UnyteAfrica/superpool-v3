@@ -167,38 +167,19 @@ class PolicyAPIViewSet(
         This action allows you to generate a new policy for your
         customer
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
+        # generate a new policy for the customer
+        # Construct a new policy object, and return both the policy number and the policy ID
 
-        customer_details = validated_data["customer_details"]
+        # emit a policy purchased signal that fires up a background task to notify the admins
+        # of the platform
 
-        try:
-            with transaction.atomic():
-                # generate a new policy for the customer
-                # Construct a new policy object, and return both the policy number and the policy ID
+        # fires off a background process that post (actually register the customer info) and
+        # the policy information to the insurer endpoint
+        # (we should just call a function in a service that would integrate the Insurer APIs)
 
-                # emit a policy purchased signal that fires up a background task to notify the admins
-                # of the platform
+        # returrn the policy ID, Policy Number, and the status of the policy to the merchant
 
-                # fires off a background process that post (actually register the customer info) and
-                # the policy information to the insurer endpoint
-                # (we should just call a function in a service that would integrate the Insurer APIs)
-
-                # returrn the policy ID, Policy Number, and the status of the policy to the merchant
-                return Response(
-                    {
-                        "message": "Policy successfully purchased.",
-                        "data": policy_serializer.data,
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
-                pass
-        except Exception as exc:
-            logger.error(f"An exception occured during policy purchase: {exc}")
-            return Response(
-                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        pass
 
     @action(detail=False, methods=["post"])
     def renew(self, request, *args, **kwargs):
