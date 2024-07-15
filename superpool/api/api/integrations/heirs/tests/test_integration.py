@@ -4,6 +4,10 @@ import pytest
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.providers.integrations.heirs.registry import (
+    MotorPolicy,
+    MotorPolicyRequest,
+    PersonalAccidentPolicy,
+    PersonalAccidentPolicyRequest,
     TravelPolicyClass,
     TravelPolicyRequest,
 )
@@ -154,16 +158,17 @@ def test_fetch_personal_accident_quotes(mocker):
 
 def test_register_personal_accident_policy(service, customer_fixture, mocker):
     product_id = "2032"
-    register_travel_policy_endpoint = (
-        f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{product_id}/policy"
+    register_personal_accident_endpoint = (
+        f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/{product_id}/policy"
     )
     mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
+    mock_post.return_value = {"policy_id": "20425", "status": "success"}
 
-    policy_details = TravelPolicyRequest(
+    accident_policy_details = PersonalAccidentPolicyRequest(
         policyHolderId="holder_1",
         items=[customer_fixture["Jane Doe"]],
     )
-    product = TravelPolicyClass(policy_details=policy_details)
+    product = PersonalAccidentPolicy(policy_details=accident_policy_details)
 
     response = service.register_policy(1, product)
 
@@ -173,17 +178,55 @@ def test_register_personal_accident_policy(service, customer_fixture, mocker):
         "items": [customer_fixture["Jane Doe"]],
     }
 
-    assert isinstance(response["policyId"], str)
+    assert isinstance(response["policy_id"], str)
     assert response["status"] == "success"
     assert response.status_code == 201
-    assert mock_post.assert_called_once_with(
-        register_travel_policy_endpoint, test_payload
+    mock_post.assert_called_once_with(register_personal_accident_endpoint, test_payload)
+
+
+def test_register_travel_policy(service, customer_fixture, mocker):
+    product_id = "1212"
+    register_travel_policy_endpoint = (
+        f"{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/{product_id}/policy"
     )
+    mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
+    mock_post.return_value = {"policy_id": "80801", "status": "success"}
+
+    test_payload = {
+        "policyHolderId": "holder_1",
+        "items": [customer_fixture["John Doe"]],
+    }
+
+    travel_policy_details = TravelPolicyRequest(
+        policyHolderId="holder_1", items=[customer_fixture["John Doe"]]
+    )
+    product = TravelPolicyClass(travel_policy_details)
+    response = service.register_policy(2, product)
+
+    assert response.status_code == 201
+    assert response["policy_id"] == "80801"
+    mock_post.assert_called_once_with(register_travel_policy_endpoint, test_payload)
 
 
-def test_register_travel_policy(service, mocker):
-    pass
+def test_register_auto_policy(service, customer_fixture, mocker):
+    product_id = "AU2345X"
+    register_motor_policy_endpoint = (
+        f"{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/{product_id}/policy"
+    )
+    mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
+    mock_post.return_value = {"policy_id": "MOTO22335", "status": "success"}
 
+    test_payload = {
+        "policyHolderId": "holder_1",
+        "items": [customer_fixture["John Doe"]],
+    }
 
-def test_register_auto_policy(service, mocker):
-    pass
+    motor_policy_details = MotorPolicyRequest(
+        policyHolderId="holder_1", items=[customer_fixture["John Doe"]]
+    )
+    product = MotorPolicy(motor_policy_details)
+    response = service.register_policy(3, product)
+
+    assert response.status_code == 201
+    assert response["policy_id"] == "MOTO22335"
+    mock_post.assert_called_once_with(register_motor_policy_endpoint, test_payload)
