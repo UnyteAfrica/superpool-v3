@@ -8,7 +8,7 @@ from .views import (PolicyAPIViewSet, PolicyListView, ProductListView,
 
 router = DefaultRouter()
 
-router.register(r"policies")
+router.register(r"policies", PolicyAPIViewSet)
 
 if typing.TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver
