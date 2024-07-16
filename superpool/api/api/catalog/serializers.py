@@ -70,3 +70,26 @@ class CreatePolicySerializer(ModelSerializer):
             "renewable",
         )
         exclude = ("cerfication_required", "inspection_required")
+
+
+class QuoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Policy
+        fields = ("id", "base_price")
+
+
+class PolicyPurchaseSerializer(serializers.Serializer):
+    """
+    Issues a new policy based on CustomerDetails and some
+    other metadata
+    """
+
+    customer_details = serializers.JSONField()
+    category = serializers.CharField()
+    product_id = serializers.UUIDField()
+    coverage_id = serializers.UUIDField()
+    merchant_id = serializers.UUIDField()
+    provider_id = serializers.UUIDField()
+    renewable = serializers.BooleanField(required=False)
+    inspection_required = serializers.BooleanField(required=False)
+    certification_required = serializers.BooleanField(required=False)

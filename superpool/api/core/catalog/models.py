@@ -152,3 +152,12 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
             models.Index(fields=["policy_holder"]),
             models.Index(fields=["provider_id"]),
         ]
+
+
+class Quote(models.Model):
+    id = models.CharField(max_length=80, primary_key=True, unique=True, editable=False)
+    base_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        verbose_name = "quote"
+        verbose_name_plural = "quotes"

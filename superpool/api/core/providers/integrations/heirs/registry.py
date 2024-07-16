@@ -1,8 +1,9 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, TypedDict, Union
+from typing import List, Optional, TypedDict, Union
 
+from _typeshed import StrEnum
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
 
@@ -148,3 +149,114 @@ class PersonalAccidentQuoteParams(TypedDict):
 QuoteDefinition = Union[
     TravelQuoteParams, PersonalAccidentQuoteParams, MotorQuoteParams, BikerQuoteParams
 ]
+
+
+# POLICIES IMPLEMENTATION
+class TravelPerson(TypedDict, total=False):
+    firstName: str
+    lastName: str
+    otherName: str
+    dateOfBirth: str
+    startDate: str
+    endDate: str
+    categoryName: str
+    country_id: str
+    email: str
+    address: str
+    nextOfKinName: str
+    relation: str
+    passportNo: str
+    partnersEmail: str
+    gender: str
+    phone: str
+    occupation: str
+
+
+class TravelPolicyRequest(TypedDict):
+    policyHolderId: str
+    items: List[TravelPerson]
+
+
+class PersonalAccidentPerson(TypedDict, total=False):
+    firstName: str
+    lastName: str
+    otherName: str
+    dateOfBirth: str
+    startDate: str
+    endDate: str
+    categoryName: str
+    country_id: str
+    email: str
+    address: str
+    nextOfKinName: str
+    relation: str
+    passportNo: str
+    partnersEmail: str
+    gender: str
+    phone: str
+    occupation: str
+
+
+class MotorParticulars(TypedDict, total=False):
+    owner: str
+    make: str
+    model: str
+    year: int
+    chassis: str
+    registrationNumber: str
+    engineNumber: str
+    value: int
+    use: str  # could be private or commercial
+    type: str  # could be saloon, suv, light truck or heavy duty truck
+
+
+class PersonalAccidentPolicyRequest(TypedDict):
+    policyHolderId: str
+    items: List[PersonalAccidentPerson]
+
+
+class MotorPolicyRequest(TypedDict, total=False):
+    policyHolderId: str
+    items: List[MotorParticulars]
+
+
+class BikerPolicyRequest(TypedDict, total=False):
+    policyHolderId: str
+    items: List[MotorParticulars]
+
+
+class InsuranceProduct:
+    def to_dict(self):
+        raise NotImplementedError("Subclasses must implement this method")
+
+
+class MotorPolicy(InsuranceProduct):
+    def __init__(self, policy_details: MotorPolicyRequest) -> None:
+        self.policy_details = policy_details
+
+    def to_dict(self):
+        return self.policy_details
+
+
+class BikerPolicy(InsuranceProduct):
+    def __init__(self, policy_details: BikerPolicyRequest) -> None:
+        self.policy_details = policy_details
+
+    def to_dict(self):
+        return self.policy_details
+
+
+class PersonalAccidentPolicy(InsuranceProduct):
+    def __init__(self, policy_details: PersonalAccidentPolicyRequest) -> None:
+        self.policy_details = policy_details
+
+    def to_dict(self):
+        return self.policy_details
+
+
+class TravelPolicyClass(InsuranceProduct):
+    def __init__(self, policy_details: TravelPolicyRequest) -> None:
+        self.policy_details = policy_details
+
+    def to_dict(self):
+        return self.policy_details
