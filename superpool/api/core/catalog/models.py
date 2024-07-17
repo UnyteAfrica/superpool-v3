@@ -38,19 +38,19 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Insurance provider offering the package",
     )
     name: models.CharField = models.CharField(
-        max_length=100,
+        max_length=255,
         help_text="Name of the package offered by the insurance provider",
     )
     description: models.TextField = models.TextField(
         help_text="Description of the package", null=True, blank=True
     )
     product_type: models.CharField = models.CharField(
-        max_length=15,
+        max_length=255,
         choices=ProductType.choices,
         help_text="Type of insurance package",
     )
     coverage_details: models.TextField = models.TextField(
-        help_text="Detailed breakdown of what's covered"
+        help_text="Detailed breakdown of what's covered", null=True, blank=True
     )
     base_price: models.DecimalField = models.DecimalField(
         max_digits=10,
