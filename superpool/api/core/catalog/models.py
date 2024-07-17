@@ -50,7 +50,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         help_text="Type of insurance package",
     )
     coverage_details: models.TextField = models.TextField(
-        help_text="Detailed breakdown of what's covered"
+        help_text="Detailed breakdown of what's covered", null=True, blank=True
     )
     base_price: models.DecimalField = models.DecimalField(
         max_digits=10,

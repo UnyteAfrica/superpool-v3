@@ -108,6 +108,7 @@ class APIKey(models.Model):
     API Key
     """
 
+    id = models.CharField(primary_key=True, unique=True, editable=False)
     merchant = models.ForeignKey(
         Merchant,
         on_delete=models.CASCADE,
@@ -118,3 +119,15 @@ class APIKey(models.Model):
 
     def __str__(self) -> str:
         return f"API Key for {self.merchant.name}"
+
+    def _generate_id(self):
+        from uuid import uuid
+
+        prefix = "SUPERPOOL_"
+        suffix = str(uuid.uuid4())
+        return "".join(prefix, suffix)
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.id = self._generate_id()
+        return super().save(*args, **kwargs)
