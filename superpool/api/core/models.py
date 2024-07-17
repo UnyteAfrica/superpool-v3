@@ -1,5 +1,8 @@
 # Utility models that does not fit into domain-specific parts of the application
 
+import hashlib
+import uuid
+
 from core.catalog.models import Product  # noqa: F401
 from core.merchants.models import Merchant  # noqa: F401
 from core.mixins import TimestampMixin, TrashableModelMixin
@@ -70,6 +73,50 @@ class Address(models.Model):
         return f"<Address: {self.street}, {self.city}, {self.state}, {self.country}>"
 
 
+class APIKey(models.Model):
+    """
+    API Key
+    """
+
+    id = models.UUIDField(
+        unique=True, editable=False, primary_key=True, default=uuid.uuid4
+    )
+    merchant = models.ForeignKey(
+        Merchant,
+        on_delete=models.CASCADE,
+        related_name="api_keys",
+    )
+    hashed_key = models.CharField(max_length=64, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"API Key for {self.merchant.name}"
+
+    def hash_(self, value):
+        return hashlib.sha256(value.encode()).hexdigest()
+
+    def generate_key(self) -> str:
+        prefix = "SUPERPOOL_"
+        suffix = str(uuid.uuid4()).replace("-", "")
+        return f"{prefix}{suffix}"
+
+    def save(self, *args, **kwargs):
+        if hasattr(self, "hashed_key") or not self.hashed_key:
+            # Generate the key and hash it for storage
+            key = self.generate_key()
+            self.hashed_key = self.hash_(key)
+            self.pub_key = key
+        super().save(*args, **kwargs)
+
+    @property
+    def pub_key(self):
+        return getattr(self, "_pub_key", None)
+
+    @pub_key.setter
+    def pub_key(self, value):
+        self._pub_key = value
+
+
 class Application(models.Model):
     """
     An application is a sandbox environment needed for interacting with Unyte's APIs
@@ -87,7 +134,7 @@ class Application(models.Model):
     # from the database to the application layer, which is more efficient
     application_id = models.CharField(max_length=100, primary_key=True, unique=True)
     api_key = models.OneToOneField(
-        "core.APIKey", on_delete=models.SET_NULL, null=True, blank=True
+        APIKey, on_delete=models.CASCADE, null=True, blank=True
     )
     name = models.CharField(max_length=255, null=True, blank=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
@@ -97,37 +144,5 @@ class Application(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.api_key:
-            self.api_key = APIKey.objects.create(
-                key=get_random_string(32), merchant=self.merchant
-            )
+            self.api_key = APIKey.objects.create(merchant=self.merchant)
         super().save(*args, **kwargs)
-
-
-class APIKey(models.Model):
-    """
-    API Key
-    """
-
-    id = models.CharField(primary_key=True, unique=True, editable=False)
-    merchant = models.ForeignKey(
-        Merchant,
-        on_delete=models.CASCADE,
-        related_name="api_keys",
-    )
-    key = models.CharField(max_length=32, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self) -> str:
-        return f"API Key for {self.merchant.name}"
-
-    def _generate_id(self):
-        from uuid import uuid
-
-        prefix = "SUPERPOOL_"
-        suffix = str(uuid.uuid4())
-        return "".join(prefix, suffix)
-
-    def save(self, *args, **kwargs):
-        if not self.id:
-            self.id = self._generate_id()
-        return super().save(*args, **kwargs)

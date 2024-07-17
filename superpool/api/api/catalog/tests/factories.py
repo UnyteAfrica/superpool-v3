@@ -1,4 +1,5 @@
 import factory
+from api.merchants.tests.factories import MerchantFactory
 from core.catalog.models import Policy, Product
 from core.merchants.models import Merchant
 from core.providers.models import Provider as Partner
@@ -6,6 +7,11 @@ from core.user.models import Customer
 from faker import Faker
 
 fake = Faker()
+
+
+class PartnerFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Partner
 
 
 class ProductFactory(factory.django.DjangoModelFactory):
@@ -16,6 +22,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
     product_type = factory.Iterator(["Life", "Health", "Auto", "Gadget", "Travel"])
     coverage_details = fake.paragraph()  # Use a paragraph for coverage details
     base_price = fake.random_number(digits=5)  # Adjust as needed
+    provider = factory.SubFactory(PartnerFactory)
 
 
 class CustomerFactory(factory.django.DjangoModelFactory):
@@ -33,16 +40,6 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     gender = factory.Iterator(["M", "F"])
     verification_type = fake.word()
     verification_id = fake.uuid4()
-
-
-class MerchantFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Merchant
-
-
-class PartnerFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Partner
 
 
 class PolicyFactory(factory.django.DjangoModelFactory):
