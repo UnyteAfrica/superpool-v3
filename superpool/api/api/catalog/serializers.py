@@ -1,4 +1,4 @@
-from core.catalog.models import Policy, Product
+from core.catalog.models import Policy, Product, Quote
 from django.db.models import fields
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -74,7 +74,7 @@ class CreatePolicySerializer(ModelSerializer):
 
 class QuoteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Policy
+        model = Quote
         fields = ("id", "base_price")
 
 
