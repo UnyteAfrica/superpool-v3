@@ -1,19 +1,19 @@
 import logging
-import uuid
 
 from api.app_auth.authentication import APIKeyAuthentication
-from core.catalog.models import Policy, Product, Quote
-from django.db import transaction
+from api.catalog.filters import QSearchFilter
+from core.catalog.models import Policy, Product
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema
-from rest_framework import generics, mixins, status, views, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 
-from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
-                          ProductSerializer)
+from .serializers import PolicyPurchaseSerializer, PolicySerializer, ProductSerializer
 from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
@@ -203,13 +203,42 @@ class PolicyAPIViewSet(
 
         pass
 
+    @extend_schema(
+        operation_id="retrieve-policy-by-id",
+        description="Retrieve a specific policy by its ID",
+        responses={200: PolicySerializer},
+    )
     def retrieve(self, request, pk=None):
         """
         Retrieve a specific policy by its ID
         """
-        pass
+        try:
+            policy = Policy.objects.get(pk=pk)
+        except Policy.DoesNotExist:
+            return Response(
+                {"error": "Policy not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = self.get_serializer(policy)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["post"])
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="product_type",
+                description="Type of the insurance product (e.g., Life, Health, Auto, Gadget)",
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="policy_name",
+                description="Name of the insurance policy",
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+        ],
+        responses={200: PolicySerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"])
     def search(self, request, **extra_kwargs):
         """
         Action that allows you to search or filter for a policy based on
@@ -218,8 +247,26 @@ class PolicyAPIViewSet(
         Params are not limited to, customer details, status of the policy,
         policy category
         """
-        # We want to do a pattern match here, depending on query params
-        pass
+        product_type = request.query_params.get("product_type")
+        policy_name = request.query_params.get("policy_name")
+
+        qs = self.get_queryset()
+
+        if product_type:
+            qs = qs.filter(product__product_type__iexact=product_type)
+
+        if policy_name:
+            qs = qs.filter(product__name__icontains=policy_name)
+
+        # we want to return a paginated results
+        # at every filteration
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ProductAPIViewSet(viewsets.GenericViewSet):

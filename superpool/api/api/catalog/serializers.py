@@ -19,10 +19,9 @@ class PolicySerializer(ModelSerializer):
     Serializer for the Policy model
     """
 
-    purchase_link = serializers.URLField(source="get_purchase_link", read_only=True)
-
     class Meta:
         model = Policy
+        depth = 1
         fields = [
             "policy_id",
             "product",
@@ -36,18 +35,12 @@ class PolicySerializer(ModelSerializer):
             "renewable",
             "inspection_required",
             "cerfication_required",
-            "purchase_link",
         ]
         extra_kwargs = {
             "policy_id": {"read_only": True},
             "merchant_id": {"read_only": True},
             "provider_id": {"read_only": True},
         }
-
-        def get_purchase_link(self, obj):
-            # This method is used to get the purchase link for the policy
-            # TODO: generate a purchase link for the policy based on the policy ID
-            pass
 
 
 class CreatePolicySerializer(ModelSerializer):
