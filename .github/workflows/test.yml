@@ -21,12 +21,49 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Run test
+        env:
+          SUPERPOOL_ALLOWED_HOSTS: ${{ secrets.SUPERPOOL_ALLOWED_HOSTS }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          SUPERPOOL_ENABLE_TEST_MODE: ${{ secrets.SUPERPOOL_ENABLE_TEST_MODE }}
+          SUPERPOOL_ENABLE_SMTP_EMAIL: ${{ secrets.SUPERPOOL_ENABLE_SMTP_EMAIL }}
+          EMAIL_BACKEND: ${{ secrets.EMAIL_BACKEND }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USE_TLS: ${{ secrets.EMAIL_USE_TLS }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+          USE_GOOGLE_STORAGE: ${{ secrets.USE_GOOGLE_STORAGE }}
+          GOOGLE_CLOUD_STORAGE_BUCKET_NAME: ${{ secrets.GOOGLE_CLOUD_STORAGE_BUCKET_NAME }}
+          GS_BUCKET_NAME: ${{ secrets.GS_BUCKET_NAME }}
+          GOOGLE_CLOUD_STORAGE_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_STORAGE_CREDENTIALS }}
+          SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL: ${{ secrets.SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL }}
+          REDIS_ENABLED: ${{ secrets.REDIS_ENABLED }}
+          DATABASE_USER: ${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          INSTANCE_UNIX_SOCKET: ${{ secrets.INSTANCE_UNIX_SOCKET }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+          SUPERPOOL_TEST_MODE_ENABLED: ${{ secrets.SUPERPOOL_TEST_MODE_ENABLED }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_CLOUD_STORAGE_PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_STORAGE_PROJECT_ID }}
+          GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT }}
+          GOOGLE_CLOUD_STORAGE_OPTIONS: ${{ secrets.GOOGLE_CLOUD_STORAGE_OPTIONS }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SUPERPOOL_LOG_FILE_NAME: ${{ secrets.SUPERPOOL_LOG_FILE_NAME }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          DISABLE_AUTH: ${{ secrets.DISABLE_AUTH }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          HEIRS_API_KEY: ${{ secrets.HEIRS_API_KEY }}
+          HEIRS_APP_ID: ${{ secrets.HEIRS_APP_ID }}
         run: pytest superpool/api/
 
       - name: Generate coverage report
