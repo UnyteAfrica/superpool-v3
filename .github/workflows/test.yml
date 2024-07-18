@@ -108,5 +108,4 @@ jobs:
           flags: unittests
           name: codecov-superpoool-v3
           token: ${{ env.CODECOV_TOKEN }}
-
-verbose: true
+          verbose: true
