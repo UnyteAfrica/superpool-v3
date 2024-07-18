@@ -1,10 +1,9 @@
-name: Run tests with Codecov
+name: CI Pipeline - Run tests with Codecov
 
 on:
   pull_request:
     branches:
       - dev
-
 permissions:
   packages: write
   contents: read
@@ -22,17 +21,36 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry/
+          key: ${{ runner.os }}-poetry-${{ hashFiles('superpool/api/poetry.lock')}}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install poetry
+        run: curl -sSL https://install.python-poetry.org | python3 -
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          cd superpool/api
+          poetry install
 
       - name: Run test
         env:
+          # Superpool related keys
           SUPERPOOL_ALLOWED_HOSTS: ${{ secrets.SUPERPOOL_ALLOWED_HOSTS }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
           SUPERPOOL_ENABLE_TEST_MODE: ${{ secrets.SUPERPOOL_ENABLE_TEST_MODE }}
           SUPERPOOL_ENABLE_SMTP_EMAIL: ${{ secrets.SUPERPOOL_ENABLE_SMTP_EMAIL }}
+          SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL: ${{ secrets.SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL }}
+          SUPERPOOL_TEST_MODE_ENABLED: ${{ secrets.SUPERPOOL_TEST_MODE_ENABLED }}
+          SUPERPOOL_LOG_FILE_NAME: ${{ secrets.SUPERPOOL_LOG_FILE_NAME }}
+
+          # Email related keys
           EMAIL_BACKEND: ${{ secrets.EMAIL_BACKEND }}
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
@@ -41,36 +59,46 @@ jobs:
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+
+
+          # GCP related keys
           USE_GOOGLE_STORAGE: ${{ secrets.USE_GOOGLE_STORAGE }}
           GOOGLE_CLOUD_STORAGE_BUCKET_NAME: ${{ secrets.GOOGLE_CLOUD_STORAGE_BUCKET_NAME }}
           GS_BUCKET_NAME: ${{ secrets.GS_BUCKET_NAME }}
           GOOGLE_CLOUD_STORAGE_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_STORAGE_CREDENTIALS }}
-          SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL: ${{ secrets.SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL }}
-          REDIS_ENABLED: ${{ secrets.REDIS_ENABLED }}
+          GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT }}
+          GOOGLE_CLOUD_STORAGE_OPTIONS: ${{ secrets.GOOGLE_CLOUD_STORAGE_OPTIONS }}
+          GOOGLE_CLOUD_STORAGE_PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_STORAGE_PROJECT_ID }}
+
+          # Database related keys
           DATABASE_USER: ${{ secrets.DATABASE_USER }}
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
           INSTANCE_UNIX_SOCKET: ${{ secrets.INSTANCE_UNIX_SOCKET }}
           DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
-          SUPERPOOL_TEST_MODE_ENABLED: ${{ secrets.SUPERPOOL_TEST_MODE_ENABLED }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GOOGLE_CLOUD_STORAGE_PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_STORAGE_PROJECT_ID }}
-          GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_CLOUD_STORAGE_SERVICE_ACCOUNT }}
-          GOOGLE_CLOUD_STORAGE_OPTIONS: ${{ secrets.GOOGLE_CLOUD_STORAGE_OPTIONS }}
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+
+          # Redis and related envs
+          REDIS_ENABLED: ${{ secrets.REDIS_ENABLED }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
-          SUPERPOOL_LOG_FILE_NAME: ${{ secrets.SUPERPOOL_LOG_FILE_NAME }}
+
+          # Others
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
           LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
           DISABLE_AUTH: ${{ secrets.DISABLE_AUTH }}
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
           HEIRS_API_KEY: ${{ secrets.HEIRS_API_KEY }}
           HEIRS_APP_ID: ${{ secrets.HEIRS_APP_ID }}
-        run: pytest superpool/api/
+        run: |
+          cd superpool/api
+          poetry run pytest .
 
       - name: Generate coverage report
         run: |
-          pip install pytest
-          pip install pytest-cov
-          pytest --cov=./ --cov-report=xml
+          cd superpool/api
+          poetry add pytest-cov
+          poetry run pytest --cov=./ --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -80,4 +108,5 @@ jobs:
           flags: unittests
           name: codecov-superpoool-v3
           token: ${{ env.CODECOV_TOKEN }}
-          verbose: true
+
+verbose: true
