@@ -4,15 +4,9 @@ import pytest
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.providers.integrations.heirs.registry import (
-    DevicePolicy,
-    DevicePolicyRequest,
-    MotorPolicy,
-    MotorPolicyRequest,
-    PersonalAccidentPolicy,
-    PersonalAccidentPolicyRequest,
-    TravelPolicyClass,
-    TravelPolicyRequest,
-)
+    DevicePolicy, DevicePolicyRequest, DeviceQuoteParams, MotorPolicy,
+    MotorPolicyRequest, PersonalAccidentPolicy, PersonalAccidentPolicyRequest,
+    TravelPolicyClass, TravelPolicyRequest)
 from django.conf import settings
 
 
@@ -252,16 +246,35 @@ def test_register_device_insurance_policy_is_successful(service, mocker):
     product = DevicePolicy(device_policy_details)
     response = service.register_policy(product_id, product)
 
-    mock_post = mocker.object.patch(HeirsLifeAssuranceClient, "post")
+    mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
     mock_post.return_value = {
         "policy_id": "HEIRS-DEV-POL-2022",
         "policy_status": "pending",
         "premium": 2200,
         "policy_holder_id": "UserX2204",
     }
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert "premium" in response.data
     assert "policy_status" in response.data
     assert "policy_id" in response.data
     assert response.data["policy_holder_id"] == policy_holder
     mock_post.assert_called_once_with(device_policy_endpoint, device_info)
+
+
+def test_fetch_device_insurance_quote(service, mocker):
+    item_value = 13_000
+    product_id = "DEV-POL2x23"
+    device_quote_endpoint = (
+        f"{settings.HEIRS_ASSURANCE_STAGING_URL}/device/quote/{item_value}"
+    )
+    request_params = {"product_id": product_id, "item_value": item_value}
+    device_params = DeviceQuoteParams(
+        productId=request_params["product_id"], itemValue=request_params["item_value"]
+    )
+    response = service.get_quote("device", device_params)
+
+    mock_get = mocker.patch.object(HeirsLifeAssuranceClient, "get")
+    mock_get.return_value = {"premium": 40_000}
+    assert response.status_code == 200
+    assert "premium" in response.data
+    mock_get.assert_called_once_with(device_quote_endpoint, request_params)
