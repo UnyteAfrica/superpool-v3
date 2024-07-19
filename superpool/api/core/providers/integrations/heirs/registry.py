@@ -1,9 +1,9 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional, TypedDict, Union
+from enum import StrEnum
+from typing import List, Optional, Required, TypedDict, Union
 
-from _typeshed import StrEnum
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
 
@@ -146,8 +146,17 @@ class PersonalAccidentQuoteParams(TypedDict):
     productId: str
 
 
+class DeviceQuoteParams(TypedDict, total=False):
+    productId: int
+    itemValue: Required[int]
+
+
 QuoteDefinition = Union[
-    TravelQuoteParams, PersonalAccidentQuoteParams, MotorQuoteParams, BikerQuoteParams
+    TravelQuoteParams,
+    PersonalAccidentQuoteParams,
+    MotorQuoteParams,
+    BikerQuoteParams,
+    DeviceQuoteParams,
 ]
 
 
@@ -210,6 +219,20 @@ class MotorParticulars(TypedDict, total=False):
     type: str  # could be saloon, suv, light truck or heavy duty truck
 
 
+class DeviceParticulars(TypedDict, total=False):
+    value: int
+    make: str
+    model: str
+    serialNumber: str
+    imei: str
+    deviceType: str  # could be Phone, Tablet, Laptop, POS
+
+
+class DevicePolicyRequest(TypedDict):
+    policyHolderId: str
+    items: List[DeviceParticulars]
+
+
 class PersonalAccidentPolicyRequest(TypedDict):
     policyHolderId: str
     items: List[PersonalAccidentPerson]
@@ -256,6 +279,14 @@ class PersonalAccidentPolicy(InsuranceProduct):
 
 class TravelPolicyClass(InsuranceProduct):
     def __init__(self, policy_details: TravelPolicyRequest) -> None:
+        self.policy_details = policy_details
+
+    def to_dict(self):
+        return self.policy_details
+
+
+class DevicePolicy(InsuranceProduct):
+    def __init__(self, policy_details: DevicePolicyRequest) -> None:
         self.policy_details = policy_details
 
     def to_dict(self):
