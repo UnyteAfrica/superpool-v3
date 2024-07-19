@@ -3,22 +3,19 @@ import uuid
 from typing import List, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (
-    APIErrorResponse,
-    AutoPolicy,
-    BikerPolicy,
-    CustomerInfo,
-    DevicePolicy,
-    InsuranceProduct,
-    MotorPolicy,
-    PersonalAccidentPolicy,
-    Policy,
-    PolicyInfo,
-    Product,
-    QuoteAPIResponse,
-    QuoteDefinition,
-    TravelPolicyClass,
-)
+from core.providers.integrations.heirs.registry import (APIErrorResponse,
+                                                        AutoPolicy,
+                                                        BikerPolicy,
+                                                        CustomerInfo,
+                                                        DevicePolicy,
+                                                        InsuranceProduct,
+                                                        MotorPolicy,
+                                                        PersonalAccidentPolicy,
+                                                        Policy, PolicyInfo,
+                                                        Product,
+                                                        QuoteAPIResponse,
+                                                        QuoteDefinition,
+                                                        TravelPolicyClass)
 from django.conf import settings
 
 
@@ -139,15 +136,15 @@ class HeirsAssuranceService:
         """
         match category:
             case "auto" | "motor":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}/{params.get('motor_type')}'
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
             case "biker":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/quote/{params.get('product_id')}/{params.get('motor_value')}/{params.get('motor_class')}'
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
             case "travel":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get('user_age')}/{params.get('start_date')}/{params.get('end_date')}/{params.get('category_name')}'
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
             case "personal_accident":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get('product_id')}'
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get("product_id")}'
             case "device":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/device/quote/{params.get('item_value')}'
+                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/device/quote/{params.get("item_value")}'
             case _:
                 return "Unsupported category"
 
