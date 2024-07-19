@@ -4,6 +4,8 @@ import pytest
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.providers.integrations.heirs.registry import (
+    DevicePolicy,
+    DevicePolicyRequest,
     MotorPolicy,
     MotorPolicyRequest,
     PersonalAccidentPolicy,
@@ -230,3 +232,36 @@ def test_register_auto_policy(service, customer_fixture, mocker):
     assert response.status_code == 201
     assert response["policy_id"] == "MOTO22335"
     mock_post.assert_called_once_with(register_motor_policy_endpoint, test_payload)
+
+
+def test_register_device_insurance_policy_is_successful(service, mocker):
+    policy_holder = "UserX2204"
+    device_policy_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/device/policy"
+    product_id = "DEV-POL2x23"
+    device_info = {
+        "value": 2,
+        "make": "Apple",
+        "model": "Iphone16ProMax",
+        "serialNumber": "IProPro16",
+        "imei": "AppleXx-2356799-100003",
+        "deviceType": "Phone",
+    }
+    device_policy_details = DevicePolicyRequest(
+        policyHolderId=policy_holder, items=[device_info]
+    )
+    product = DevicePolicy(device_policy_details)
+    response = service.register_policy(product_id, product)
+
+    mock_post = mocker.object.patch(HeirsLifeAssuranceClient, "post")
+    mock_post.return_value = {
+        "policy_id": "HEIRS-DEV-POL-2022",
+        "policy_status": "pending",
+        "premium": 2200,
+        "policy_holder_id": "UserX2204",
+    }
+    assert response.status_code == 200
+    assert "premium" in response.data
+    assert "policy_status" in response.data
+    assert "policy_id" in response.data
+    assert response.data["policy_holder_id"] == policy_holder
+    mock_post.assert_called_once_with(device_policy_endpoint, device_info)

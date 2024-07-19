@@ -228,7 +228,7 @@ class DeviceParticulars(TypedDict, total=False):
     deviceType: str  # could be Phone, Tablet, Laptop, POS
 
 
-class DevicePolicyRequest(TypedDict):
+class DevicePolicyRequest(TypedDict, total=False):
     policyHolderId: str
     items: List[DeviceParticulars]
 
