@@ -13,7 +13,8 @@ from rest_framework.filters import SearchFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .serializers import PolicyPurchaseSerializer, PolicySerializer, ProductSerializer
+from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
+                          ProductSerializer, QuoteSerializer)
 from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
@@ -280,12 +281,21 @@ class QuoteView(generics.RetrieveAPIView):
     # endpoint to get a quote on a Policy from the database or cache,
     # if it exists it retrieves it, otherwise it call the Insurer's API
     # to retrieve new quotes and save it to the database
+    serializer_class = QuoteSerializer
 
-    # update endpoint that updates our local database at the end of every day with
-    # realtime prices from the insurers a quote should be associated with a policy, under
-    # a product and an associated insurer
-    # NOTE: UPDATE: THIS SHOULD NOT BE AN ENDPOINT IT SHOULD BE A CELERY TASK OR SOMETHING
-    # THIS COULD INFACT BE DESIGNED IN SOLID_PRINCIPLES, EACH INSURER WOULD HAVE THEIR OWN
-    # QUOTE UPDATER THAT WOULD UPDATE THE DATABASE, HENCE EASIER FOR DEBUGGING AND TROBULESHOOTING
+    def get_object(self, **kwargs):
+        policy_id = kwargs.get("policy_id")
+        return Policy.objects.get(policy_id)
 
-    pass
+    # @extend_schema(
+    #     operation_id="retrieve quotes",
+    #     responses={
+    #         200: QuoteSerializer,
+    #     },
+    # )
+    # def retrieve(self, request, *args, **kwargs):
+    #     policy = self.get_object()
+    #     quote_service = QuoteService(policy)
+    #     quote = quote_service.get_quote()
+    #     serializer = self.get_serializer(quote)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)

@@ -50,3 +50,14 @@ class TestPolicyViewSet:
         url = reverse("policy-detail", kwargs={"pk": "some-non-existent-id"})
         response = api_client.get(url)
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestQuoteView:
+    def merchant_can_retrieve_quotes_with_valid_parameters(self):
+        pass
+
+    def merchant_cannot_retrieve_quotes_with_empty_parameters(self):
+        pass
+
+    def merchant_with_invalid_quote_parameters_results_in_api_error(self):
+        pass
