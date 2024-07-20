@@ -1,12 +1,12 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.providers.integrations.heirs.registry import (
     DevicePolicy, DevicePolicyRequest, DeviceQuoteParams, MotorPolicy,
-    MotorPolicyRequest, PersonalAccidentPolicy, PersonalAccidentPolicyRequest,
-    TravelPolicyClass, TravelPolicyRequest)
+    MotorPolicyRequest, MotorQuoteParams, PersonalAccidentPolicy,
+    PersonalAccidentPolicyRequest, TravelPolicyClass, TravelPolicyRequest)
 from django.conf import settings
 
 
@@ -94,9 +94,8 @@ def test_register_policy_holder(service, data_fixture):
 
         response = service.register_policy_holder(data_fixture)
 
-        assert response["message"] == {
-            "message": "Policy holder registered successfully"
-        }
+        assert response["message"] == "Policy holder registered successfully"
+
         assert mock_post.assert_called_once_with(policy_holder_endpoint, data_fixture)
 
 
@@ -105,6 +104,10 @@ def test_fetch_all_products(service):
     with patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
         company = "Heirs%20Insurance"
         products_by_class_resource_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{test_product_class}/product"
+        mock_response = MagicMock(
+            status_code=200, data=[{"id": 1, "name": "Test Product"}]
+        )
+        mock_get.return_value = mock_response
 
         response = service.product_queryset(test_product_class)
         assert response.status_code == 200
@@ -135,21 +138,26 @@ def test_fetch_policy_information_with_invalid_policy_number_is_unsuccessful(ser
         policy_info_endpoint = (
             f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/policy/{policy_number}"
         )
+        mock_response = MagicMock(status_code=404)
+        mock_get.return_value = mock_response
 
         response = service.get_policy_details(policy_number)
-        assert response.status_code != 200
         assert response.status_code in (401, 403, 404)
         assert mock_get.assert_called_once_with(policy_info_endpoint)
 
 
-def test_fetch_personal_accident_quotes(mocker):
+def test_fetch_personal_accident_quotes(service, mocker):
     params = {}
     with mocker.patch.object(HeirsLifeAssuranceClient, "get") as mock_get:
         params["product_id"] = "1234Heirs"
         personal_accident_quotes_endpoint = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get('product_id')}"
-        response = service.get_quote("personal_accident", params)
 
+        mock_response = MagicMock(status_code=200, data={"premium": 22_000})
+        mock_get.return_value = mock_response
+
+        response = service.get_quote("personal_accident", params)
         assert response.status_code == 200
+        mock_get.assert_called_once_with(personal_accident_quotes_endpoint)
 
 
 def test_register_personal_accident_policy(service, customer_fixture, mocker):
@@ -158,7 +166,11 @@ def test_register_personal_accident_policy(service, customer_fixture, mocker):
         f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/{product_id}/policy"
     )
     mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
-    mock_post.return_value = {"policy_id": "20425", "status": "success"}
+    mock_post.return_value = {
+        "policy_id": "20425",
+        "status": "success",
+        "status_code": 201,
+    }
 
     accident_policy_details = PersonalAccidentPolicyRequest(
         policyHolderId="holder_1",
@@ -186,7 +198,11 @@ def test_register_travel_policy(service, customer_fixture, mocker):
         f"{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/{product_id}/policy"
     )
     mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
-    mock_post.return_value = {"policy_id": "80801", "status": "success"}
+    mock_post.return_value = {
+        "status_code": 201,
+        "policy_id": "80801",
+        "status": "success",
+    }
 
     test_payload = {
         "policyHolderId": "holder_1",
@@ -210,7 +226,11 @@ def test_register_auto_policy(service, customer_fixture, mocker):
         f"{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/{product_id}/policy"
     )
     mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
-    mock_post.return_value = {"policy_id": "MOTO22335", "status": "success"}
+    mock_post.return_value = {
+        "status_code": 201,
+        "policy_id": "MOTO22335",
+        "status": "success",
+    }
 
     test_payload = {
         "policyHolderId": "holder_1",
@@ -248,6 +268,7 @@ def test_register_device_insurance_policy_is_successful(service, mocker):
 
     mock_post = mocker.patch.object(HeirsLifeAssuranceClient, "post")
     mock_post.return_value = {
+        "status_code": 201,
         "policy_id": "HEIRS-DEV-POL-2022",
         "policy_status": "pending",
         "premium": 2200,
@@ -274,7 +295,7 @@ def test_fetch_device_insurance_quote(service, mocker):
     response = service.get_quote("device", device_params)
 
     mock_get = mocker.patch.object(HeirsLifeAssuranceClient, "get")
-    mock_get.return_value = {"premium": 40_000}
+    mock_get.return_value = {"status_code": 200, "data": {"premium": 40_000}}
     assert response.status_code == 200
     assert "premium" in response.data
     mock_get.assert_called_once_with(device_quote_endpoint, request_params)

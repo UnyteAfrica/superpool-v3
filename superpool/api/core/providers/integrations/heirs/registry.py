@@ -130,8 +130,8 @@ class TravelQuoteParams(TypedDict):
 
 
 class MotorQuoteParams(TypedDict):
-    productId: str
-    motorValue: str
+    productId: str | int
+    motorValue: str | int
     motorClass: str
     motorType: str
 
