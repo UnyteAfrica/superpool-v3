@@ -53,6 +53,10 @@ class Claim(models.Model):
     class Meta:
         verbose_name = "claim"
         verbose_name_plural = "claims"
+        indexes = [
+            models.Index("created_at"),
+            models.Index("claim_number"),
+        ]
 
     @property
     def latest_status(self):
