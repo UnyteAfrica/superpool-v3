@@ -34,7 +34,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     )
     provider: models.ForeignKey = models.ForeignKey(
         Partner,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         help_text="Insurance provider offering the package",
     )
     name: models.CharField = models.CharField(
