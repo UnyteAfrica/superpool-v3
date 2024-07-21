@@ -1,13 +1,14 @@
 import uuid
 
 from core.catalog.models import Policy, Product
+from core.mixins import TimestampMixin
 from core.providers.models import Provider
 from core.user.models import Customer
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class Claim(models.Model):
+class Claim(TimestampMixin, models.Model):
     """
     A request for compensation by a policyholder due to a covered loss.
     """
@@ -55,9 +56,14 @@ class Claim(models.Model):
         verbose_name = "claim"
         verbose_name_plural = "claims"
         indexes = [
+            # For performance reasons, we want to index the timestamps and claims number
+            # as they would be used during audit processes
             models.Index("created_at"),
             models.Index("claim_number"),
         ]
+
+    def __str__(self) -> str:
+        return f"Claim #{self.id}"
 
     @property
     def latest_status(self):
@@ -78,3 +84,4 @@ class StatusTimeline(models.Model):
         Claim, on_delete=models.CASCADE, related_name="claim_status_timeline"
     )
     status = models.CharField(max_length=30, choices=Claim.CLAIM_STATUS)
+    timestamp = models.DateTimeField(auto_now_add=True)
