@@ -73,5 +73,7 @@ class StatusTimeline(models.Model):
     Stores the new status and the timestamp when the change occurred.
     """
 
-    claim = models.ForeignKey(Claim, on_delete=models.CASCADE)
+    claim = models.ForeignKey(
+        Claim, on_delete=models.CASCADE, related_name="claim_status_timeline"
+    )
     status = models.CharField(max_length=30, choices=Claim.CLAIM_STATUS)
