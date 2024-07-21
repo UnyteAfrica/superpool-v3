@@ -43,6 +43,14 @@ class StatusTimelineSerializer(serializers.ModelSerializer):
 
 
 class ClaimSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Claim instances.
+
+    This serializer includes fields that are intended to be visible when
+    retrieving or listing Claim objects. It provides a human-readable
+    representation of the Claim, including status descriptions.
+    """
+
     product = ClaimProductSerializer()
     customer = ClaimOwnerSerializer()
     insurer = ClaimProviderSerializer()
@@ -67,4 +75,22 @@ class ClaimSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "claim_reference_number": {"required": False},
         }
+
+
+class ClaimWriteSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating new Claim objects.
+
+    This serializer is used for creating and updating claim objects.
+    It provides fields needed only for write-operations and excludes
+    all forms of computed fields
+
+    NOTE: It shuld be used in write-only operations
+    """
+
+    class Meta:
+        model = Claim
+        fields = []
+        extra_kwargs = {}
