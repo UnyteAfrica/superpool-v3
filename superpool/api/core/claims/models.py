@@ -14,12 +14,13 @@ class Claim(TimestampMixin, models.Model):
     """
 
     CLAIM_STATUS = (
-        (_("Accepted"), "accepted"),
-        (_("Approved"), "approved"),
-        (_("Pending"), "pending"),
-        (_("Rejected"), "rejected"),
-        (_("Paid"), "paid"),
-        (_("Offered Sent"), "offer_sent"),
+        ("accepted", _("Accepted")),
+        ("approved", _("Approved")),
+        ("pending", _("Pending")),
+        ("denied", _("Rejected")),
+        ("paid", _("Paid")),
+        ("offer_sent", _("Offer sent")),
+        ("offer_accepted", _("Offer accepted")),
     )
     """ The current state of a claim (e.g., pending, accepted, approved, paid)."""
 
@@ -48,7 +49,7 @@ class Claim(TimestampMixin, models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    status = models.CharField(max_length=30, choices=CLAIM_STATUS)
+    status = models.CharField(max_length=30, choices=CLAIM_STATUS, default="pending")
     provider = models.ForeignKey(Provider, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
@@ -63,7 +64,7 @@ class Claim(TimestampMixin, models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Claim #{self.id}"
+        return f"Claim #{self.id} - {self.get_status_display()}"
 
     @property
     def latest_status(self):
