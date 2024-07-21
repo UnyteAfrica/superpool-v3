@@ -16,8 +16,9 @@ class Claim(models.Model):
         (_("Accepted"), "accepted"),
         (_("Approved"), "approved"),
         (_("Pending"), "pending"),
-        (_("Rejected"), "denied"),
+        (_("Rejected"), "rejected"),
         (_("Paid"), "paid"),
+        (_("Offered Sent"), "offer_sent"),
     )
     """ The current state of a claim (e.g., pending, accepted, approved, paid)."""
 
