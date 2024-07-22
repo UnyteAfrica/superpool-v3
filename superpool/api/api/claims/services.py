@@ -37,6 +37,38 @@ class ClaimService(IClaim):
         Retrieve a list of claim based on query parameters
         """
         queryset = Claim.objects.all()
+
+        # TODO: REFACTOR OUT INTO A CUSTOM FILTER
+        # A CUSTOM REST FRAMEWORK OR DJANGO FILTER SUBCLASS
+        #
+        # T FOR THANKS!
+        if "claim_status" in query_params:
+            queryset = queryset.filter(status=query_params["claim_status"])
+        if "customer_id" in query_params:
+            queryset = queryset.filter(customer__id=query_params["customer_id"])
+        if "customer_email" in query_params:
+            queryset = queryset.filter(customer__email=query_params["customer_email"])
+        if "first_name" in query_params:
+            queryset = queryset.filter(
+                customer__first_name__icontains=query_params["first_name"]
+            )
+        if "last_name" in query_params:
+            queryset = queryset.filter(
+                customer__last_name__icontains=query_params["last_name"]
+            )
+        if "phone_number" in query_params:
+            queryset = queryset.filter(
+                customer__phone_number=query_params["phone_number"]
+            )
+        if "claim_type" in query_params:
+            queryset = queryset.filter(claim_type=query_params["claim_type"])
+        if "claim_owner" in query_params:
+            queryset = queryset.filter(
+                claim_owner__icontains=query_params["claim_owner"]
+            )
+        if "offer_amount" in query_params:
+            queryset = queryset.filter(claim_amount=query_params["offer_amount"])
+
         return queryset
 
     def get_claim(

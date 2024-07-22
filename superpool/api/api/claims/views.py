@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .exceptions import NotFound
@@ -18,6 +19,7 @@ class ClaimsViewSet(viewsets.ViewSet):
         return ClaimService()
 
     @extend_schema(
+        summary="View all claims made by your customers",
         parameters=[
             OpenApiParameter(
                 name="customer_email",
@@ -51,10 +53,29 @@ class ClaimsViewSet(viewsets.ViewSet):
                 required=False,
                 type=OpenApiTypes.STR,
             ),
-        ]
+        ],
     )
     def list(self, request):
-        pass
+        """
+        Retrieve a list of claims based on query parameters.
+        """
+        query_params = request.query_params.dict()
+        service = self.get_service()
+        try:
+            claims = service.get_claims(query_params)
+
+            # we want to, paginate the resulting queryset
+            paginator = LimitOffsetPagination()
+            page = paginator.paginate_queryset(claims, request)
+
+            if page is not None:
+                serializer = ClaimSerializer(page, many=True)
+                return paginator.get_paginated_response(serializer.data)
+
+            serializer = ClaimSerializer(claims, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary="Retrieve a claim by its ID or Reference Number",
