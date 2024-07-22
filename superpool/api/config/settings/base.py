@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "core",
     "core.merchants",
     "core.catalog",
+    "core.claims",
     "api",
     "middleware",
 ]
