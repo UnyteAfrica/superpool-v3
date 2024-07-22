@@ -5,13 +5,25 @@ from core.user.models import Customer
 from rest_framework import serializers
 
 
+class ProviderSerializer(serializers.ModelSerializer):
+    """Helps us to serialize the Insurer name from the Provider object"""
+
+    class Meta:
+        model = Provider
+        fields = ["name"]
+
+
 class ClaimOwnerSerializer(serializers.ModelSerializer):
+    """Serializes the metadata about at claim owner"""
+
     class Meta:
         model = Customer
         fields = ["first_name", "last_name", "dob", "email", "phone_number"]
 
 
 class ClaimProductSerializer(serializers.ModelSerializer):
+    """Serilizes the metadata about the product category a claim belongs to"""
+
     class Meta:
         model = Product
         fields = [
@@ -21,10 +33,12 @@ class ClaimProductSerializer(serializers.ModelSerializer):
 
 
 class ClaimProviderSerializer(serializers.ModelSerializer):
+    provider = ProviderSerializer()
+
     class Meta:
         # We are using product here, so we can use the product to reference the insurer who offered this package
         model = Product
-        fields = ["provider__name"]
+        fields = ["provider"]
 
 
 class StatusTimelineSerializer(serializers.ModelSerializer):
@@ -72,6 +86,7 @@ class ClaimSerializer(serializers.ModelSerializer):
             "insurer",
             "product",
             "policy",
+            "claim_status_timeline",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
