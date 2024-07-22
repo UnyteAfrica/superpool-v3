@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Union
 
 from core.claims.models import Claim
+from django.db import transaction
 from django.db.models import F, Q, QuerySet
 
 
@@ -47,6 +48,7 @@ class ClaimService(IClaim):
         id = claim_id if claim_id is not None else None
         return Claim.objects.get(Q(claim_number) | Q(id))
 
+    @transaction.atomic
     def submit_claim(self, data: dict[str, Any]):
         """
         Create a new claim with the given data
@@ -54,6 +56,7 @@ class ClaimService(IClaim):
         claim = Claim.objects.create(**data)
         return claim
 
+    @transaction.atomic
     def update_claim(self, claim_number: str | int, data: dict[str, Any]):
         """
         Update an existing claim with the provided data
