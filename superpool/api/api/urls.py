@@ -20,6 +20,7 @@ urlpatterns = [
     ),
     # path("", include("api.merchants.urls"), name="merchants"),
     path("", include("api.catalog.urls"), name="catalog"),
+    path("", include("api.claims.urls"), name="claims"),
 ]
 
 urlpatterns += router.urls
