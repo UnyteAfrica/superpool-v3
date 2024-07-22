@@ -105,7 +105,20 @@ class ClaimWriteSerializer(serializers.ModelSerializer):
     NOTE: It shuld be used in write-only operations
     """
 
+    claim_reference_number = serializers.CharField(source="claim_number")
+    customer = ClaimOwnerSerializer()
+    claim_id = serializers.UUIDField(source="id")
+
     class Meta:
         model = Claim
-        fields = []
-        extra_kwargs = {}
+        fields = [
+            "claim_id",
+            "claim_reference_number",
+            "claim_status",
+            "customer",
+            # TODO: documents and other stuff should be used in this serializer and not in the read serializer
+        ]
+        extra_kwargs = {
+            "claim_reference_number": {"read_only": True},
+            "claim_id": {"read_only": True},
+        }

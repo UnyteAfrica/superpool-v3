@@ -133,3 +133,45 @@ class ClaimsViewSet(viewsets.ViewSet):
                     Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST),
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Update the details of a previously filed claim by a cutstomer",
+        parameters=[
+            OpenApiParameter(
+                name="claim_number",
+                description="Claim Reference Number issued by the Insurance provider to help manage/track claim object",
+            ),
+        ],
+        responses={200: ClaimSerializer},
+    )
+    def update(self, request, claim_number):
+        """
+        Endpoint to update an existing filed claim
+        """
+        serializer = ClaimWriteSerializer(data=request.data)
+
+        data = serializer.validated_data
+        if serializer.is_valid():
+            service = self.get_service()
+            # We want to retrive the claim instance then update it with the new details
+            instance = service.get_claim(claim_number=data["claim_number"])
+
+            if instance:
+                claim = service.update_claim(
+                    claim_number=data["claim_number"], data=data
+                )
+                response_serializer = ClaimSerializer(claim)
+                return Response(
+                    {
+                        "data": response_serializer.data,
+                        "message": "Claim updated successfully",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            return Response(
+                {
+                    "error": "It seems we fcked up! Please contact support for swift resolution!",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
