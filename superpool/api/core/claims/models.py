@@ -61,6 +61,7 @@ class Claim(TimestampMixin, models.Model):
             # as they would be used during audit processes
             models.Index("created_at"),
             models.Index("claim_number"),
+            models.Index("id"),
         ]
 
     def __str__(self) -> str:
@@ -71,7 +72,8 @@ class Claim(TimestampMixin, models.Model):
         """
         Provides latest information regarding a claim status
         """
-        pass
+        # retrieves a set from the StatusTimeline class, ordering by latest timestamp
+        return self.statustimeline_set.order_by("-timestamp").first()
 
 
 class StatusTimeline(models.Model):
