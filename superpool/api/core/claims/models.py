@@ -59,9 +59,11 @@ class Claim(TimestampMixin, models.Model):
         indexes = [
             # For performance reasons, we want to index the timestamps and claims number
             # as they would be used during audit processes
-            models.Index("created_at"),
-            models.Index("claim_number"),
-            models.Index("id"),
+            models.Index(fields=["created_at"], name="created_at_idx"),
+            models.Index(fields=["claim_number"], name="claim_number_idx"),
+            models.Index(
+                fields=["id"], name="claim_id_idx"
+            ),  # pronounced claim id index
         ]
 
     def __str__(self) -> str:
