@@ -5,7 +5,9 @@ from core.merchants.models import Merchant
 from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner
 from core.user.models import Customer
+from core.utils import generate_id
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
 
 
@@ -154,10 +156,62 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         ]
 
 
-class Quote(models.Model):
-    id = models.CharField(max_length=80, primary_key=True, unique=True, editable=False)
+class Price(models.Model):
+    """
+    Defines the pricing structure for an object e.g a product
+    """
+
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    comission = models.DecimalField(
+        max_digits=3, decimal_places=2, null=True, blank=True
+    )
+    discount_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    surcharges = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+
+
+class Quote(models.Model):
+    """
+    Represents an insurance quote for a policy
+    """
+
+    # id = models.CharField(max_length=80, primary_key=True, unique=True, editable=False)
+    quote_code = models.CharField(
+        _("Quote Code"),
+        primary_key=True,
+        unique=True,
+        editable=False,
+        help_text="Assigned identifier for managing quote objects",
+    )
+    base_price = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Price of quote excluding  discount"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        help_text="Insurance Product/Service covered by the quote",
+    )
+    coverage_amount = models.DecimalField(
+        decimal_places=2,
+        max_digits=10,
+        help_text="The total coverage amount for the quote.",
+    )
+    premium = models.ForeignKey(
+        Price,
+        on_delete=models.CASCADE,
+        help_text="The calculated premium for the quote",
+    )
+    expires_in = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "quote"
         verbose_name_plural = "quotes"
+
+    def save(self, *args, **kwargs):
+        if not self.quote_code:
+            quote_code = generate_id(self.__class__.__name__)
+            self.quote_code = quote_code
+            return super().save(*args, **kwargs)

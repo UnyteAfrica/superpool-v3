@@ -1,3 +1,5 @@
+import uuid
+
 from core.merchants.models import Merchant
 
 
@@ -29,3 +31,16 @@ def send_verification_email(email: str, token: str) -> None:
         confirm_url=CONFIRMATION_URL, to=email, from_=settings.FROM_EMAIL
     )
     verification_email.send()
+
+
+def generate_id(klass):
+    """
+    Performant ID generator that generates memory-efficient, unique idenifiers
+    for objects
+    """
+    class_name = klass
+    prefix = class_name[:3].lower().encode("utf-8")
+    suffix = uuid.uuid4().hex[:16].encode("utf-8")
+    # print(f"Prefix: {prefix}")
+    # print(f"Suffix: {suffix}")
+    return f"{prefix.decode()}_{suffix.decode()}"

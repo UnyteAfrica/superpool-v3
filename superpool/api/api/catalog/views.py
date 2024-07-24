@@ -13,8 +13,12 @@ from rest_framework.filters import SearchFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
-                          ProductSerializer, QuoteSerializer)
+from .serializers import (
+    PolicyPurchaseSerializer,
+    PolicySerializer,
+    ProductSerializer,
+    QuoteSerializer,
+)
 from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
@@ -277,25 +281,32 @@ class ProductAPIViewSet(viewsets.GenericViewSet):
     pass
 
 
-class QuoteView(generics.RetrieveAPIView):
+class QuoteView(viewsets.GenericViewSet):
     # endpoint to get a quote on a Policy from the database or cache,
     # if it exists it retrieves it, otherwise it call the Insurer's API
     # to retrieve new quotes and save it to the database
     serializer_class = QuoteSerializer
 
+    def get_service(self):
+        return QuoteService()
+
     def get_object(self, **kwargs):
         policy_id = kwargs.get("policy_id")
         return Policy.objects.get(policy_id)
 
-    # @extend_schema(
-    #     operation_id="retrieve quotes",
-    #     responses={
-    #         200: QuoteSerializer,
-    #     },
-    # )
-    # def retrieve(self, request, *args, **kwargs):
-    #     policy = self.get_object()
-    #     quote_service = QuoteService(policy)
-    #     quote = quote_service.get_quote()
-    #     serializer = self.get_serializer(quote)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        operation_id="retrieve-quotes",
+        summary="Retrieve quotes for a policy",
+        responses={
+            200: QuoteSerializer,
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        policy = self.get_object()
+        quote_service = self.get_service()
+        quote = quote_service.get_quote(policy_id)
+        serializer = self.get_serializer(quote)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def list(self, request, *args, **kwargs):
+        pass
