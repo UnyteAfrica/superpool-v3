@@ -15,8 +15,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .exceptions import ProductNotFoundError
-from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
-                          ProductSerializer, QuoteSerializer)
+from .serializers import (
+    PolicyPurchaseSerializer,
+    PolicySerializer,
+    ProductSerializer,
+    QuoteSerializer,
+)
 from .services import PolicyService, ProductService, QuoteService
 
 logger = logging.getLogger(__name__)

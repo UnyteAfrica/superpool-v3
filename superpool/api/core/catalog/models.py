@@ -162,7 +162,7 @@ class Price(models.Model):
     Defines the pricing structure for an object e.g a product
     """
 
-    base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    value = models.DecimalField(max_digits=10, decimal_places=2)
     comission = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True
     )
