@@ -29,3 +29,7 @@ class QuoteNotFoundError(Exception):
 
 class PremiumCalculationError(Exception):
     pass
+
+
+class ProductNotFoundError(Exception):
+    pass

@@ -1,9 +1,15 @@
 import typing
 
-from django.urls import include, path
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import PolicyAPIViewSet, PolicyListView, ProductListView, ProductView
+from .views import (
+    PolicyAPIViewSet,
+    ProductListView,
+    ProductView,
+    QuoteDetailView,
+    QuoteListView,
+)
 
 router = DefaultRouter()
 
@@ -30,6 +36,10 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         PolicyAPIViewSet.as_view({"get": "search"}),
         name="policy-search",
     ),
+    path(
+        "quotes/request/<str:product_name>/", QuoteListView.as_view(), name="quote-list"
+    ),
+    path("quotes/<str:quote_code>/", QuoteDetailView.as_view(), name="quote-detail"),
     # path(
     #     "policies/purchase/",
     #     PolicyAPIViewSet.as_view({"post": "purchase"}),

@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import Union
 
-from api.catalog.exceptions import QuoteNotFoundError
+from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
 from django.db import models
 from django.db.models import QuerySet
+
+from .serializers import QuoteSerializer
 
 
 class ProductService:
@@ -59,9 +62,9 @@ class PolicyService:
 
 class IQuote(ABC):
     @abstractmethod
-    def get_quote(self, product, batch=False):
+    def get_quote(self, product, quote_code=None, batch=False):
         """Retrieves an insurance quotation on a policy. if batch is selected returns a list of quotes from multiple insurers instead."""
-        return NotImplementedError()
+        raise NotImplementedError()
 
     # compute methods for traditional insurers
     def calculate_premium(self):
@@ -83,12 +86,34 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
-    def get_quote(self, product, batch=False):
-        if batch:
-            # TODO: Implement a logic for listing multiple quotes
-            pass
+    def _get_all_quotes_for_product(self, product_code):
+        try:
+            product = Product.objects.get(code=product_code)
+            quotes = Quote.objects.filter(product=product)
+            if not quotes:
+                raise QuoteNotFoundError("No quotes found for the given product.")
+            serializer = QuoteSerializer(quotes, many=True)
+            return serializer.data
+        except Product.DoesNotExist:
+            raise ProductNotFoundError("Product not found.")
 
-        quote = Quote.objects.filter(product=product).distinct()
-        if not quote:
-            raise QuoteNotFoundError("No quote found for the given product.")
-        return quote
+    def _get_quote_by_code(self, quote_code):
+        try:
+            quote = Quote.objects.get(quote_code=quote_code)
+            serializer = QuoteSerializer(quote)
+            return serializer.data
+        except Quote.DoesNotExist:
+            raise QuoteNotFoundError("Quote not found.")
+
+    def get_quote(
+        self,
+        product: Union[str, None] = None,
+        quote_code: Union[str, None] = None,
+        batch=False,
+    ):
+        """
+        Retrieves insurance quotes for an insurance policy
+        """
+        if batch and product is not None:
+            return self._get_all_quotes_for_product(product_code=product)
+        return self._get_quote_by_code(quote_code=quote_code)

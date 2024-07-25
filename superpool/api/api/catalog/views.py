@@ -1,24 +1,22 @@
 import logging
 
 from api.app_auth.authentication import APIKeyAuthentication
+from api.catalog.exceptions import QuoteNotFoundError
 from api.catalog.filters import QSearchFilter
 from core.catalog.models import Policy, Product
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import generics, mixins, status, viewsets
+from rest_framework import generics, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .serializers import (
-    PolicyPurchaseSerializer,
-    PolicySerializer,
-    ProductSerializer,
-    QuoteSerializer,
-)
+from .exceptions import ProductNotFoundError
+from .serializers import (PolicyPurchaseSerializer, PolicySerializer,
+                          ProductSerializer, QuoteSerializer)
 from .services import PolicyService, ProductService, QuoteService
 
 logger = logging.getLogger(__name__)
@@ -281,12 +279,35 @@ class ProductAPIViewSet(viewsets.GenericViewSet):
     pass
 
 
-class QuoteView(viewsets.GenericViewSet):
-    # endpoint to get a quote on a Policy from the database or cache,
-    # if it exists it retrieves it, otherwise it call the Insurer's API
-    # to retrieve new quotes and save it to the database
-    serializer_class = QuoteSerializer
-    lookup_field = "quote_code"
-
+class QuoteListView(generics.ListAPIView):
     def get_service(self):
         return QuoteService()
+
+    def get(self, request, product_name):
+        """
+        Retrieve list of quotes for an insurance policy
+        """
+        service = self.get_service()
+
+        try:
+            quotes = service.get_quote(product=product_name, batch=True)
+            return Response(quotes, status=status.HTTP_200_OK)
+        except (QuoteNotFoundError, ProductNotFoundError) as api_err:
+            return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
+
+
+class QuoteDetailView(views.APIView):
+    def get_service(self):
+        return QuoteService()
+
+    def get(self, request, quote_code):
+        """
+        Endpoint to retrieve a specific quote by its ID
+        """
+        service = self.get_service()
+
+        try:
+            quote = service.get_quote(quote_code=quote_code)
+            return Response(quote, status=status.HTTP_200_OK)
+        except QuoteNotFoundError as api_err:
+            return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
