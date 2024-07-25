@@ -1,5 +1,6 @@
 import typing
 import uuid
+from datetime import datetime, timedelta
 
 from core.merchants.models import Merchant
 from core.mixins import TimestampMixin, TrashableModelMixin
@@ -194,17 +195,15 @@ class Quote(models.Model):
         on_delete=models.CASCADE,
         help_text="Insurance Product/Service covered by the quote",
     )
-    coverage_amount = models.DecimalField(
-        decimal_places=2,
-        max_digits=10,
-        help_text="The total coverage amount for the quote.",
-    )
     premium = models.ForeignKey(
         Price,
         on_delete=models.CASCADE,
         help_text="The calculated premium for the quote",
     )
-    expires_in = models.DateTimeField(auto_now_add=True)
+    expires_in = models.DateTimeField(
+        auto_now_add=True, help_text="The expiry date of the quote."
+    )
+    status = models.CharField(max_length=20, default="pending")
 
     class Meta:
         verbose_name = "quote"
@@ -212,6 +211,10 @@ class Quote(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.quote_code:
-            quote_code = generate_id(self.__class__.__name__)
+            quote_code = generate_id(self)
             self.quote_code = quote_code
-            return super().save(*args, **kwargs)
+
+        if not self.expires_in:
+            # Set quote expiry by default to 1 Month
+            self.expires_in = datetime.now() + timedelta(days=30)
+        return super().save(*args, **kwargs)
