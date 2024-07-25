@@ -117,3 +117,18 @@ class QuoteService(IQuote):
         if batch and product is not None:
             return self._get_all_quotes_for_product(product_code=product)
         return self._get_quote_by_code(quote_code=quote_code)
+
+    def update_quote(self, quote_code, data):
+        """
+        Updates the information and metadata of an existing quote
+        """
+        try:
+            # get the quote from the database and update it with new
+            # information
+            quote = Quote.objects.get(quote_code=quote_code)
+            serializer = QuoteSerializer(quote, data=data, partial=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return serializer.data
+        except Quote.DoesNotExist:
+            raise QuoteNotFoundError("Quote not found.")
