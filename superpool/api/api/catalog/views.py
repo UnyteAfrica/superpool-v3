@@ -19,7 +19,7 @@ from .serializers import (
     ProductSerializer,
     QuoteSerializer,
 )
-from .services import PolicyService, ProductService
+from .services import PolicyService, ProductService, QuoteService
 
 logger = logging.getLogger(__name__)
 
@@ -286,27 +286,7 @@ class QuoteView(viewsets.GenericViewSet):
     # if it exists it retrieves it, otherwise it call the Insurer's API
     # to retrieve new quotes and save it to the database
     serializer_class = QuoteSerializer
+    lookup_field = "quote_code"
 
     def get_service(self):
         return QuoteService()
-
-    def get_object(self, **kwargs):
-        policy_id = kwargs.get("policy_id")
-        return Policy.objects.get(policy_id)
-
-    @extend_schema(
-        operation_id="retrieve-quotes",
-        summary="Retrieve quotes for a policy",
-        responses={
-            200: QuoteSerializer,
-        },
-    )
-    def retrieve(self, request, *args, **kwargs):
-        policy = self.get_object()
-        quote_service = self.get_service()
-        quote = quote_service.get_quote(policy_id)
-        serializer = self.get_serializer(quote)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def list(self, request, *args, **kwargs):
-        pass

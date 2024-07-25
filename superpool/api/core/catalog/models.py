@@ -179,6 +179,12 @@ class Quote(models.Model):
     Represents an insurance quote for a policy
     """
 
+    QUOTE_STATUS = (
+        ("pending", "pending"),
+        ("accepted", "accepted"),
+        ("declined", "declined"),
+    )
+
     # id = models.CharField(max_length=80, primary_key=True, unique=True, editable=False)
     quote_code = models.CharField(
         _("Quote Code"),
@@ -201,9 +207,10 @@ class Quote(models.Model):
         help_text="The calculated premium for the quote",
     )
     expires_in = models.DateTimeField(
-        auto_now_add=True, help_text="The expiry date of the quote."
+        auto_now_add=True,
+        help_text="The expiry date of the quote.",
     )
-    status = models.CharField(max_length=20, default="pending")
+    status = models.CharField(max_length=20, choices=QUOTE_STATUS, default="pending")
 
     class Meta:
         verbose_name = "quote"
@@ -213,8 +220,6 @@ class Quote(models.Model):
         if not self.quote_code:
             quote_code = generate_id(self)
             self.quote_code = quote_code
-
-        if not self.expires_in:
-            # Set quote expiry by default to 1 Month
-            self.expires_in = datetime.now() + timedelta(days=30)
+        # Set quote expiry by default to 1 Month
+        self.expires_in = datetime.now() + timedelta(days=30)
         return super().save(*args, **kwargs)
