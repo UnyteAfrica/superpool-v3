@@ -55,17 +55,12 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     coverage_details: models.TextField = models.TextField(
         help_text="Detailed breakdown of what's covered", null=True, blank=True
     )
-    base_price: models.DecimalField = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        help_text="Base price of the package prior to any modifications or adjustments",
-    )  # TODO: We want to add a proper currency field here, we would probably need to create a custom field for this or use a  third-party package
     is_live = models.BooleanField(
         default=True, help_text="Indicates if the package is live"
     )
 
     def __str__(self) -> str:
-        return f"Product: {self.name}, Provider: {self.provider.name}"
+        return f"{self.name} - {self.product_type}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
@@ -218,8 +213,9 @@ class Quote(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.quote_code:
-            quote_code = generate_id(self)
+            quote_code = generate_id(self.__class__)
             self.quote_code = quote_code
         # Set quote expiry by default to 1 Month
-        self.expires_in = datetime.now() + timedelta(days=30)
+        if not self.expires_in:
+            self.expires_in = datetime.now() + timedelta(days=30)
         return super().save(*args, **kwargs)

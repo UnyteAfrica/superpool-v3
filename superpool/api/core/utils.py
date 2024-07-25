@@ -9,10 +9,12 @@ def generate_verification_token() -> str:
     """
     Generates a verification token for email verification
     """
-    return random.choice([
-        "".join(random.choices(string.ascii_letters + string.digits, k=1))
-        for _ in range(6)
-    ])
+    return random.choice(
+        [
+            "".join(random.choices(string.ascii_letters + string.digits, k=1))
+            for _ in range(6)
+        ]
+    )
 
 
 def send_verification_email(email: str, token: str) -> None:
