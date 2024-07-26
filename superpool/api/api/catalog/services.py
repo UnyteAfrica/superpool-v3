@@ -63,7 +63,7 @@ class PolicyService:
 
 class IQuote(ABC):
     @abstractmethod
-    def get_quote(self, product, quote_code=None, batch=False):
+    def get_quote(self, product, product_name, quote_code=None, batch=False):
         """Retrieves an insurance quotation on a policy. if batch is selected returns a list of quotes from multiple insurers instead."""
         raise NotImplementedError()
 
@@ -113,13 +113,18 @@ class QuoteService(IQuote):
     def get_quote(
         self,
         product: Union[str, None] = None,
+        product_name: Union[str, None] = None,
         quote_code: Union[str, None] = None,
         batch=False,
     ):
         """
         Retrieves insurance quotes for an insurance policy
         """
-        if batch and product is not None:
+        if product and product_name:
+            return self._get_all_quotes_for_product(
+                product_type=product, product_name=product_name
+            )
+        elif product:
             return self._get_all_quotes_for_product(product_type=product)
         return self._get_quote_by_code(quote_code=quote_code)
 
