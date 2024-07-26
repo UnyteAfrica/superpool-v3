@@ -7,6 +7,7 @@ from .views import (
     PolicyAPIViewSet,
     ProductListView,
     ProductView,
+    QuoteAPIViewSet,
     QuoteDetailView,
     QuoteListView,
 )
@@ -14,6 +15,7 @@ from .views import (
 router = DefaultRouter()
 
 router.register(r"policies", PolicyAPIViewSet, basename="policy")
+router.register(r"quotations", QuoteAPIViewSet, basename="quotation")
 
 if typing.TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver

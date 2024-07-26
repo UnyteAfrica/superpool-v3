@@ -5,6 +5,7 @@ from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
 from django.db import models
 from django.db.models import QuerySet
+from rest_framework.serializers import ValidationError
 
 from .serializers import QuoteSerializer
 
@@ -76,11 +77,11 @@ class IQuote(ABC):
         """Generates a PDF document of the quote."""
         pass
 
-    def accept(self):
+    def accept_quote(self, quote):
         """Converts the quote into a policy"""
         pass
 
-    def decline(self, quote):
+    def decline_quote(self, quote):
         """Sets the quote status to declined."""
         pass
 
@@ -132,3 +133,17 @@ class QuoteService(IQuote):
                 return serializer.data
         except Quote.DoesNotExist:
             raise QuoteNotFoundError("Quote not found.")
+
+    def accept_quote(self, quote):
+        if quote:
+            customer_metadata = getattr(quote, "customer_metadata", {})
+            # Create a corresponding Policy object with the information on the quote
+            policy_payload = {
+                "product": quote.product,
+                "customer": customer_metadata,
+                "provider_name": quote.provider.name,
+                "provider_id": quote.provider.name,
+                "premium": quote.premium,
+            }
+            policy_id, policy = Policy.objects.create(**policy_payload)
+            return policy_id, policy
