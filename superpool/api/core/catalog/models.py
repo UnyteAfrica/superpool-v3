@@ -60,7 +60,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.name} - {self.product_type}"
+        return f"{self.product_type}: {self.name} - {self.provider.name}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
@@ -84,6 +84,12 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         primary_key=True,
         default=uuid.uuid4,
         help_text="Unique identifier for the policy",
+    )
+    policy_number = models.CharField(
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Policy Refrence Number assigned by the insurer e.g GI86585700-1, AXA2024727-2, LEAD18002-42, etc",
     )
     product: models.ForeignKey = models.ForeignKey(
         Product,
@@ -124,6 +130,11 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     renewable = models.BooleanField(
         default=False, help_text="Indicates if the policy is renewable"
     )
+    renewal_date = models.DateTimeField(
+        help_text="Date when this insurance policy is due for renewal",
+        null=True,
+        blank=True,
+    )
     inspection_required = models.BooleanField(
         default=False,
         help_text="Indicates if an inspection is required before the policy can be purchased",
@@ -134,7 +145,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
 
     def __str__(self) -> str:
-        return f"Policy: {self.policy_id} bought by User: {self.policy_holder.username}"
+        return f"{self.policy_id} bought by User: {self.policy_holder.username}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
