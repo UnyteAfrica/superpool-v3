@@ -4,7 +4,7 @@ from typing import Union
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
 
 from .serializers import QuoteSerializer
@@ -87,14 +87,18 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
-    def _get_all_quotes_for_product(self, product_code):
+    def _get_all_quotes_for_product(self, product_type, product_name=None):
         try:
-            product = Product.objects.get(code=product_code)
+            if product_name:
+                product = Product.objects.filter(
+                    Q(product_type=product_type) | Q(product_name=product_name)
+                )
+            product = Product.objects.get(product_type=product_type)
             quotes = Quote.objects.filter(product=product)
             if not quotes:
                 raise QuoteNotFoundError("No quotes found for the given product.")
             serializer = QuoteSerializer(quotes, many=True)
-            return serializer.data
+            return serializer
         except Product.DoesNotExist:
             raise ProductNotFoundError("Product not found.")
 
@@ -102,7 +106,7 @@ class QuoteService(IQuote):
         try:
             quote = Quote.objects.get(quote_code=quote_code)
             serializer = QuoteSerializer(quote)
-            return serializer.data
+            return serializer
         except Quote.DoesNotExist:
             raise QuoteNotFoundError("Quote not found.")
 
@@ -116,7 +120,7 @@ class QuoteService(IQuote):
         Retrieves insurance quotes for an insurance policy
         """
         if batch and product is not None:
-            return self._get_all_quotes_for_product(product_code=product)
+            return self._get_all_quotes_for_product(product_type=product)
         return self._get_quote_by_code(quote_code=quote_code)
 
     def update_quote(self, quote_code, data):
