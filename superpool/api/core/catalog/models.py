@@ -80,6 +80,9 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     Insurance policy purchased by a user
     """
 
+    POLICY_STATUS = (("accepted", _("Accepted")), ("cancelled", _("Cancelled")))
+    """ Describes the current status of the policy """
+
     policy_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -142,6 +145,24 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     cerfication_required = models.BooleanField(
         default=False,
         help_text="Indicates if any certifications are required before the policy can be purchased",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=POLICY_STATUS,
+        default="active",
+        help_text="Current status of the policy",
+    )
+    cancellation_initiator = models.CharField(
+        max_length=50,
+        help_text="Who requested for cancellation of this policy?",
+        null=True,
+        blank=True,
+    )
+    cancellation_reason = models.TextField(
+        null=True, blank=True, help_text="Reason for policy cancellation"
+    )
+    cancellation_date = models.DateTimeField(
+        null=True, blank=True, help_text="Date when the policy was cancelled"
     )
 
     def __str__(self) -> str:
