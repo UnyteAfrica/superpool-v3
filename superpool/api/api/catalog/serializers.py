@@ -67,28 +67,6 @@ class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
         depth = 1
 
 
-class CreatePolicySerializer(ModelSerializer):
-    """
-    Serializer for creating a Policy model
-
-    This serializer is used to create a new policy
-
-    """
-
-    class Meta:
-        model = Policy
-        fields = (
-            "name",
-            "policy_holder",
-            "premium",
-            "coverage",
-            "merchant_id",
-            "provider_id",
-            "renewable",
-        )
-        exclude = ("cerfication_required", "inspection_required")
-
-
 class PriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Price
