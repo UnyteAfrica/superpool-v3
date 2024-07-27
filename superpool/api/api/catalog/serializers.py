@@ -28,20 +28,7 @@ class PolicySerializer(ModelSerializer):
     class Meta:
         model = Policy
         depth = 1
-        fields = [
-            "policy_id",
-            "product",
-            "policy_holder",
-            "effective_from",
-            "effective_through",
-            "premium",
-            "coverage",
-            "merchant_id",
-            "provider_id",
-            "renewable",
-            "inspection_required",
-            "cerfication_required",
-        ]
+        fields = "__all__"
         extra_kwargs = {
             "policy_id": {"read_only": True},
             "merchant_id": {"read_only": True},
