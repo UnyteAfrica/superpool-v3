@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Any, NewType, Union
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
@@ -7,7 +7,12 @@ from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
 
-from .serializers import QuoteSerializer
+from .serializers import PolicyCancellationResponseSerializer, QuoteSerializer
+
+CustomerT = NewType("CustomerT", str)
+""" Denotes a Customer Type"""
+MerchantT = NewType("MerchantT", str)
+""" Denotes a Merchant Type"""
 
 
 class ProductService:
@@ -59,6 +64,37 @@ class PolicyService:
         return Policy.objects.filter(
             models.Q(product__product_type=models.F("product_type"))
         ).select_related("product", "provider_id")
+
+    def notify(self, action, who: MerchantT | CustomerT) -> dict[str, Any]:
+        """
+        Notify a stakeholder about an action that took place on this policy
+
+        Arguments:
+            action: context to include in the mail to be sent to this stakeholder
+            who: the stakeholder, who is of string type Customer or string type Merchant
+        """
+        pass
+
+    def _notify_merchant(policy, action) -> dict[str, Any]:
+        pass
+
+    def _notify_customer(policy, action) -> dict[str, Any]:
+        pass
+
+    @staticmethod
+    def cancel_policy(data) -> PolicyCancellationResponseSerializer | Exception:
+        """
+        Initiate a cancellation request using the given policy data
+
+        Returns:
+
+            PolicyCancellationResponseSerializer (dict) a formatted response object in form of a python dictionary
+
+            OR
+
+            Exception an error message indicating failure of opertion
+        """
+        pass
 
 
 class IQuote(ABC):
