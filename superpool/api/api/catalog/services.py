@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, NewType, Union
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
@@ -65,7 +66,10 @@ class PolicyService:
             models.Q(product__product_type=models.F("product_type"))
         ).select_related("product", "provider_id")
 
-    def notify(self, action, who: MerchantT | CustomerT) -> dict[str, Any]:
+    @staticmethod
+    def notify(
+        who: MerchantT | CustomerT, action: str | dict, policy: Policy
+    ) -> dict[str, Any]:
         """
         Notify a stakeholder about an action that took place on this policy
 
@@ -73,18 +77,23 @@ class PolicyService:
             action: context to include in the mail to be sent to this stakeholder
             who: the stakeholder, who is of string type Customer or string type Merchant
         """
-        pass
+        return {}
 
-    def _notify_merchant(policy, action) -> dict[str, Any]:
-        pass
-
-    def _notify_customer(policy, action) -> dict[str, Any]:
+    @staticmethod
+    def _notify_merchant(action, policy) -> dict[str, Any]:
         pass
 
     @staticmethod
-    def cancel_policy(data) -> PolicyCancellationResponseSerializer | Exception:
+    def _notify_customer(action, policy) -> dict[str, Any]:
+        pass
+
+    @staticmethod
+    def cancel_policy(data: str) -> dict | Exception:
         """
         Initiate a cancellation request using the given policy data
+
+        Policy cancellation can be initiated either using the policy reference number or the assigned
+        policy ID.
 
         Returns:
 
@@ -94,7 +103,33 @@ class PolicyService:
 
             Exception an error message indicating failure of opertion
         """
-        pass
+        from api.catalog.serializers import PolicySerializer
+
+        # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
+        # with the provided information, and return it back to the merchant
+        try:
+            policy = Policy.objects.get(policy_id=data["policy_id"])
+
+            policy.status = "cancelled"
+            policy.cancellation_reason = data["cancellation_reason"]
+            policy.cancellation_date = datetime.now()
+            policy.save()
+
+            # send notification emails to stakeholders - in this case, our merchant  and their customer
+            PolicyService.notify(MerchantT, "cancel_policy", policy)
+            PolicyService.notify(CustomerT, "cancel_policy", policy)
+
+            return {
+                "policy_id": policy.policy_id,
+                "status": policy.status,
+                "cancellation_reason": policy.cancellation_reason,
+                "cancellation_date": policy.cancellation_date,
+                "message": "Policy cancelled successfully.",
+            }
+        except Policy.DoesNotExist:
+            raise Exception("Policy not found")
+        except Exception as exc:
+            raise Exception(f"An error occured during policy cancellation: {str(exc)}")
 
 
 class IQuote(ABC):

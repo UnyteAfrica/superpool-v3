@@ -9,8 +9,8 @@ from core.user.models import Customer
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (OpenApiParameter, OpenApiRequest,
-                                   extend_schema)
+from drf_spectacular.utils import (OpenApiExample, OpenApiParameter,
+                                   OpenApiRequest, extend_schema)
 from rest_framework import generics, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -312,23 +312,6 @@ class PolicyAPIViewSet(
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @extend_schema(
-        summary="Cancel policy subscription",
-        request=PolicyCancellationSerializer,
-        responses={200: PolicyCancellationResponseSerializer},
-    )
-    @action(detail=False, methods=["post"])
-    def cancel(self, request, policy_id):
-        """
-        Cancel a policy subscription using the policy ID or the policy number
-        """
-        policy_identifier = policy_id or request.data.get("policy_reference_number")
-        serializer = PolicyCancellationSerializer(data=request.data)
-        if serializer.is_valid():
-            response_serializer = PolicyCancellationResponseSerializer()
-            return Response(response_serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ProductAPIViewSet(viewsets.GenericViewSet):
     # endpoint to search and filter for product based on query parameters
@@ -494,3 +477,56 @@ class PolicyPurchaseView(generics.CreateAPIView):
         policy = serializer.save()
         response_serializer = PolicyPurchaseResponseSerializer(policy)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PolicyCancellationView(generics.GenericAPIView):
+    """
+    This view allows you to initiate the termination of insurance policy
+    """
+
+    serializer_class = PolicyCancellationSerializer
+
+    def get_service(self):
+        return PolicyService()
+
+    @extend_schema(
+        summary="Cancel an active policy subscription",
+        parameters=[
+            OpenApiParameter(
+                name="policy_id",
+                description="Unique ID of the policy",
+            ),
+            OpenApiParameter(
+                name="policy_number",
+                description="policy reference number assigned by the insurer",
+            ),
+        ],
+        description="Cancel an active policy subscription using the policy id or the policy number provided by the insurer",
+        request=PolicyCancellationSerializer,
+        responses={200: PolicyCancellationResponseSerializer, 400: {"error": "string"}},
+    )
+    def post(self, request):
+        """
+        Cancel a policy subscription using the policy ID or the policy number
+        """
+        service = self.get_service()
+        policy_number = request.data.get("policy_number")
+        policy_id = request.data.get("policy_id")
+
+        if not policy_id or not policy_number:
+            return Response(
+                {
+                    "error": "Either policy number or policy number must be provided",
+                    "detail": "Please provide a valid policy reference number or policy id to perform this action",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                response = service.cancel_policy(serializer.validated_data)
+                response_serializer = PolicyCancellationResponseSerializer(response)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            except Exception as exc:
+                return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

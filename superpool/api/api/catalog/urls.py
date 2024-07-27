@@ -3,14 +3,21 @@ import typing
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import (PolicyAPIViewSet, PolicyPurchaseView, ProductListView,
-                    ProductView, QuoteAPIViewSet, QuoteDetailView,
-                    QuoteListView, RequestQuoteView)
+from .views import (
+    PolicyAPIViewSet,
+    PolicyCancellationView,
+    PolicyPurchaseView,
+    ProductListView,
+    ProductView,
+    QuoteAPIViewSet,
+    QuoteDetailView,
+    QuoteListView,
+    RequestQuoteView,
+)
 
 router = DefaultRouter()
 
 router.register(r"policies", PolicyAPIViewSet, basename="policy")
-router.register(r"quotations", QuoteAPIViewSet, basename="quotation")
 
 if typing.TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver
@@ -24,6 +31,7 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     ),
     # path("", include(router.urls)),
     path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
+    path("policies/cancel", PolicyCancellationView.as_view(), name="policy-cancel"),
     # path(
     #     "policies/<uuid:pk>/",
     #     PolicyAPIViewSet.as_view({"get": "retrieve"}),
