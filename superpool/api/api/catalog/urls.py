@@ -3,14 +3,9 @@ import typing
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
-    PolicyAPIViewSet,
-    ProductListView,
-    ProductView,
-    QuoteAPIViewSet,
-    QuoteDetailView,
-    QuoteListView,
-)
+from .views import (PolicyAPIViewSet, PolicyPurchaseView, ProductListView,
+                    ProductView, QuoteAPIViewSet, QuoteDetailView,
+                    QuoteListView, RequestQuoteView)
 
 router = DefaultRouter()
 
@@ -28,16 +23,18 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         name="product-detail",
     ),
     # path("", include(router.urls)),
-    path(
-        "policies/<uuid:pk>/",
-        PolicyAPIViewSet.as_view({"get": "retrieve"}),
-        name="policy-detail",
-    ),
-    path(
-        "policies/search/",
-        PolicyAPIViewSet.as_view({"get": "search"}),
-        name="policy-search",
-    ),
+    path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
+    # path(
+    #     "policies/<uuid:pk>/",
+    #     PolicyAPIViewSet.as_view({"get": "retrieve"}),
+    #     name="policy-detail",
+    # ),
+    # path(
+    #     "policies/search/",
+    #     PolicyAPIViewSet.as_view({"get": "search"}),
+    #     name="policy-search",
+    # ),
+    path("quotes", RequestQuoteView.as_view(), name="request-quote"),
     path(
         "quotes/request/<str:product_name>/", QuoteListView.as_view(), name="quote-list"
     ),
@@ -53,3 +50,5 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     #     name="policy-renew",
     # ),
 ]
+
+urlpatterns += router.urls

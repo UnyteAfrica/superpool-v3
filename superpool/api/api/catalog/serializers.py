@@ -2,8 +2,10 @@ from datetime import datetime
 from typing import Union
 
 from core.catalog.models import Policy, Price, Product, Quote
+from core.merchants.models import Merchant
+from core.models import Coverage
+from core.providers.models import Provider as Partner
 from core.user.models import Customer
-from django.db.models import fields
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
 
@@ -45,6 +47,24 @@ class PolicySerializer(ModelSerializer):
             "merchant_id": {"read_only": True},
             "provider_id": {"read_only": True},
         }
+
+
+class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
+    """
+    Limited view of the PolicySerializer for the purchase response
+    """
+
+    policy_reference_number = serializers.CharField(source="policy_number")
+
+    class Meta:
+        model = Policy
+        fields = [
+            "policy_id",
+            "policy_reference_number",
+            "product",
+            "premium",
+        ]
+        depth = 1
 
 
 class CreatePolicySerializer(ModelSerializer):
@@ -146,7 +166,7 @@ class QuoteRequestSerializer(serializers.Serializer):
 
 
 class ProductMetadataSerializer(serializers.Serializer):
-    product_name = serializers.CharField(max_length=255)
+    product_name = serializers.CharField(max_length=255, required=False)
     product_type = serializers.CharField(max_length=50)
     insurer = serializers.CharField(max_length=100, required=False)
 
@@ -177,9 +197,6 @@ class ActivationMetadataSerializer(serializers.Serializer):
 class PolicyPurchaseSerializer(serializers.Serializer):
     """
     Validates the purchase request payload
-
-    Issues a new policy based on customer information and some
-    other metadata
 
     For example:
 
@@ -212,7 +229,7 @@ class PolicyPurchaseSerializer(serializers.Serializer):
     ```
     """
 
-    quote_code = serializers.CharField(required=True)
+    quote_code = serializers.CharField()
     customer_metadata = CustomerDetailsSerializer()
     product_metadata = ProductMetadataSerializer()
     payment_metadata = PaymentInformationSerializer()
@@ -233,3 +250,54 @@ class PolicyPurchaseSerializer(serializers.Serializer):
                 "Confirmation must be provided to proceed with the purchase of this policy"
             )
         return value
+
+    def create(self, validated_data):
+        """
+        Creates and save the policy in the database
+        """
+        # first we prep all information to use in creating the new policy
+        customer_metadata = validated_data["customer_metadata"]
+        product_metadata = validated_data["product_metadata"]
+        payment_information = validated_data["payment_information"]
+        activation_details = validated_data["activation_details"]
+
+        # next we create each object with our information
+        product = Product.objects.get(name=product_metadata["product_name"])
+        coverage = Coverage.objects.get(name=product_metadata["product_type"])
+        merchant = Merchant.objects.get(id=validated_data["merchant_id"])
+        provider = Partner.objects.get(name=product_metadata["insurer"])
+        policy_holder = Customer.objects.get(email=customer_metadata["customer_email"])
+
+        # then we create the actual policy object and return the policy
+        policy = Policy.objects.create(
+            policy_holder=policy_holder,
+            product=product,
+            coverage=coverage,
+            premium=payment_information["premium_amount"],
+            effective_from=datetime.now(),
+            effective_through=datetime.strptime(
+                activation_details["policy_duration"], "%Y-%m-%d"
+            ),
+            merchant_id=merchant,
+            provider_id=provider,
+            renewable=activation_details["renew"],
+            inspection_required=False,  # Set appropriate values
+            certification_required=False,  # Set appropriate values
+        )
+        return policy
+
+
+class PolicyCancellationSerializer(serializers.Serializer):
+    """
+    Validates a policy cancellation request
+    """
+
+    pass
+
+
+class PolicyCancellationResponseSerializer(serializers.Serializer):
+    """
+    Formats response information for cancellation request
+    """
+
+    pass

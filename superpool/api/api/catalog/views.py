@@ -3,11 +3,14 @@ import logging
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
 from api.catalog.filters import QSearchFilter
+from api.catalog.serializers import PolicyPurchaseResponseSerializer
 from core.catalog.models import Policy, Product, Quote
+from core.user.models import Customer
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, OpenApiRequest, extend_schema
+from drf_spectacular.utils import (OpenApiParameter, OpenApiRequest,
+                                   extend_schema)
 from rest_framework import generics, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -16,12 +19,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .exceptions import ProductNotFoundError
-from .serializers import (
-    PolicyPurchaseSerializer,
-    PolicySerializer,
-    ProductSerializer,
-    QuoteSerializer,
-)
+from .serializers import (PolicyCancellationResponseSerializer,
+                          PolicyCancellationSerializer,
+                          PolicyPurchaseSerializer, PolicySerializer,
+                          ProductSerializer, QuoteRequestSerializer,
+                          QuoteSerializer)
 from .services import PolicyService, ProductService, QuoteService
 
 logger = logging.getLogger(__name__)
@@ -160,7 +162,9 @@ class ProductView(generics.RetrieveAPIView):
 
 
 class PolicyAPIViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
 ):
     queryset = PolicyService.list_policies()
     authentication_classes = [APIKeyAuthentication]
@@ -169,26 +173,6 @@ class PolicyAPIViewSet(
         if self.action == "create":
             return PolicyPurchaseSerializer
         return PolicySerializer
-
-    @action(detail=False, methods=["post"])
-    def purchase(self, request, *args, **kwargs):
-        """
-        This action allows you to generate a new policy for your
-        customer
-        """
-        # generate a new policy for the customer
-        # Construct a new policy object, and return both the policy number and the policy ID
-
-        # emit a policy purchased signal that fires up a background task to notify the admins
-        # of the platform
-
-        # fires off a background process that post (actually register the customer info) and
-        # the policy information to the insurer endpoint
-        # (we should just call a function in a service that would integrate the Insurer APIs)
-
-        # returrn the policy ID, Policy Number, and the status of the policy to the merchant
-
-        pass
 
     @action(detail=False, methods=["post"])
     def renew(self, request, *args, **kwargs):
@@ -275,6 +259,42 @@ class PolicyAPIViewSet(
 
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Update an existing policy data",
+        responses={
+            200: PolicySerializer,
+        },
+    )
+    @action(detail=True, methods=["patch"], url_path="update-policy")
+    def update(self, request, policy_id):
+        """
+        Update an insurance policy using the policy ID
+        """
+        serializer = PolicySerializer(data=request.data)
+
+        if serializer.is_valid():
+            policy = Policy.objects.get(id=policy_id)
+            serializer.update(policy, serializer.validated_data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Cancel policy subscription",
+        request=PolicyCancellationSerializer,
+        responses={200: PolicyCancellationResponseSerializer},
+    )
+    @action(detail=False, methods=["post"])
+    def cancel(self, request, policy_id):
+        """
+        Cancel a policy subscription using the policy ID or the policy number
+        """
+        policy_identifier = policy_id or request.data.get("policy_reference_number")
+        serializer = PolicyCancellationSerializer(data=request.data)
+        if serializer.is_valid():
+            response_serializer = PolicyCancellationResponseSerializer()
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductAPIViewSet(viewsets.GenericViewSet):
@@ -376,3 +396,68 @@ class QuoteAPIViewSet(viewsets.ViewSet):
             return Response(
                 {"error": "Quote not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class RequestQuoteView(views.APIView):
+    def get_service(self):
+        return QuoteService()
+
+    @extend_schema(
+        summary="Request a policy quote",
+        request=QuoteRequestSerializer,
+        responses={
+            200: QuoteSerializer,
+        },
+    )
+    def post(self, request):
+        mode = request.META.get("x-quote-mode", "testnet")
+
+        # validate incoming data conforms to some predefined values
+        req_serializer = QuoteRequestSerializer(data=request.data)
+        if req_serializer.is_valid(raise_exception=True):
+            request_data = req_serializer.validated_data
+
+            if mode == "mainnet":
+                # make call to the API service
+                pass
+            # it means we in dev mode
+            quote_service = self.get_service()
+            # retrieve the quote based on the parameters provided
+            quote = quote_service.get_quote(
+                product=request_data.get(
+                    "insurance_type"
+                ),  # an insurance type have to be provided e.g Auto, Travel, Health
+                product_name=request_data.get(
+                    "insurance_name"
+                ),  # as an addition, a policy name (Smart Health Insurance) can be provided
+                quote_code=request_data.get("quote_code"),
+            )
+            if quote:
+                return Response(quote.data, status=status.HTTP_200_OK)
+            return Response(quote.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PolicyPurchaseView(generics.CreateAPIView):
+    """
+    This view allows you to generate a new policy for your
+    customer
+    """
+
+    serializer_class = PolicyPurchaseSerializer
+
+    @extend_schema(
+        summary="Purchase a policy",
+        description="Purchase a new policy for your customer",
+        request=PolicyPurchaseSerializer,
+        responses={201: PolicyPurchaseResponseSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        """
+        Issue a new policy for a customer
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        policy = serializer.save()
+        response_serializer = PolicyPurchaseResponseSerializer(policy)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
