@@ -167,7 +167,6 @@ class PolicyAPIViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = PolicyService.list_policies()
-    authentication_classes = [APIKeyAuthentication]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -262,20 +261,54 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Update an existing policy data",
+        request=PolicySerializer,
         responses={
             200: PolicySerializer,
         },
     )
-    @action(detail=True, methods=["patch"], url_path="update-policy")
-    def update(self, request, policy_id):
+    @action(detail=True, methods=["patch"], url_path="update")
+    def update_policy(self, request):
         """
-        Update an insurance policy using the policy ID
+        Update an insurance policy using the policy ID or the policy number
         """
-        serializer = PolicySerializer(data=request.data)
+        policy_id = request.data.get("policy_id")
+        policy_number = request.data.get("policy_number")
+
+        if not policy_number or not policy_id:
+            return Response(
+                {
+                    "error": "Error! Provide a policy_id or policy_number to update policy",
+                    "detail": "You must provide either policy ID issued by us or the policy reference number issued by the insurer.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if policy_id:
+            try:
+                instance = Policy.objects.get(policy_id=policy_id)
+            except Policy.DoesNotExist:
+                return Response(
+                    {"error": "Policy not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        elif policy_number:
+            try:
+                instance = Policy.objects.get(policy_number=policy_number)
+            except Policy.DoesNotExist:
+                return Response(
+                    {"error": "Policy not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        else:
+            return Response(
+                {"error": "You must provide either policy_id or policy_number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
 
         if serializer.is_valid():
-            policy = Policy.objects.get(id=policy_id)
-            serializer.update(policy, serializer.validated_data)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
