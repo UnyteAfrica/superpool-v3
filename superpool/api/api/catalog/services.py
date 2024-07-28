@@ -11,11 +11,6 @@ from rest_framework.serializers import ValidationError
 
 from .serializers import PolicyCancellationResponseSerializer, QuoteSerializer
 
-CustomerT = NewType("CustomerT", str)
-""" Denotes a Customer Type"""
-MerchantT = NewType("MerchantT", str)
-""" Denotes a Merchant Type"""
-
 
 class ProductService:
     """
@@ -46,6 +41,11 @@ class ProductService:
         )
 
 
+############################################################################################################
+#
+# POLICY SERVICE
+#
+############################################################################################################
 class PolicyService:
     """
     Service class for the Policy model
@@ -66,68 +66,6 @@ class PolicyService:
         return Policy.objects.filter(
             models.Q(product__product_type=models.F("product_type"))
         ).select_related("product", "provider_id")
-
-    @staticmethod
-    def notify(
-        who: MerchantT | CustomerT, action: str | dict, policy: Policy
-    ) -> dict[str, Any]:
-        """
-        Notify a stakeholder about an action that took place on this policy
-
-        Arguments:
-            action: context to include in the mail to be sent to this stakeholder
-            who: the stakeholder, who is of string type Customer or string type Merchant
-        """
-        return {}
-
-    @staticmethod
-    def _notify_merchant(action, policy) -> None | Exception:
-        """Send a notification to the merchant about the action that took place on the policy"""
-
-        from django.conf import settings
-
-        ACTION_TITLE_TEMPLATE = {
-            "purchase_policy": "Policy Purchase Notification - A new policy has been purchased.",
-            "accept_policy": "Policy Confirmation - A new policy has been accepted.",
-            "cancel_policy": "Policy Cancellation Notification",
-            "status_update": "Policy Status Update - A policy status has been updated.",
-        }
-
-        try:
-            send_mail(
-                f"{ACTION_TITLE_TEMPLATE[action]}",
-                f"The policy {policy.policy_number} sold by you has been {ACTION_TITLE_TEMPLATE[action]}. Please take note.",
-                f"{settings.DEFAULT_FROM_EMAIL}",
-                [policy.merchant_id.email],
-            )
-        except Exception as exc:
-            raise Exception(
-                f"An error occured during merchant notification: {str(exc)}"
-            )
-
-    @staticmethod
-    def _notify_customer(action, policy, channel) -> None | Exception:
-        """Notify the customer about the action that took place on their policy"""
-
-        from django.conf import settings
-
-        ACTION_TITLE_TEMPLATE = {
-            "purchase_policy": "Policy Purchase Successful - We've got your back!. Your policy has been purchased.",
-            "accept_policy": "Your policy has been accepted.",
-            "cancel_policy": "Policy Cancellation Confirmation - Your policy has been cancelled.",
-            "status_update": "Policy Status Update - Your policy status has been updated.",
-        }
-        try:
-            send_mail(
-                f"{ACTION_TITLE_TEMPLATE[action]}",
-                f"Your policy {policy.policy_number} has been cancelled.",
-                f"{settings.DEFAULT_FROM_EMAIL}",
-                [policy.policy_holder.email],
-            )
-        except Exception as exc:
-            raise Exception(
-                f"An error occured during merchant notification: {str(exc)}"
-            )
 
     @staticmethod
     def cancel_policy(policy_identifier: str, reason: str) -> dict | Exception:
@@ -162,8 +100,8 @@ class PolicyService:
             NotificationService.notify("customer", "cancel_policy", policy)
 
             return {
-                "status": policy.status,
                 "message": "Policy cancelled successfully.",
+                "status": policy.status,
                 "policy_id": policy.policy_id,
                 "cancellation_reason": policy.cancellation_reason,
                 "cancellation_date": policy.cancellation_date,
@@ -174,6 +112,11 @@ class PolicyService:
             raise Exception(f"An error occured during policy cancellation: {str(exc)}")
 
 
+############################################################################################################
+#
+# QUOTE SERVICE
+#
+############################################################################################################
 class IQuote(ABC):
     @abstractmethod
     def get_quote(self, product, product_name, quote_code=None, batch=False):
