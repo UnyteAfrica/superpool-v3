@@ -4,6 +4,7 @@ from typing import Any, NewType, Union
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
+from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
@@ -80,12 +81,53 @@ class PolicyService:
         return {}
 
     @staticmethod
-    def _notify_merchant(action, policy) -> dict[str, Any]:
-        pass
+    def _notify_merchant(action, policy) -> None | Exception:
+        """Send a notification to the merchant about the action that took place on the policy"""
+
+        from django.conf import settings
+
+        ACTION_TITLE_TEMPLATE = {
+            "purchase_policy": "Policy Purchase Notification - A new policy has been purchased.",
+            "accept_policy": "Policy Confirmation - A new policy has been accepted.",
+            "cancel_policy": "Policy Cancellation Notification",
+            "status_update": "Policy Status Update - A policy status has been updated.",
+        }
+
+        try:
+            send_mail(
+                f"{ACTION_TITLE_TEMPLATE[action]}",
+                f"The policy {policy.policy_number} sold by you has been {ACTION_TITLE_TEMPLATE[action]}. Please take note.",
+                f"{settings.DEFAULT_FROM_EMAIL}",
+                [policy.merchant_id.email],
+            )
+        except Exception as exc:
+            raise Exception(
+                f"An error occured during merchant notification: {str(exc)}"
+            )
 
     @staticmethod
-    def _notify_customer(action, policy) -> dict[str, Any]:
-        pass
+    def _notify_customer(action, policy, channel) -> None | Exception:
+        """Notify the customer about the action that took place on their policy"""
+
+        from django.conf import settings
+
+        ACTION_TITLE_TEMPLATE = {
+            "purchase_policy": "Policy Purchase Successful - We've got your back!. Your policy has been purchased.",
+            "accept_policy": "Your policy has been accepted.",
+            "cancel_policy": "Policy Cancellation Confirmation - Your policy has been cancelled.",
+            "status_update": "Policy Status Update - Your policy status has been updated.",
+        }
+        try:
+            send_mail(
+                f"{ACTION_TITLE_TEMPLATE[action]}",
+                f"Your policy {policy.policy_number} has been cancelled.",
+                f"{settings.DEFAULT_FROM_EMAIL}",
+                [policy.policy_holder.email],
+            )
+        except Exception as exc:
+            raise Exception(
+                f"An error occured during merchant notification: {str(exc)}"
+            )
 
     @staticmethod
     def cancel_policy(data: str) -> dict | Exception:
