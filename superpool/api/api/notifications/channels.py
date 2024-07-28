@@ -1,4 +1,6 @@
 from api.notifications.base import INotification
+from django.conf import settings
+from django.core.mail import send_mail
 
 
 class EmailNotification(INotification):
@@ -11,7 +13,12 @@ class EmailNotification(INotification):
         """
         Sends a message to a recipient via Email
         """
-        pass
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+        )
 
 
 class SMSNotification(INotification):
