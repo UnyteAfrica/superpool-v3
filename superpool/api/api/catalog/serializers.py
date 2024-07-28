@@ -231,7 +231,9 @@ class PolicyPurchaseSerializer(serializers.Serializer):
         coverage = Coverage.objects.get(name=product_metadata["product_type"])
         merchant = Merchant.objects.get(id=validated_data["merchant_id"])
         provider = Partner.objects.get(name=product_metadata["insurer"])
-        policy_holder = Customer.objects.get(email=customer_metadata["customer_email"])
+        policy_holder = Customer.objects.get_or_create(
+            email=customer_metadata["customer_email"]
+        )
 
         # then we create the actual policy object and return the policy
         policy = Policy.objects.create(
@@ -246,8 +248,8 @@ class PolicyPurchaseSerializer(serializers.Serializer):
             merchant_id=merchant,
             provider_id=provider,
             renewable=activation_details["renew"],
-            inspection_required=False,  # Set appropriate values
-            certification_required=False,  # Set appropriate values
+            inspection_required=False,
+            certification_required=False,
         )
         return policy
 

@@ -261,12 +261,19 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Update an existing policy data",
+        parameters=[
+            OpenApiParameter(
+                name="policy_id",
+            ),
+            OpenApiParameter(
+                name="policy_number",
+                description="policy reference number assigned by the insurer",
+            ),
+        ],
         request=PolicySerializer,
-        responses={
-            200: PolicySerializer,
-        },
+        responses={200: PolicySerializer, 400: {"error": "string", "detail": "string"}},
     )
-    @action(detail=True, methods=["patch"], url_path="update")
+    @action(detail=False, methods=["patch"], url_path="update")
     def update_policy(self, request):
         """
         Update an insurance policy using the policy ID or the policy number
