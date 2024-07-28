@@ -29,11 +29,18 @@ class INotification(ABC):
 
     @staticmethod
     @abstractmethod
-    def send(subject: str, message: str, recipient: str) -> None:
+    def send_message(subject: str, message: str, recipient: str) -> None:
         raise NotImplementedError
 
 
 class NotificationService(INotification):
+    """
+    Generic Notification Service
+    """
+
+    from .channels import (EmailNotification, SMSNotification,
+                           WhatsAppNotification)
+
     ACTION_REGISTRY = {
         "purchase_policy": {
             "merchant": "Policy Purchase Notification - A new policy has been purchased.",
@@ -63,12 +70,12 @@ class NotificationService(INotification):
     """ Registry of actions and their corresponding messages"""
 
     NOTIFICATION_CHANNEL_REGISTRY = {
-        "email": "EmailNotification",
-        "sms": "SMSNotification",
+        "email": EmailNotification,
+        "sms": SMSNotification,
         # Unyte might go B2C, or offer self-care portal for merchant's customer WhatsApp notification channel
         # There-fore, push and whatsapp notification channels might be added in the future
-        "push": "PushNotification",
-        "whatsapp": "WhatsAppNotification",
+        # "push": PushNotification,
+        "whatsapp": WhatsAppNotification,
     }
     """ Registry of notification types and their corresponding classes"""
 
@@ -88,7 +95,7 @@ class NotificationService(INotification):
         pass
 
     @staticmethod
-    def send(subject: str, message: str, recipient: str) -> None:
+    def send_message(subject: str, message: str, recipient: str) -> None:
         """
         Send a notification to the recipient
 
