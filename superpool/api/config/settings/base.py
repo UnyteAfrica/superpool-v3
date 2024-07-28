@@ -256,6 +256,12 @@ LOGGING = {
 
 BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
 
+ADMINS = []
+ADMINS += env.list("SUPERPOOL_ADMINS", default=[])
+MANAGERS = ADMINS
+
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 # INSURANCE PARTNERS
 #
 # Heirs Holdings
