@@ -531,7 +531,10 @@ class PolicyCancellationView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             try:
-                response = service.cancel_policy(serializer.validated_data)
+                response = service.cancel_policy(
+                    policy_identifier=serializer.validated_data["policy_id"],
+                    reason=serializer.validated_data["cancellation_reason"],
+                )
                 response_serializer = PolicyCancellationResponseSerializer(response)
                 return Response(response_serializer.data, status=status.HTTP_200_OK)
             except Exception as exc:

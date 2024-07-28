@@ -130,7 +130,7 @@ class PolicyService:
             )
 
     @staticmethod
-    def cancel_policy(data: str) -> dict | Exception:
+    def cancel_policy(policy_identifier: str, reason: str) -> dict | Exception:
         """
         Initiate a cancellation request using the given policy data
 
@@ -145,21 +145,21 @@ class PolicyService:
 
             Exception an error message indicating failure of opertion
         """
-        from api.catalog.serializers import PolicySerializer
+        from api.notifications.services import NotificationService
 
         # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
         # with the provided information, and return it back to the merchant
         try:
-            policy = Policy.objects.get(policy_id=data["policy_id"])
+            policy = Policy.objects.get(policy_id=policy_identifier)
 
             policy.status = "cancelled"
-            policy.cancellation_reason = data["cancellation_reason"]
+            policy.cancellation_reason = reason
             policy.cancellation_date = datetime.now()
             policy.save()
 
             # send notification emails to stakeholders - in this case, our merchant  and their customer
-            PolicyService.notify(MerchantT, "cancel_policy", policy)
-            PolicyService.notify(CustomerT, "cancel_policy", policy)
+            NotificationService.notify("merchant", "cancel_policy", policy)
+            NotificationService.notify("customer", "cancel_policy", policy)
 
             return {
                 "policy_id": policy.policy_id,
