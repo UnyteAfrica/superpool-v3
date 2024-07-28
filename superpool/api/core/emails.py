@@ -2,11 +2,10 @@ from typing import Any, Union
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 
 _EmailType = Union[str, list[str]]
-
-from django.template.loader import render_to_string
 
 
 class BaseEmailMessage(EmailMultiAlternatives):
@@ -45,17 +44,18 @@ class BaseEmailMessage(EmailMultiAlternatives):
             extra_kwargs: Additional keyword arguments to pass to the parent class.
         """
 
+        self.from_email = from_email or self.get_from_email()
         subject = self.get_subject()
-        from_email = self.get_from_email()
         to = self._ensure_list(to)
         super().__init__(subject=subject, from_email=from_email, to=to)
 
         if "headers" not in extra_kwargs:
             extra_kwargs["headers"] = {}
+        extra_kwargs["headers"]["Reply-To"] = self.from_email
 
-        extra_kwargs["headers"]["Reply-To"] = from_email
-
-        self.attach_alternative(self.get_template(), "text/html")
+        context = extra_kwargs.pop("context", {})
+        html_content = self.render_template(context)
+        self.attach_alternative(html_content, "text/html")
 
     def _ensure_list(self, emails: _EmailType) -> list[str]:
         if isinstance(emails, str):
@@ -102,8 +102,7 @@ class PendingVerificationEmail(BaseEmailMessage):
         self,
         confirm_url: str,
         to: str,
-        from_: str,
-        *args: dict,
+        from_: str | None = None,
         **kwargs: dict,
     ) -> None:
         """
@@ -117,7 +116,7 @@ class PendingVerificationEmail(BaseEmailMessage):
         """
         self.confirm_url = confirm_url
         context = {"confirm_url": self.confirm_url}
-        super().__init__(to, from_, context=context, **kwargs)
+        super().__init__(to, from_email=from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
         return _("Unyte - Verify your email address")
@@ -133,11 +132,11 @@ class OnboardingEmail(BaseEmailMessage):
     def __init__(
         self,
         to: str | list[str],
-        from_: str | list[str],
-        *args: dict,
+        from_: str | None = None,
         **kwargs: dict,
     ) -> None:
-        super().__init__(to, from_, **kwargs)
+        context = {}
+        super().__init__(to, from_email=from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
         return _("Unyte - Welcome to the best insure-tech infrastructure!")
