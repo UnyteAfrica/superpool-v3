@@ -92,7 +92,31 @@ class NotificationService(INotification):
         Returns:
             A dictionary with a status message
         """
-        pass
+        message_template = cls.ACTION_REGISTRY.get(action, {}).get(who)
+        if not message_template:
+            raise ValueError("Invalid action or recipent type")
+
+        # Build the notification information based on the passed parameters
+        # we want to get recipent email  address based on who's being notified
+        # and construct the message subject based on specific action.
+        recipient = (
+            policy.merchant_id.email
+            if who == "merchant"
+            else policy.policy_holder.email
+        )
+
+        subject = f"Policy Notification - {action}"
+
+        # We want to send  the notification to the recipient using the appropriate channel
+        notification_channel_class = cls.NOTIFICATION_CHANNEL_REGISTRY.get("email")
+
+        if notification_channel_class:
+            notification_channel = notification_channel_class()
+            notification_channel.send_message(subject, message_template, recipient)
+        else:
+            raise ValueError("Invalid notification channel")
+
+        return {"message": "Notification sent successfully", "status": "success"}
 
     @staticmethod
     def send_message(subject: str, message: str, recipient: str) -> None:
