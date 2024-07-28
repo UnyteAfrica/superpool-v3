@@ -48,4 +48,5 @@ class Provider(models.Model):
         return f"{self.name}"
 
     class Meta(TypedModelMeta):
-        verbose_name_plural = _("Providers")
+        verbose_name = _("Insurer")
+        verbose_name_plural = _("Insurers")
