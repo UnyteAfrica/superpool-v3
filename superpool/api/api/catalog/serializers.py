@@ -290,6 +290,8 @@ class PolicyCancellationResponseSerializer(serializers.Serializer):
 
     policy_id = serializers.UUIDField()
     status = serializers.CharField()
+    message = serializers.CharField()
+    policy_id = serializers.UUIDField()
     cancellation_reason = serializers.CharField()
     cancellation_date = serializers.DateTimeField()
     refund_amount = serializers.DecimalField(
