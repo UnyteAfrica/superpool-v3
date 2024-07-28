@@ -19,7 +19,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .exceptions import ProductNotFoundError
-from .serializers import (PolicyCancellationResponseSerializer,
+from .serializers import (PolicyCancellationRequestSerializer,
+                          PolicyCancellationResponseSerializer,
                           PolicyCancellationSerializer,
                           PolicyPurchaseSerializer, PolicySerializer,
                           ProductSerializer, QuoteRequestSerializer,
@@ -491,7 +492,7 @@ class PolicyCancellationView(generics.GenericAPIView):
     This view allows you to initiate the termination of insurance policy
     """
 
-    serializer_class = PolicyCancellationSerializer
+    serializer_class = PolicyCancellationRequestSerializer
 
     def get_service(self):
         return PolicyService()
@@ -509,7 +510,7 @@ class PolicyCancellationView(generics.GenericAPIView):
             ),
         ],
         description="Cancel an active policy subscription using the policy id or the policy number provided by the insurer",
-        request=PolicyCancellationSerializer,
+        request=PolicyCancellationRequestSerializer,
         responses={200: PolicyCancellationResponseSerializer, 400: {"error": "string"}},
     )
     def post(self, request):

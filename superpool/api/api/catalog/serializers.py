@@ -254,7 +254,7 @@ class PolicyPurchaseSerializer(serializers.Serializer):
         return policy
 
 
-class PolicyCancellationSerializer(serializers.Serializer):
+class PolicyCancellationRequestSerializer(serializers.Serializer):
     """
     Validates a policy cancellation request
     """
@@ -281,6 +281,20 @@ class PolicyCancellationSerializer(serializers.Serializer):
                 raise ValidationError("Policy not found or already cancelled.")
 
         return data
+
+
+class PolicyCancellationSerializer(serializers.ModelSerializer):
+    """Allow us to audit list of cancelled policy or a single cancelled policy"""
+
+    class Meta:
+        model = Policy
+        fields = [
+            "policy_id",
+            "policy_number",
+            "status",
+            "cancellation_reason",
+            "cancellation_date",
+        ]
 
 
 class PolicyCancellationResponseSerializer(serializers.Serializer):

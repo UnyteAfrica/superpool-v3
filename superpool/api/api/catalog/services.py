@@ -83,7 +83,7 @@ class PolicyService:
 
             Exception an error message indicating failure of opertion
         """
-        from api.notifications.services import NotificationService
+        from api.notifications.services import PolicyNotificationService
 
         # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
         # with the provided information, and return it back to the merchant
@@ -96,8 +96,8 @@ class PolicyService:
             policy.save()
 
             # send notification emails to stakeholders - in this case, our merchant  and their customer
-            NotificationService.notify("merchant", "cancel_policy", policy)
-            NotificationService.notify("customer", "cancel_policy", policy)
+            PolicyNotificationService.notify_merchant("cancel_policy", policy)
+            PolicyNotificationService.notify_customer("cancel_policy", policy)
 
             return {
                 "message": "Policy cancelled successfully.",

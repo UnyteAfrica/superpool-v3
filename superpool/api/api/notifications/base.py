@@ -70,11 +70,10 @@ class NotificationService(INotification):
     """ Registry of actions and their corresponding messages"""
 
     NOTIFICATION_CHANNEL_REGISTRY = {
-        "email": EmailNotification,
-        "sms": SMSNotification,
         # Unyte might go B2C, or offer self-care portal for merchant's customer WhatsApp notification channel
         # There-fore, push and whatsapp notification channels might be added in the future
-        # "push": PushNotification,
+        "email": EmailNotification,
+        "sms": SMSNotification,
         "whatsapp": WhatsAppNotification,
     }
     """ Registry of notification types and their corresponding classes"""
@@ -122,10 +121,5 @@ class NotificationService(INotification):
     def send_message(subject: str, message: str, recipient: str) -> None:
         """
         Send a notification to the recipient
-
-        Arguments:
-            subject: The subject of the notification
-            message: The message to send
-            recipient: The recipient of the notification
         """
         pass
