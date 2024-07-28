@@ -288,13 +288,11 @@ class PolicyCancellationResponseSerializer(serializers.Serializer):
     Formats response information for cancellation request
     """
 
-    policy_id = serializers.UUIDField()
-    status = serializers.CharField()
     message = serializers.CharField()
+    status = serializers.CharField()
     policy_id = serializers.UUIDField()
     cancellation_reason = serializers.CharField()
     cancellation_date = serializers.DateTimeField()
     refund_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False
     )
-    message = serializers.CharField()

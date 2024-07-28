@@ -162,11 +162,11 @@ class PolicyService:
             NotificationService.notify("customer", "cancel_policy", policy)
 
             return {
-                "policy_id": policy.policy_id,
                 "status": policy.status,
+                "message": "Policy cancelled successfully.",
+                "policy_id": policy.policy_id,
                 "cancellation_reason": policy.cancellation_reason,
                 "cancellation_date": policy.cancellation_date,
-                "message": "Policy cancelled successfully.",
             }
         except Policy.DoesNotExist:
             raise Exception("Policy not found")
