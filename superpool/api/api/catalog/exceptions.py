@@ -21,3 +21,15 @@ class PolicyNotFoundException(APIException):
     status_code = 404
     default_detail = "Policy not found"
     default_code = "policy_not_found"
+
+
+class QuoteNotFoundError(Exception):
+    pass
+
+
+class PremiumCalculationError(Exception):
+    pass
+
+
+class ProductNotFoundError(Exception):
+    pass

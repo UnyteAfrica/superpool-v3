@@ -1,9 +1,19 @@
 import typing
 
-from django.urls import include, path
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import PolicyAPIViewSet, PolicyListView, ProductListView, ProductView
+from .views import (
+    PolicyAPIViewSet,
+    PolicyCancellationView,
+    PolicyPurchaseView,
+    ProductListView,
+    ProductView,
+    QuoteAPIViewSet,
+    QuoteDetailView,
+    QuoteListView,
+    RequestQuoteView,
+)
 
 router = DefaultRouter()
 
@@ -20,16 +30,23 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         name="product-detail",
     ),
     # path("", include(router.urls)),
+    path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
+    path("policies/cancel", PolicyCancellationView.as_view(), name="policy-cancel"),
+    # path(
+    #     "policies/<uuid:pk>/",
+    #     PolicyAPIViewSet.as_view({"get": "retrieve"}),
+    #     name="policy-detail",
+    # ),
+    # path(
+    #     "policies/search/",
+    #     PolicyAPIViewSet.as_view({"get": "search"}),
+    #     name="policy-search",
+    # ),
+    path("quotes", RequestQuoteView.as_view(), name="request-quote"),
     path(
-        "policies/<uuid:pk>/",
-        PolicyAPIViewSet.as_view({"get": "retrieve"}),
-        name="policy-detail",
+        "quotes/request/<str:product_name>/", QuoteListView.as_view(), name="quote-list"
     ),
-    path(
-        "policies/search/",
-        PolicyAPIViewSet.as_view({"get": "search"}),
-        name="policy-search",
-    ),
+    path("quotes/<str:quote_code>/", QuoteDetailView.as_view(), name="quote-detail"),
     # path(
     #     "policies/purchase/",
     #     PolicyAPIViewSet.as_view({"post": "purchase"}),
@@ -41,3 +58,5 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     #     name="policy-renew",
     # ),
 ]
+
+urlpatterns += router.urls
