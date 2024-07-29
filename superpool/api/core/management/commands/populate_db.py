@@ -63,7 +63,7 @@ class Command(BaseCommand):
         # Create 5 Products of 6 ditinct insurance types
         for _ in range(5):
             Product.objects.create(
-                name=fake.word(),
+                name=fake.random_company_product(),
                 description=fake.sentence(),
                 product_type=fake.random_element(
                     elements=(
@@ -77,6 +77,7 @@ class Command(BaseCommand):
                 ),
                 provider=fake.random_element(Partner.objects.all()),
             )
+
         # Create 20 Policies
         for _ in range(20):
             Policy.objects.create(
@@ -105,7 +106,14 @@ class Command(BaseCommand):
         # Create 20 Quotess
         for _ in range(20):
             Quote.objects.create(
-                base_price=fake.random_number(),
+                quote_code=fake.uuid4(),
+                product=Product.objects.order_by("?").first(),
+                customer=Customer.objects.order_by("?").first(),
+                merchant=Merchant.objects.order_by("?").first(),
+                price=fake.random_number(digits=5),
+                status=fake.random_element(
+                    elements=("pending", "accepted", "rejected")
+                ),
             )
 
         # Create 20 Addresses
@@ -115,6 +123,18 @@ class Command(BaseCommand):
                 city=fake.city(),
                 state=fake.state(),
                 country=fake.country(),
+            )
+
+        # Create 20 Coverages
+        for _ in range(20):
+            Coverage.objects.create(
+                coverage_name=fake.random_element(
+                    elements=("Liability", "Comprehensive", "Collision")
+                ),
+                coverage_id=uuid.uuid4(),
+                coverage_limit=fake.random_number(digits=5),
+                description=fake.sentence(),
+                product_id=Product.objects.order_by("?").first(),
             )
 
         pprint("Database populated successfully")
