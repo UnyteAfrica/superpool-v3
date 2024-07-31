@@ -52,6 +52,34 @@ class PolicyService:
     """
 
     @staticmethod
+    def validate_policy(policy_id: str | None = None, policy_number: str | None = None):
+        """
+        Validates a policy using either the policy ID or policy number
+        """
+
+        if not policy_id and not policy_number:
+            raise ValidationError(
+                "Policy identifier is required. Either policy id or policy number must be provided"
+            )
+
+        # check if the policy exists and is active
+        if (
+            policy_id
+            and not Policy.objects.filter(policy_id=policy_id, status="active").exists()
+        ):
+            raise ValidationError("Policy not found or already cancelled")
+        elif (
+            policy_number
+            and not Policy.objects.filter(
+                policy_number=policy_number, status="active"
+            ).exists()
+        ):
+            return ValidationError("Policy not found or already cancelled")
+
+        # policy is active and exist, so we return an identifier
+        return policy_id or policy_number
+
+    @staticmethod
     def list_policies() -> QuerySet:
         """
         Returns a queryset of all policies
