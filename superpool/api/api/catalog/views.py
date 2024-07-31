@@ -1,4 +1,6 @@
 import logging
+from uuid import uuid4
+import uuid
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -191,7 +193,34 @@ class PolicyAPIViewSet(
     @extend_schema(
         summary="Renew a policy",
         request=PolicyRenewalRequestSerializer,
-        responses={200: PolicyRenewalSerializer},
+        responses={
+            200: OpenAPIResponse(
+                description="Insurance Policy Renewal successful",
+                examples={
+                    "application/json": {
+                        "renewal_status": "success",  # 'success' or 'failed
+                        "message": "Policy Renewal successful",
+                        "data": {
+                            "policy_number": "POL-2021-01-0001",
+                            "policy_duration": 365,
+                            "policy_metadata": {
+                                "product_name": "Basic Health Coverage",
+                                "product_type": "Health",
+                                "insurer": "Reliance Health",
+                                "customer_name": "Janet Joestar",
+                                "customer_email": "janet.joe@email.com",
+                                "customer_phone": "+234 123 456 7890",
+                                "customer_address": "123, Main Street, Lagos, Nigeria",
+                                "policy_status": "active",
+                                "policy_id": "e2f7ca44-905a-4e22-b31f-2d1f23fb1c07",
+                                "renewable": "True",
+                            },
+                            "renewal_date": "2024-11-01",
+                        },
+                    },
+                },
+            ),
+        },
     )
     @action(detail=False, methods=["post"])
     def renew(self, request, *args, **kwargs):
