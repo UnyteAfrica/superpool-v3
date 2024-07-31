@@ -215,14 +215,39 @@ class PolicyAPIViewSet(
             data = serializer.validated_data
             policy_identifier = data.get("policy_identifier")
 
-            policy = Policy.objects.get(
-                Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier)
-            )
-            renewed_policy = PolicyService.renew_policy(
-                policy, data.get("policy_end_date")
-            )
-            response_serializer = PolicyRenewalSerializer(renewed_policy)
-            return Response(response_serializer.data, status=status.HTTP_200_OK)
+            try:
+                policy = Policy.objects.get(
+                    Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier)
+                )
+                renewed_policy = PolicyService.renew_policy(
+                    policy, data.get("policy_end_date")
+                )
+                response_serializer = PolicyRenewalSerializer(renewed_policy)
+                response_data = {
+                    "renewal_status": "success",
+                    "message": "Policy Renewal successful",
+                    "data": response_serializer.data,
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
+            except Policy.DoesNotExist:
+                response_data = {
+                    "renewal_status": "failed",
+                    "error": "Policy not found",
+                }
+                return Response(response_data, status=status.HTTP_404_NOT_FOUND)
+            except Exception as exc:
+                response_data = {
+                    "renewal_status": "failed",
+                    "error": str(exc),
+                }
+                return Response(
+                    response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        response_data = {
+            "renewal_status": "failed",
+            "error": serializer.errors,
+        }
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
