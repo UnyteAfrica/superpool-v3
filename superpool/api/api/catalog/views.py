@@ -15,6 +15,7 @@ from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
     OpenApiRequest,
+    OpenApiResponse,
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
@@ -194,9 +195,9 @@ class PolicyAPIViewSet(
         summary="Renew a policy",
         request=PolicyRenewalRequestSerializer,
         responses={
-            200: OpenAPIResponse(
+            200: OpenApiResponse(
                 description="Insurance Policy Renewal successful",
-                examples={
+                examples=[
                     "application/json": {
                         "renewal_status": "success",  # 'success' or 'failed
                         "message": "Policy Renewal successful",
@@ -218,8 +219,9 @@ class PolicyAPIViewSet(
                             "renewal_date": "2024-11-01",
                         },
                     },
-                },
+                ],
             ),
+            400: OpenApiResponse(),
         },
     )
     @action(detail=False, methods=["post"])
