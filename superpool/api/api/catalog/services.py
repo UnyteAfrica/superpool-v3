@@ -9,8 +9,6 @@ from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
 
-from .serializers import PolicyCancellationResponseSerializer, QuoteSerializer
-
 
 class ProductService:
     """
@@ -78,6 +76,26 @@ class PolicyService:
 
         # policy is active and exist, so we return an identifier
         return policy_id or policy_number
+
+    @staticmethod
+    def renew_policy(policy: Policy, expiry_date: datetime) -> Policy:
+        """
+        Renews a policy using the given policy data
+        """
+        from api.notifications.services import PolicyNotificationService
+
+        # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
+        # with the provided information, and return it back to the merchant
+        policy.effective_through = expiry_date
+        policy.save()
+
+        # send notification emails to stakeholders - in this case, our merchant  and their customer
+        PolicyNotificationService.notify_merchant("renew_policy", policy)
+        PolicyNotificationService.notify_customer("renew_policy", policy)
+
+        # Trigger background task to renew policy with the insurer and set the policy status to renewed
+
+        return policy
 
     @staticmethod
     def list_policies() -> QuerySet:
@@ -172,6 +190,8 @@ class IQuote(ABC):
 
 class QuoteService(IQuote):
     def _get_all_quotes_for_product(self, product_type, product_name=None):
+        from api.catalog.serializers import QuoteSerializer
+
         try:
             if product_name:
                 product = Product.objects.filter(
@@ -187,6 +207,8 @@ class QuoteService(IQuote):
             raise ProductNotFoundError("Product not found.")
 
     def _get_quote_by_code(self, quote_code):
+        from api.catalog.serializers import QuoteSerializer
+
         try:
             quote = Quote.objects.get(quote_code=quote_code)
             serializer = QuoteSerializer(quote)
@@ -216,6 +238,8 @@ class QuoteService(IQuote):
         """
         Updates the information and metadata of an existing quote
         """
+        from api.catalog.serializers import QuoteSerializer
+
         try:
             # get the quote from the database and update it with new
             # information
