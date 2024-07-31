@@ -221,7 +221,33 @@ class PolicyAPIViewSet(
                     },
                 ],
             ),
-            400: OpenApiResponse(),
+            400: OpenApiResponse(
+                description='Bad request',
+                examples={
+                    'application/json': {
+                        "renewal_status": "error",
+                        "error": 'An error occured, please provide the Policy Refrence Number or the Policy unique\'s iD'
+                    }
+                }
+            ),
+            404: OpenApiResponse(
+                description='Policy not found',
+                examples={
+                    'application/json': {
+                        "renewal_status": "error",
+                        "error": "Policy not found"
+                    }
+                }
+            ),
+            500: OpenApiResponse(
+                description='Server error',
+                examples={
+                    'application/json': {
+                        "renewal_status": "error",
+                        "error": "Internal server error message"
+                    }
+                }
+            )
         },
     )
     @action(detail=False, methods=["post"])
