@@ -166,7 +166,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.policy_id} bought by User: {self.policy_holder.username}"
+        return f"#{self.policy_id} bought by User: {self.policy_holder.username}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
