@@ -9,22 +9,33 @@ from core.user.models import Customer
 from django.db.models import QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (OpenApiExample, OpenApiParameter,
-                                   OpenApiRequest, extend_schema)
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiRequest,
+    extend_schema,
+)
 from rest_framework import generics, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from django.db.models import Q
 
 from .exceptions import ProductNotFoundError
-from .serializers import (PolicyCancellationRequestSerializer,
-                          PolicyCancellationResponseSerializer,
-                          PolicyCancellationSerializer,
-                          PolicyPurchaseSerializer, PolicySerializer,
-                          ProductSerializer, QuoteRequestSerializer,
-                          QuoteSerializer)
+from .serializers import (
+    PolicyCancellationRequestSerializer,
+    PolicyCancellationResponseSerializer,
+    PolicyCancellationSerializer,
+    PolicyPurchaseSerializer,
+    PolicyRenewalSerializer,
+    PolicySerializer,
+    ProductSerializer,
+    QuoteRequestSerializer,
+    QuoteSerializer,
+    PolicyRenewalRequestSerializer,
+)
 from .services import PolicyService, ProductService, QuoteService
 
 logger = logging.getLogger(__name__)
@@ -174,26 +185,45 @@ class PolicyAPIViewSet(
             return PolicyPurchaseSerializer
         return PolicySerializer
 
+    def get_service(self):
+        return PolicyService()
+
+    @extend_schema(
+        summary="Renew a policy",
+        request=PolicyRenewalRequestSerializer,
+        responses={200: PolicyRenewalSerializer},
+    )
     @action(detail=False, methods=["post"])
     def renew(self, request, *args, **kwargs):
         """
         This action allows you as a merchant to submit a renewal
         request for your customer
         """
-        # This should grab the policy instance from the database
+        policy_id = request.data.get("policy_id")
+        policy_number = request.data.get("policy_number")
 
-        # It should should check if update a policy  is renewable
-        # if it is, it should update the details of a policy with
-        # new set of information: specifically, the effective_from
-        # and the effective to
+        if not policy_number or not policy_id:
+            return Response(
+                {
+                    "error": "An error occured, please provide the Policy Refrence Number or the Policy unique's iD"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # Return the updated policy from the database to the user
+        serializer = PolicyRenewalRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            policy_identifier = data.get("policy_identifier")
 
-        # NOTE: ALTHOUGH WE HAVE A FIELD, renewable in our django models for Policy,
-        # WE SHOULD PROBABLY ADD RENEWED or IS_RENEWED TO CHECK IF A POLICY HAS BEEN
-        # RENEWED AND TO DIFFERENTIATE IT FROM NON-RENEWED POLICIES
-
-        pass
+            policy = Policy.objects.get(
+                Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier)
+            )
+            renewed_policy = PolicyService.renew_policy(
+                policy, data.get("policy_end_date")
+            )
+            response_serializer = PolicyRenewalSerializer(renewed_policy)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         operation_id="retrieve-policy-by-id",
