@@ -197,57 +197,67 @@ class PolicyAPIViewSet(
         responses={
             200: OpenApiResponse(
                 description="Insurance Policy Renewal successful",
+                response=PolicyRenewalSerializer,
                 examples=[
-                    "application/json": {
-                        "renewal_status": "success",  # 'success' or 'failed
-                        "message": "Policy Renewal successful",
-                        "data": {
-                            "policy_number": "POL-2021-01-0001",
-                            "policy_duration": 365,
-                            "policy_metadata": {
-                                "product_name": "Basic Health Coverage",
-                                "product_type": "Health",
-                                "insurer": "Reliance Health",
-                                "customer_name": "Janet Joestar",
-                                "customer_email": "janet.joe@email.com",
-                                "customer_phone": "+234 123 456 7890",
-                                "customer_address": "123, Main Street, Lagos, Nigeria",
-                                "policy_status": "active",
-                                "policy_id": "e2f7ca44-905a-4e22-b31f-2d1f23fb1c07",
-                                "renewable": "True",
+                    OpenApiExample(
+                        "Successful Renewal Example",
+                        value={
+                            "renewal_status": "success",
+                            "message": "Policy Renewal successful",
+                            "data": {
+                                "policy_number": "POL-2021-01-0001",
+                                "policy_duration": 365,
+                                "policy_metadata": {
+                                    "product_name": "Basic Health Coverage",
+                                    "product_type": "Health",
+                                    "insurer": "Reliance Health",
+                                    "customer_name": "Janet Joestar",
+                                    "customer_email": "janet.joe@email.com",
+                                    "customer_phone": "+234 123 456 7890",
+                                    "customer_address": "123, Main Street, Lagos, Nigeria",
+                                    "policy_status": "active",
+                                    "policy_id": "e2f7ca44-905a-4e22-b31f-2d1f23fb1c07",
+                                    "renewable": True,
+                                },
+                                "renewal_date": "2024-11-01",
                             },
-                            "renewal_date": "2024-11-01",
                         },
-                    },
+                    )
                 ],
             ),
             400: OpenApiResponse(
-                description='Bad request',
-                examples={
-                    'application/json': {
-                        "renewal_status": "error",
-                        "error": 'An error occured, please provide the Policy Refrence Number or the Policy unique\'s iD'
-                    }
-                }
+                description="Bad request",
+                examples=[
+                    OpenApiExample(
+                        "Bad Request Example",
+                        value={
+                            "renewal_status": "failed",
+                            "error": "An error occurred, please provide the Policy Reference Number or the Policy unique ID",
+                        },
+                    )
+                ],
             ),
             404: OpenApiResponse(
-                description='Policy not found',
-                examples={
-                    'application/json': {
-                        "renewal_status": "error",
-                        "error": "Policy not found"
-                    }
-                }
+                description="Policy not found",
+                examples=[
+                    OpenApiExample(
+                        "Not Found Example",
+                        value={"renewal_status": "failed", "error": "Policy not found"},
+                    )
+                ],
             ),
             500: OpenApiResponse(
-                description='Server error',
-                examples={
-                    'application/json': {
-                        "renewal_status": "error",
-                        "error": "Internal server error message"
-                    }
-                }
-            )
+                description="Server error",
+                examples=[
+                    OpenApiExample(
+                        "Server Error Example",
+                        value={
+                            "renewal_status": "failed",
+                            "error": "Internal server error message",
+                        },
+                    )
+                ],
+            ),
         },
     )
     @action(detail=False, methods=["post"])
