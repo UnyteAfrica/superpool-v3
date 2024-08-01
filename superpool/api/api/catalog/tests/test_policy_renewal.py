@@ -82,7 +82,7 @@ def test_policy_renewal_is_successful(client, data_fixture):
         "policy_id": policy_id,
         "policy_end_date": "2025-01-01",
     }
-    response = client.post(RENEWAL_URL, policy_renewal_payload)
+    response = client.post(RENEWAL_URL, policy_renewal_payload, format="json")
     assert response.status_code == 200
     assert response.data == {"status": "success"}
 
