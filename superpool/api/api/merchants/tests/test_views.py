@@ -15,7 +15,7 @@ client = APIClient()
 
 REGISTRATION_V1_URL = reverse("merchant-list")
 REGISTRATION_URL = reverse("merchant-v2-list")
-RETRIEVE_ENDPOINT = reverse("merchant-v2-retrieve")
+RETRIEVE_ENDPOINT = reverse("merchant-v2-detail")
 # LOGIN_URL = reverse("merchant:login")
 
 
