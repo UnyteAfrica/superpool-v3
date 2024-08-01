@@ -94,6 +94,7 @@ class PolicyService:
         PolicyNotificationService.notify_customer("renew_policy", policy)
 
         # Trigger background task to renew policy with the insurer and set the policy status to renewed
+        # Once policy is renewed, notify the merchant of a status update and notify the merchant of the renewal
 
         return policy
 
