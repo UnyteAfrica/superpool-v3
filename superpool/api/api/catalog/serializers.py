@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Union
 
+from api.catalog.services import PolicyService
 from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
 from core.providers.models import Provider as Partner
+from django.db.models import Q
 from core.user.models import Customer
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
@@ -310,3 +312,110 @@ class PolicyCancellationResponseSerializer(serializers.Serializer):
     refund_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False
     )
+
+
+class PolicyRenewalRequestSerializer(serializers.Serializer):
+    """
+    Validates a policy renewal request
+    """
+
+    policy_id = serializers.UUIDField(required=False)
+    policy_number = serializers.CharField(max_length=255, required=False)
+    policy_end_date = serializers.DateField()
+    auto_renew = serializers.BooleanField(required=False)
+
+    def validate(self, data):
+        """Validates the existence of a policy with the given policy ID or policy reference number"""
+        policy_identifier = PolicyService.validate_policy(
+            policy_id=data.get("policy_id"), policy_number=data.get("policy_number")
+        )
+        self.validate_auto_renew(policy_identifier, data.get("auto_renew"))
+        data["policy_identifier"] = policy_identifier
+        return data
+
+    def validate_auto_renew(self, policy_identifier, auto_renew):
+        """Ensure that auto_renew is only possible if model instance contains a 'renewable' field set to True"""
+        if auto_renew:
+            # check for an existing policy with this policy number (or ID), that could be autorenewed
+            if not Policy.objects.filter(
+                Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier),
+                renewable=True,
+            ).exists():
+                raise ValidationError(
+                    "Policy does not support auto-renewal. Please contact suppport team to renew manually."
+                )
+
+    def validate_policy_end_date(self, value):
+        """Ensures that the policy end date is valid (not in the past)"""
+        today = datetime.now()
+
+        if value <= today:
+            raise ValidationError("Policy end date must be a future date.")
+        return value
+
+
+class PolicyMetadataSerializer(serializers.ModelSerializer):
+    """
+    Formats response information for insurance renewal request
+
+    Its a limited view  of the PolicySerializer - exposing just enough informtion
+    """
+
+    class Meta:
+        model = Policy
+        fields = [
+            "product_name",
+            "product_type",
+            "insurer",
+            "customer_name",
+            "customer_email",
+            "customer_phone",
+            "customer_address",
+            "policy_status",
+            "policy_id",
+            "renewable",
+        ]
+
+    product_name = serializers.CharField(source="product.name")
+    product_type = serializers.CharField(source="product.product_type")
+    insurer = serializers.CharField(source="provider_id.name")
+    customer_name = serializers.SerializerMethodField()
+    customer_email = serializers.EmailField(source="policy_holder.email")
+    customer_phone = serializers.CharField(source="policy_holder.phone_number")
+    customer_address = serializers.CharField(source="policy_holder.address")
+    policy_status = serializers.CharField(source="status")
+
+    def get_customer_name(self, instance):
+        """Returns the full name of the policy holder"""
+        return f"{instance.policy_holder.first_name} {instance.policy_holder.last_name}"
+
+
+class PolicyRenewalSerializer(serializers.ModelSerializer):
+    """
+    Formats response information for insurance renewal request
+    """
+
+    policy_duration = serializers.SerializerMethodField()
+    renewal_date = serializers.SerializerMethodField()
+    policy_metadata = PolicyMetadataSerializer()
+
+    class Meta:
+        model = Policy
+        fields = [
+            "policy_number",
+            "policy_duration",
+            "policy_metadata",
+            "renewal_date",
+        ]
+
+    def get_policy_duration(self, instance):
+        """Calculate the duration of the policy (in days)"""
+        duration = instance.effective_through - instance.effective_from
+        return duration.days
+
+    def get_renewal_date(self, instance):
+        """Gets the renewal date if auto_renew is set to True"""
+        request = self.context.get("request")
+        if request and request.data.get("auto_renew"):
+            return instance.effective_through
+        return None
