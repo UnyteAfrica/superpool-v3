@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.db.models import Q
+from rest_framework import filters
 
 from .exceptions import ProductNotFoundError
 from .serializers import (
@@ -133,47 +134,75 @@ class PolicyByProductTypeView(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ProductView(generics.RetrieveAPIView):
+class ProductRetrieveView(generics.RetrieveAPIView):
     """
-    This endpoint lets you find one from the products list by the product's id.
+    This endpoint lets you find a product by its ID or name
+
+    e.g
+
+        /api/v1/products/1
+
+        /api/v1/products/health-insurance
+        /api/v1/products/health-insurance?product_id=1
     """
 
     serializer_class = ProductSerializer
-
-    def get_queryset(self, **kwargs: dict):
-        return ProductService.get_product_by_id(kwargs.get("product_id"))
+    queryset = ProductService.list_products()
 
     @extend_schema(
-        summary="Retrieve a product by ID",
-        description="Retrieve a product by ID",
+        summary="Retrieve a product by ID or name",
+        description="Retrieve a specific product by its ID or name",
+        request=OpenApiRequest(
+            request=ProductSerializer,
+            examples=[
+                OpenApiExample(
+                    name="Product ID Example",
+                    value={
+                        "product_id": "b097d1b7-70f8-42a7-a411-6f22727b5c7d",
+                    },
+                ),
+                OpenApiExample(
+                    name="Product Name Example",
+                    value={
+                        "product_name": "Health Insurance",
+                    },
+                ),
+            ],
+        ),
         responses={
-            200: ProductSerializer,
-            404: {"error": "Product not found"},
-            500: {"error": "Internal server error"},
+            200: OpenApiResponse(
+                description="Product details",
+                response=ProductSerializer,
+                examples=[
+                    OpenApiExample(
+                        "Product Response Example",
+                        value={
+                            "id": 1,
+                            "name": "Health Insurance",
+                            "product_type": "Health",
+                            "insurer": "Reliance Health",
+                            "description": "This is a health insurance policy",
+                            "price": 1000.0,
+                            "currency": "USD",
+                            "created_at": "2021-11-01T00:00:00Z",
+                            "updated_at": "2021-11-01T00:00:00Z",
+                        },
+                    )
+                ],
+            )
         },
     )
-    def retrieve(self, request: Request, *args: dict, **kwargs: dict) -> Response:
-        params = request.query_params.dict()
-        product_id = params.get("product_id")
+    def get_object(self):
+        # Priority is given to the product_id
+        # if the product_id is provided, we will use it to retrieve the product
+        # if the product_id is not provided, we will fallback to the product_name
 
-        try:
-            queryset = self.get_queryset(product_id=product_id)
-            serializer = self.get_serializer(queryset)
-        except Product.DoesNotExist:
-            return Response(
-                {"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-        except Product.MultipleObjectsReturned:
-            return Response(
-                {"error": "Multiple products found"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        except Exception:
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        product_id = self.kwargs.get("pk")
+        product_name = self.kwargs.get("product_name")
+
+        if product_id:
+            return ProductService.get_product_by_id(product_id)
+        return ProductService.get_product(product_name)
 
 
 class PolicyAPIViewSet(
