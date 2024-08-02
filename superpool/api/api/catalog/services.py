@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, NewType, Union
 
+from rest_framework.generics import get_object_or_404
+
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
 from django.core.mail import send_mail
@@ -23,20 +25,18 @@ class ProductService:
         return Product.objects.all()
 
     @staticmethod
-    def get_product(name: str) -> Product:
+    def get_product(product_name: str) -> Product:
         """
         Returns a product by name
         """
-        return Product.objects.get(models.Q(name=name)).select_related("provider_id")
+        return get_object_or_404(Product, name=product_name)
 
     @staticmethod
     def get_product_by_id(product_id: int) -> Product:
         """
         Returns a product by id
         """
-        return Product.objects.get(models.Q(id=product_id)).select_related(
-            "provider_id"
-        )
+        return get_object_or_404(Product, id=product_id)
 
 
 ############################################################################################################
