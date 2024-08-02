@@ -7,6 +7,9 @@ from ..environment import env
 MAILGUN_ENABLED = env.bool("MAILGUN_ENABLED", default=False)
 SENDGRID_ENABLED = env.bool("SENDGRID_ENABLED", default=False)
 
+SUPERPOOL_NS_EMAIL = env("SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+
 if MAILGUN_ENABLED and SENDGRID_ENABLED:
     raise ValueError(
         "Only one email provider can be enabled at a time. "
@@ -23,19 +26,15 @@ match (settings.DEBUG, MAILGUN_ENABLED, SENDGRID_ENABLED):
         EMAIL_HOST_USER = ""
         EMAIL_HOST_PASSWORD = ""
         FROM_EMAIL = env("FROM_EMAIL", default="webmaster@localhost")
-        DEFAULT_FROM_EMAIL = FROM_EMAIL
 
     # If Mailgun is enabled, use the Mailgun backend
     case (False, True, _):
         EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
         EMAIL_HOST = env("MAILGUN_SMTP_SERVER")
-        EMAIL_PORT = env("MAILGUN_SMTP_PORT")
         EMAIL_PORT = 587
         EMAIL_USE_TLS = True
         EMAIL_HOST_USER = env("MAILGUN_EMAIL_USERNAME")
         EMAIL_HOST_PASSWORD = env("MAILGUN_EMAIL_PASSWORD")
-        SUPERPOOL_NS_EMAIL = env("SUPERPOOL_NOTIFICATION_SERVICE_FROM_EMAIL")
-        DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
     # If Sendgrid is enabled, use Sendgrid backend
     case (False, _, True):
@@ -45,8 +44,6 @@ match (settings.DEBUG, MAILGUN_ENABLED, SENDGRID_ENABLED):
         EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
         EMAIL_USE_TLS = True
         EMAIL_PORT = env("EMAIL_PORT")
-        FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
-        DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
     # You fucked up!
     case _:
