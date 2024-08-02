@@ -8,7 +8,7 @@ from .views import (
     PolicyCancellationView,
     PolicyPurchaseView,
     ProductListView,
-    ProductView,
+    ProductRetrieveView,
     QuoteAPIViewSet,
     QuoteDetailView,
     QuoteListView,
@@ -25,9 +25,14 @@ if typing.TYPE_CHECKING:
 urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     path("products", ProductListView.as_view(), name="product-list"),
     path(
-        "products/<uuid:product_id>",
-        ProductView.as_view(),
-        name="product-detail",
+        "products/<uuid:pk>/",
+        ProductRetrieveView.as_view(),
+        name="product-detail-by-id",
+    ),
+    path(
+        "products/<str:product_name>/",
+        ProductRetrieveView.as_view(),
+        name="product-detail-by-name",
     ),
     # path("", include(router.urls)),
     path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
