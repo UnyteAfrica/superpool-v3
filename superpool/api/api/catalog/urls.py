@@ -29,6 +29,11 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         ProductRetrieveView.as_view(),
         name="product-detail-by-id",
     ),
+    path(
+        "products/<str:product_name>/",
+        ProductRetrieveView.as_view(),
+        name="product-detail-by-name",
+    ),
     # path("", include(router.urls)),
     path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
     path("policies/cancel", PolicyCancellationView.as_view(), name="policy-cancel"),
