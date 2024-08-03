@@ -40,8 +40,8 @@ try:
             EMAIL_PORT = env.int("MAILGUN_EMAIL_PORT")
             EMAIL_HOST_USER = env("MAILGUN_EMAIL_USERNAME")
             EMAIL_HOST_PASSWORD = env("MAILGUN_EMAIL_PASSWORD")
-            EMAIL_USE_TLS = EMAIL_USE_TLS
-            EMAIL_USE_SSL = EMAIL_USE_SSL
+            EMAIL_USE_TLS = False
+            EMAIL_USE_SSL = True
 
         # If Sendgrid is enabled, use Sendgrid backend
         case (False, _, True):
