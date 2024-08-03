@@ -79,7 +79,7 @@ class BaseEmailMessage(EmailMultiAlternatives):
         """
         Retrieves the system's email mailbox
         """
-        return settings.FROM_EMAIL
+        return settings.DEFAULT_FROM_EMAIL
 
     def send(self, silent: bool = True) -> None:
         """
