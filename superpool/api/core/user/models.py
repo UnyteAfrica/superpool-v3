@@ -55,6 +55,9 @@ class User(AbstractUser, TimestampMixin):
         default=USER_TYPES.ADMIN,
         help_text="Designates the role of a given user on the platform",
     )
+    # merchant = models.ForeignKey(
+    #     "Merchant", null=True, blank=True, on_delete=models.SET_NULL
+    # )
 
     email = models.EmailField(unique=True)
 
@@ -80,6 +83,8 @@ class Customer(TimestampMixin, models.Model):
 
     Model to represent a customer
     """
+
+    from core.merchants.models import Merchant
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(
@@ -129,6 +134,14 @@ class Customer(TimestampMixin, models.Model):
         help_text="ID of the verification document",
         max_length=20,
         null=True,
+    )
+    merchant = models.ForeignKey(
+        Merchant,
+        on_delete=models.CASCADE,
+        related_name="customers",
+        null=True,
+        blank=True,
+        help_text="Merchant that created the customer",
     )
 
     def has_completed_verification(self) -> bool:
