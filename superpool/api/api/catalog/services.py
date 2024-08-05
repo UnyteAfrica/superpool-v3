@@ -198,7 +198,21 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
-    def _get_all_quotes_for_product(self, product_type, product_name=None):
+    def _get_all_quotes_for_product(
+        self, product_type, product_name=None, insurance_details: Dict[str, Any] = None
+    ):
+        """
+        Retrieves all quotes for a given product type and optional product name.
+
+        Arguments:
+
+            product_type: The type of insurance product.
+            product_name: The specific name of the insurance product.
+            insurance_details: Additional details specific to the insurance type.
+
+        Returns:
+            A list of quotes.
+        """
         from api.catalog.serializers import QuoteSerializer
 
         try:
@@ -206,7 +220,8 @@ class QuoteService(IQuote):
                 product = Product.objects.filter(
                     Q(product_type=product_type) | Q(product_name=product_name)
                 )
-            product = Product.objects.get(product_type=product_type)
+            else:
+                product = Product.objects.get(product_type=product_type)
             quotes = Quote.objects.filter(product=product)
             if not quotes:
                 raise QuoteNotFoundError("No quotes found for the given product.")
@@ -253,10 +268,14 @@ class QuoteService(IQuote):
 
         if product and product_name:
             return self._get_all_quotes_for_product(
-                product_type=product, product_name=product_name
+                product_type=product,
+                product_name=product_name,
+                insurance_details=insurance_details,
             )
         elif product:
-            return self._get_all_quotes_for_product(product_type=product)
+            return self._get_all_quotes_for_product(
+                product_type=product, insurance_details=insurance_details
+            )
         elif quote_code:
             return self._get_quote_by_code(quote_code=quote_code)
         else:
