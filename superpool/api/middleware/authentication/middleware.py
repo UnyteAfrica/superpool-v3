@@ -9,15 +9,11 @@ import logging
 
 from core.models import Application
 from core.merchants.models import Merchant
-from django.http import JsonResponse
-from rest_framework import status
-
-# from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
 
-class APIKeyMiddleware:
+class TenantAuthenticationMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
