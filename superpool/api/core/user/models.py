@@ -60,8 +60,7 @@ class User(AbstractUser, TimestampMixin):
     # )
 
     email = models.EmailField(unique=True)
-
-    REQUIRED_FIELDS = ["email"]
+    REQUIRED_FIELDS = []
 
     class Meta:
         ordering = ["first_name", "last_name", "last_login", "date_joined"]
