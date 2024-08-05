@@ -161,3 +161,34 @@ class Customer(TimestampMixin, models.Model):
         indexes = [
             models.Index(fields=["first_name", "last_name", "email"]),
         ]
+
+
+###############################################################################
+# INTERNAL USERS
+###############################################################################
+
+
+class Admin(models.Model):
+    """
+    Represents an admin user on the platform
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="admin_user"
+    )
+
+    def __str__(self):
+        return self.user.full_name
+
+
+class CustomerSupport(models.Model):
+    """
+    Represents someone from the Customer Support team
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="support_user"
+    )
+
+    def __str__(self):
+        return self.user.full_name
