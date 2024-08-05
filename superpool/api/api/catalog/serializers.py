@@ -359,6 +359,22 @@ class QuoteRequestSerializer(serializers.Serializer):
             return instance_serializer.data
         return {}
 
+    def validate(self, data):
+        """Validates the incoming request based on the product type"""
+        product_type = data.get("insurance_type")
+        serializer_class = self.get_serializer_class(product_type)
+        if not product_type:
+            raise ValidationError("Product type must be provided.")
+        if not serializer_class:
+            raise ValidationError(f"Invalid product type: {product_type} provided.")
+
+        insurance_serializer = serializer_class(data=self.initial_data)
+        if not insurance_serializer.is_valid():
+            return ValidationError(insurance_serializer.errors)
+
+        data["insurance_details"] = insurance_serializer.data
+        return data
+
 
 class ProductMetadataSerializer(serializers.Serializer):
     product_name = serializers.CharField(max_length=255, required=False)
