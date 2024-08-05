@@ -48,10 +48,10 @@ def create_permissions():
             name=description,
             content_type=content_type,
         )
-        if created:
-            print("Permissions created successfully")
-        else:
-            print("Permissions already exist")
+        # if created:
+        #     print("Permissions created successfully")
+        # else:
+        #     print("Permissions already exist")
 
 
 def assign_user_to_group(user, group_name: str):
@@ -101,9 +101,9 @@ def assign_permissions_to_groups():
             permission = Permission.objects.filter(codename=codename).first()
             if permission:
                 group.permissions.add(permission)
-                print(f'Added permission "{codename}" to group "{group_name}"')
-            else:
-                print(f"Permission {codename} does not exist")
+            #     print(f'Added permission "{codename}" to group "{group_name}"')
+            # else:
+            #     print(f"Permission {codename} does not exist")
 
 
 # Invoke the functions to create permissions and assign them to groups

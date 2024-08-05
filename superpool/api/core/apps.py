@@ -6,5 +6,4 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self):
-        print(f"Core app is ready! Successsfully loaded all signals")
         import core.signals
