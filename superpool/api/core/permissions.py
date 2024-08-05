@@ -93,9 +93,10 @@ def assign_permissions_to_groups():
         #  Assign permissions to groups
         for codename in perm_codenames:
             # check if the permission exists
-            permission = Permission.objects.filter(codename=codename).first()
-            if permission:
-                group.permissions.add(Permission.objects.get(codename=codename))
+            permission_qs = Permission.objects.filter(codename=codename)
+            if permission_qs.exists():
+                permission = permission_qs.first()
+                group.permissions.add(Permission.objects.get(codename=permission))
             else:
                 print(f"Permission {codename} does not exist")
 
