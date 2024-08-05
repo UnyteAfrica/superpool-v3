@@ -116,15 +116,217 @@ class CustomerDetailsSerializer(serializers.Serializer):
     customer_address = serializers.CharField()
 
 
+class BaseQuoteRequestSerializer(serializers.Serializer):
+    """
+    Validate the base quote request payload
+    """
+
+    customer_metadata = CustomerDetailsSerializer()
+
+
+class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the travel insurance quote request payload
+
+    """
+
+    destination = serializers.CharField(max_length=255)
+    departure_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    return_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    number_of_travellers = serializers.IntegerField(min_value=1, max_value=10)
+    trip_duration = serializers.IntegerField(min_value=1, max_value=365, required=False)
+    trip_type = serializers.ChoiceField(
+        choices=[("one_way", "One Way"), ("round_trip", "Round Trip")]
+    )
+    trip_type_details = serializers.ChoiceField(
+        choices=[
+            ("business", "Business"),
+            ("leisure", "Leisure"),
+            ("education", "Education"),
+            ("religious", "Religious"),
+            ("medical", "Medical"),
+        ],
+        required=False,
+    )
+
+
+class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the health insurance quote request payload
+
+    """
+
+    health_condition = serializers.ChoiceField(
+        choices=[
+            ("good", "Good"),
+            ("fair", "Fair"),
+            ("poor", "Poor"),
+            ("critical", "Critical"),
+        ]
+    )
+    age = serializers.IntegerField(min_value=1, max_value=100)
+    coverage_type = serializers.ChoiceField(
+        choices=[
+            ("basic", "Basic"),
+            ("standard", "Standard"),
+            ("premium", "Premium"),
+        ],
+    )
+    coverage_type_details = serializers.ChoiceField(
+        choices=[
+            ("individual", "Individual"),
+            ("family", "Family"),
+            ("group", "Group"),
+        ],
+        required=False,
+    )
+
+
+class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the auto insurance quote request payload
+
+    """
+
+    vehicle_type = serializers.ChoiceField(
+        choices=[
+            ("car", "Car"),
+            ("bike", "Bike"),
+        ]
+    )
+    vehicle_make = serializers.CharField(max_length=100, required=False)
+    vehicle_model = serializers.CharField(max_length=100, required=False)
+    vehicle_year = serializers.IntegerField(
+        min_value=1900,
+        max_value=datetime.now().year,
+    )
+    vehicle_value = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False
+    )
+    vehicle_usage = serializers.ChoiceField(
+        choices=[
+            ("personal", "Personal"),
+            ("commercial", "Commercial"),
+            ("rideshare", "Ride Share"),
+        ]
+    )
+    vehicle_usage_details = serializers.ChoiceField(
+        choices=[
+            ("private", "Private"),
+            ("public", "Public"),
+            ("commercial", "Commercial"),
+        ],
+        required=False,
+    )
+    vehicle_mileage = serializers.IntegerField(min_value=1, max_value=100000)
+    vehicle_location = serializers.ChoiceField(
+        choices=[
+            ("urban", "Urban"),
+            ("suburban", "Suburban"),
+            ("rural", "Rural"),
+        ]
+    )
+    vehicle_location_details = serializers.ChoiceField(
+        choices=[
+            ("high_crime", "High Crime"),
+            ("low_crime", "Low Crime"),
+            ("safe", "Safe"),
+        ],
+        required=False,
+    )
+    vehicle_purpose = serializers.ChoiceField(
+        choices=[
+            ("personal", "Personal"),
+            ("commercial", "Commercial"),
+        ]
+    )
+    vehicle_purpose_details = serializers.ChoiceField(
+        choices=[
+            ("business", "Business"),
+            ("commute", "Commute"),
+        ],
+        required=False,
+    )
+
+
+class PersonalAccidentInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the personal accident insurance quote request payload
+
+
+    """
+
+    occupation = serializers.CharField(max_length=255)
+    occupation_risk_level = serializers.ChoiceField(
+        choices=[
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+        ],
+        required=False,
+    )
+    occupation_risk_details = serializers.ChoiceField(
+        choices=[
+            ("office", "Office"),
+            ("field", "Field"),
+            ("remote", "Remote"),
+        ],
+        required=False,
+    )
+    age = serializers.IntegerField(min_value=1, max_value=100)
+
+
+class HomeInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the home insurance quote request payload
+
+    """
+
+    property_type = serializers.ChoiceField(
+        choices=[
+            ("house", "House"),
+            ("apartment", "Apartment"),
+            ("condo", "Condo"),
+        ]
+    )
+    property_value = serializers.DecimalField(max_digits=10, decimal_places=2)
+    property_location = serializers.CharField(max_length=255)
+    security_details = serializers.JSONField(required=False)
+
+
+class GadgetInsuranceSerializer(BaseQuoteRequestSerializer):
+    """
+    Validate the gadget insurance quote request payload
+
+
+    """
+
+    gadget_type = serializers.ChoiceField(
+        choices=[
+            ("smartphone", "Smartphone"),
+            ("laptop", "Laptop"),
+            ("tablet", "Tablet"),
+            ("smartwatch", "Smartwatch"),
+            ("camera", "Camera"),
+            ("headphones", "Headphones"),
+            ("other", "Other"),
+        ]
+    )
+    gadget_information = serializers.JSONField()
+    usage_history = serializers.JSONField(required=False)
+
+
 class QuoteRequestSerializer(serializers.Serializer):
     """Validate the entire quote request payload"""
 
-    insurance_type = serializers.ChoiceField(
+    product_type = serializers.ChoiceField(
         choices=[
             ("health", "Health Insurance"),
             ("auto", "Auto Insurance"),
             ("travel", "Travel Insurance"),
             ("personal_accident", "Personal Accident Insurance"),
+            ("home", "Home Insurance"),
+            ("gadget", "Gadget Insurance"),
         ]
     )
     quote_code = serializers.CharField(required=False)
