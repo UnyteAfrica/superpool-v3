@@ -129,7 +129,33 @@ class QuoteRequestSerializer(serializers.Serializer):
     )
     quote_code = serializers.CharField(required=False)
     insurance_name = serializers.CharField(required=False)
-    customer_metadata = CustomerDetailsSerializer()
+    # customer_metadata = CustomerDetailsSerializer()
+    insurance_details = serializers.SerializerMethodField()
+
+    def get_serializer_class(self, product_type):
+        """Return the appropriate serializer class based on the product type"""
+        product_type = self.initial_data.get("insurance_type")
+        serializer_mapping = {
+            "health": HealthInsuranceSerializer,
+            "auto": AutoInsuranceSerializer,
+            "travel": TravelInsuranceSerializer,
+            "personal_accident": PersonalAccidentInsuranceSerializer,
+            "home": HomeInsuranceSerializer,
+            "gadget": GadgetInsuranceSerializer,
+        }
+        return serializer_mapping.get(product_type)
+
+    def get_insurance_details(self, instance):
+        """Return the insurance details based on the product type"""
+        # first we get the serializer class, by passing the product type from the instance
+        serializer_class = self.get_serializer_class(instance["product_type"])
+        if serializer_class:
+            # then we create an instance of the serializer class and pass the initial
+            instance_serializer = serializer_class(data=self.initial_data)
+            # we validate the instance and return the dataj
+            instance_serializer.is_valid(raise_exception=True)
+            return instance_serializer.data
+        return {}
 
 
 class ProductMetadataSerializer(serializers.Serializer):
