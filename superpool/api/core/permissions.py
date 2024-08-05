@@ -1,6 +1,9 @@
 from rest_framework.permissions import BasePermission
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class IsCustomerSupport(BasePermission):
@@ -22,50 +25,80 @@ class IsAdminUser(BasePermission):
 
 
 # define permissions types, permission groups, and assign permissions to groups
-permissions = [
-    # Permissions for Customer Support
-    ("manage_merchants", "Can manage merchants"),
-    ("view_customer", "Can view customer"),
-    # Permissions for Merchant
-    ("manage_customers", "Can manage customers"),
-    ("manage_policies", "Can manage policies"),
-    ("manage_claims", "Can manage claims"),
-]
+def create_permissions():
+    permissions = [
+        ("view_dashboard", "Can view dashboard"),
+        ("manage_users", "Can manage users"),
+        ("manage_merchants", "Can manage merchants"),
+        ("view_customers", "Can view customers"),
+        ("manage_customers", "Can manage customers"),
+        ("manage_policies", "Can manage policies"),
+        ("manage_claims", "Can manage claims"),
+        ("manage_tickets", "Can manage support tickets"),
+        (
+            "create_quote",
+            "Can create a quote",
+        ),  # allows us to be able to create a quote on the admin dashboard
+    ]
 
-# Create the actual permissions
-for codename, name in permissions:
-    content_type = ContentType.objects.get_for_model(Group)
-    permission = Permission.objects.get_or_create(
-        codename=codename, name=name, content_type=content_type
-    )
-
-admin_permissions = [
-    "view_dashboard",
-    "manage_users",
-    "manage_merchants",
-    "manage_customers",
-    "manage_policies",
-    "manage_claims",
-]
-support_permissions = ["view_dashboard", "view_customers", "manage_merchants"]
-merchant_permissions = [
-    "view_customers",
-    "manage_customers",
-    "manage_policies",
-    "manage_claims",
-]
-
-admin_group, created = Group.objects.get_or_create(name="Admin")
-support_group, created = Group.objects.get_or_create(name="CustomerSupport")
-merchant_group, created = Group.objects.get_or_create(name="Merchant")
+    content_type = ContentType.objects.get_for_model(User)
+    for codename, description in permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=description,
+            content_type=content_type,
+        )
 
 
-# Assign permissions to groups
-for permission in admin_permissions:
-    admin_group.permissions.add(Permission.objects.get(codename=permission))
+def assign_user_to_group(user, group_name: str):
+    # create a group if it does not exist and assign the user to the group
+    group, created = Group.objects.get_or_create(name=group_name)
+    if user:
+        user.groups.add(group)
+        user.save()
 
-for permission in support_permissions:
-    support_group.permissions.add(Permission.objects.get(codename=permission))
 
-for permission in merchant_permissions:
-    merchant_group.permissions.add(Permission.objects.get(codename=permission))
+def assign_permissions_to_groups():
+    permissions = {
+        "Admin": [
+            "view_dashboard",
+            "manage_users",
+            "manage_merchants",
+            "view_customers",
+            "view_tickets",
+            "manage_claims",
+            "create_quote",
+        ],
+        "Merchant": [
+            "view_dashboard",
+            "manage_customers",
+            "create_quote",
+            "manage_policies",
+            "manage_claims",
+            "manage_policies",
+        ],
+        "CustomerSupport": [
+            "view_dashboard",
+            "manage_tickets",
+            "manage_merchants",
+            "manage_customers",
+            "manage_claims",
+        ],
+    }
+    # assign the predefined permissions to the groups
+
+    for group_name, perm_codenames in permissions.items():
+        group, created = Group.objects.get_or_create(name=group_name)
+
+        #  Assign permissions to groups
+        for codename in perm_codenames:
+            permission = Permission.objects.get(codename=codename)
+            if permission:
+                group.permissions.add(Permission.objects.get(codename=codename))
+            else:
+                print(f"Permission {codename} does not exist")
+
+
+# Invoke the functions to create permissions and assign them to groups
+create_permissions()
+assign_permissions_to_groups()
