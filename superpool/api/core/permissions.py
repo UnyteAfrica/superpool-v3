@@ -28,6 +28,7 @@ class IsAdminUser(BasePermission):
 def create_permissions():
     permissions = [
         ("view_dashboard", "Can view dashboard"),
+        ("manage_users", "Can manage users"),
         ("manage_merchants", "Can manage merchants"),
         ("view_customers", "Can view customers"),
         ("manage_customers", "Can manage customers"),
