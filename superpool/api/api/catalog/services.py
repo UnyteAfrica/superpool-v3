@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, NewType, Union
+from typing import Any, Dict, NewType, Union
 
 from rest_framework.generics import get_object_or_404
 
@@ -166,7 +166,15 @@ class PolicyService:
 ############################################################################################################
 class IQuote(ABC):
     @abstractmethod
-    def get_quote(self, product, product_name, quote_code=None, batch=False):
+    def get_quote(
+        self,
+        product,
+        product_name,
+        quote_code=None,
+        insurance_details=None,
+        batch=False,
+        **kwargs,
+    ):
         """Retrieves an insurance quotation on a policy. if batch is selected returns a list of quotes from multiple insurers instead."""
         raise NotImplementedError()
 
@@ -222,18 +230,37 @@ class QuoteService(IQuote):
         product: Union[str, None] = None,
         product_name: Union[str, None] = None,
         quote_code: Union[str, None] = None,
-        batch=False,
+        insurance_details: Dict[str, Any] = None,
+        batch: bool = False,
+        **kwargs,
     ):
         """
         Retrieves insurance quotes for an insurance policy
+
+        Arguments:
+
+            product: The type of insurance product.
+            product_name: The specific name of the insurance product.
+            quote_code: A unique code for the insurance quote.
+            insurance_details: Additional details specific to the insurance type.
+            batch: Flag to indicate if multiple quotes should be retrieved.
+            kwargs: Additional arguments for future extensions.
+
+        Returns:
+            A quote or list of quotes.
         """
+        insurance_details = insurance_details or {}
+
         if product and product_name:
             return self._get_all_quotes_for_product(
                 product_type=product, product_name=product_name
             )
         elif product:
             return self._get_all_quotes_for_product(product_type=product)
-        return self._get_quote_by_code(quote_code=quote_code)
+        elif quote_code:
+            return self._get_quote_by_code(quote_code=quote_code)
+        else:
+            raise ValueError("Either product, or quote_code must be provided.")
 
     def update_quote(self, quote_code, data):
         """
