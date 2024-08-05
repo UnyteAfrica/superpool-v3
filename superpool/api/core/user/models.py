@@ -19,6 +19,7 @@ class User(AbstractUser, TimestampMixin):
         # TODO: Remove the customer model in the next release
         # CUSTOMER = "customer", _("Customer")
         ADMIN = "admin", _("Admin")
+        MERCHANT = "merchant", _("Merchant")
         SUPPORT = "support", _("Customer Support")
 
     id = models.UUIDField(
@@ -31,11 +32,15 @@ class User(AbstractUser, TimestampMixin):
         _("First Name"),
         help_text="Given name as it appears on ID",
         max_length=40,
+        null=True,
+        blank=True,
     )
     last_name = models.CharField(
         _("Last Name"),
         help_text="Family name as it appears on ID",
         max_length=40,
+        null=True,
+        blank=True,
     )
     username = models.CharField(
         unique=True,
@@ -53,7 +58,7 @@ class User(AbstractUser, TimestampMixin):
 
     email = models.EmailField(unique=True)
 
-    REQUIRED_FIELDS = ["first_name", "last_name", "email"]
+    REQUIRED_FIELDS = ["email"]
 
     class Meta:
         ordering = ["first_name", "last_name", "last_login", "date_joined"]
@@ -67,22 +72,6 @@ class User(AbstractUser, TimestampMixin):
 
     def __str__(self):
         return self.full_name
-
-    # TODO: Remove the customer model in the next release
-    @deprecated("This function would be removed in nearest future stable release ")
-    def has_completed_verification(self) -> bool:
-        """
-        Validates if the user has completed KYC verification
-        """
-        return False
-
-    # TODO: Remove the customer model in the next release
-    @deprecated("This function would be removed in nearest future stable release ")
-    def has_read_terms(self) -> bool:
-        """
-        Check if user has read terms and conditions
-        """
-        return False
 
 
 class Customer(TimestampMixin, models.Model):
