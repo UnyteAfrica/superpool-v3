@@ -43,9 +43,18 @@ class APIKeyMiddleware:
 
                 if merchant and application:
                     request.tenant = merchant
-            except (Merchant.DoesNotExist, Application.DoesNotExist):
+                else:
+                    # if the merchant or application is incorrect, fallback to normal
+                    logger.warning("Invalid merchant or application information")
+                    request.tenant = None
+            except (Merchant.DoesNotExist, Application.DoesNotExist) as err:
+                # if no merchant or application is found in the database, fallback to normal
+                logger.warning(f"Error fetching merchant or application: {err}")
                 request.tenant = None
         else:
+            # if the merchant_id or application_id is not found in the request headers
+            # proceed to authenticate as normal authentication
+            logger.warning("Merchant ID or Application ID not found in request headers")
             request.tenant = None
 
         response = self.get_response(request)
