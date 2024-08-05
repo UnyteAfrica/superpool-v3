@@ -8,6 +8,7 @@ middleware
 import logging
 
 from core.models import Application
+from core.merchants.models import Merchant
 from django.http import JsonResponse
 from rest_framework import status
 
@@ -21,23 +22,31 @@ class APIKeyMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Get the information of the merchant from the request headers
+        # if the merchant_id is not present in the request headers, it therefore
+        # means, we have to check if the reqeust is coming from an internal user -
+        # the admin or the customer support
+        # otherwise invalidate the reqeust
+
+        # NOTE: merchant_id is the unique identifier of the merchant
+        merchant_id = request.headers.get("X-Merchant-ID")
+        # APP ID is the identifier of the application, this is used to identify the
+        # application that is making the request
+        # for merchannts, they would have to create an application and use the
+        # application id to make requests to the API
         x_app_id = request.headers.get("X-APP-ID")
 
-        if not x_app_id:
-            return JsonResponse(
-                {"error": "Request object must contain X-APP-ID"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-        try:
-            app = Application.objects.get(application_id=x_app_id)
+        if merchant_id and x_app_id:
+            try:
+                merchant = Merchant.objects.get(id=merchant_id)
+                application = Application.objects.get(id=x_app_id)
 
-            request.application = app
-            request.merchant = app.merchant
-        except Application.DoesNotExist:
-            logger.error(f"Invalid X-APP-ID: {x_app_id}")
-            return JsonResponse(
-                {"error": "Invalid X-APP-ID"}, status=status.HTTP_403_FORBIDDEN
-            )
+                if merchant and application:
+                    request.tenant = merchant
+            except (Merchant.DoesNotExist, Application.DoesNotExist):
+                request.tenant = None
+        else:
+            request.tenant = None
 
         response = self.get_response(request)
 
