@@ -28,7 +28,6 @@ class IsAdminUser(BasePermission):
 def create_permissions():
     permissions = [
         ("view_dashboard", "Can view dashboard"),
-        ("manage_users", "Can manage users"),
         ("manage_merchants", "Can manage merchants"),
         ("view_customers", "Can view customers"),
         ("manage_customers", "Can manage customers"),
@@ -43,11 +42,15 @@ def create_permissions():
 
     content_type = ContentType.objects.get_for_model(User)
     for codename, description in permissions:
-        Permission.objects.get_or_create(
+        permission, created = Permission.objects.get_or_create(
             codename=codename,
             name=description,
             content_type=content_type,
         )
+        if created:
+            print("Permissions created successfully")
+        else:
+            print("Permissions already exist")
 
 
 def assign_user_to_group(user, group_name: str):
@@ -93,10 +96,11 @@ def assign_permissions_to_groups():
         #  Assign permissions to groups
         for codename in perm_codenames:
             # check if the permission exists
-            permission_qs = Permission.objects.filter(codename=codename)
-            if permission_qs.exists():
-                permission = permission_qs.first()
-                group.permissions.add(Permission.objects.get(codename=permission))
+            # permission_qs = Permission.objects.filter(codename=codename)
+            permission = Permission.objects.filter(codename=codename).first()
+            if permission:
+                group.permissions.add(permission)
+                print(f'Added permission "{codename}" to group "{group_name}"')
             else:
                 print(f"Permission {codename} does not exist")
 
