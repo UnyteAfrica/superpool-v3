@@ -312,7 +312,7 @@ class GadgetInsuranceSerializer(BaseQuoteRequestSerializer):
             ("other", "Other"),
         ]
     )
-    gadget_information = serializers.JSONField()
+    gadget_information = serializers.JSONField(required=False)
     usage_history = serializers.JSONField(required=False)
 
 
