@@ -113,7 +113,7 @@ class CustomerDetailsSerializer(serializers.Serializer):
     """
 
     first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100, required=False)
     customer_email = serializers.EmailField()
     customer_phone = serializers.CharField(max_length=20, required=False)
     customer_address = serializers.CharField()
