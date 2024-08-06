@@ -15,6 +15,13 @@ travel_insurance_example = OpenApiExample(
             "trip_type": "round_trip",
             "trip_type_details": "leisure",
         },
+        # Customer Information is optional
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.com",
+            "customer_address": "Planet Pluto",
+        },
     },
     request_only=True,  # indicates this is a request example
     response_only=False,
@@ -32,6 +39,13 @@ health_insurance_example = OpenApiExample(
             "coverage_type": "standard",
             "coverage_type_details": "individual",
         },
+        # Customer Information is optional
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.com",
+            "customer_address": "Planet Pluto",
+        },
     },
     request_only=True,
     response_only=False,
@@ -48,6 +62,13 @@ home_insurance_example = OpenApiExample(
             "home_location": "New York",
             "home_value": 500000,
             "home_age": 10,
+        },
+        # Customer Information is optional
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.com",
+            "customer_address": "Planet Pluto",
         },
     },
     request_only=True,
@@ -67,6 +88,13 @@ gadget_insurance_example = OpenApiExample(
             "gadget_value": 1000,
             "gadget_age": 1,
         },
+        # Customer Information is optional
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.com",
+            "customer_address": "Planet Pluto",
+        },
     },
     request_only=True,
     response_only=False,
@@ -80,11 +108,17 @@ auto_insurance_example = OpenApiExample(
         "quote_code": "AUTO123",
         "insurance_details": {
             "vehicle_type": "car",
-            "vehicle_make": "Toyota",
-            "vehicle_model": "Camry",
+            "vehicle_make": "Tesla",
+            "vehicle_model": "GLE",
             "vehicle_year": 2022,
             "vehicle_value": 30000,
             "vehicle_age": 1,
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.com",
+            "customer_address": "Planet Pluto",
         },
     },
     request_only=True,
