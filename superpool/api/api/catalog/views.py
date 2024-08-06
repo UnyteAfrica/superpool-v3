@@ -507,6 +507,70 @@ class QuoteDetailView(views.APIView):
     def get_service(self):
         return QuoteService()
 
+    @extend_schema(
+        summary="Retrieve a specific quote by its ID",
+        parameters=[
+            OpenApiParameter(
+                name="quote_code",
+                description="Unique code assigned to the quote",
+                required=True,
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Quote details",
+                response=QuoteSerializer,
+                examples=[
+                    OpenApiExample(
+                        "Quote Example",
+                        value={
+                            "quote_code": "QTE-2021-01-0001",
+                            "base_price": 1000.0,
+                            "product": {
+                                "id": "3b0630d1-1a90-4413-a46f-501fc5e783d9",
+                                "created_at": "2021-11-01T00:00:00Z",
+                                "updated_at": "2021-11-01T00:00:00Z",
+                                "is_trashed": "false",
+                                "trashed_at": "null",
+                                "restored_at": "null",
+                                "name": "Health Insurance",
+                                "description": "This is a health insurance policy",
+                                "product_type": "Health",
+                                "provider": "1fecef4b-76c4-4b0f-a01c-282c45b645db",
+                                "coverage_details": "null",
+                                "insurer": "Reliance Health",
+                                "price": {
+                                    "amount": 1000.0,
+                                    "description": "Health insurance premium",
+                                    "currency": "USD",
+                                    "discount_amount": 0.0,
+                                    "surcharges": 0.0,
+                                    "commission": 0.0,
+                                },
+                            },
+                        },
+                    ),
+                ],
+            ),
+            404: OpenApiResponse(
+                description="Not Found",
+                examples=[
+                    OpenApiExample(
+                        "Quote Not Found Example", value={"error": "Quote Not Found"}
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+                examples=[
+                    OpenApiExample(
+                        "Internal Server Error Example",
+                        value={"error": "Internal Server Error"},
+                    )
+                ],
+            ),
+        },  # noqa},
+    )
     def get(self, request, quote_code):
         """
         Endpoint to retrieve a specific quote by its ID
@@ -601,9 +665,62 @@ class RequestQuoteView(views.APIView):
             ],
         ),
         responses={
-            200: QuoteSerializer,
-            400: OpenApiResponse(description="Bad Request"),
-            500: OpenApiResponse(description="Internal Server Error"),
+            200: OpenApiResponse(
+                description="Quotes",
+                response=QuoteSerializer,
+                examples=[
+                    OpenApiExample(
+                        "Travel Insurance Quote",
+                        value={
+                            "quote_code": "QTE-2021-01-0001",
+                            "base_price": 1000.0,
+                            "product": {
+                                "id": "3b0630d1-1a90-4413-a46f-501fc5e783d9",
+                                "created_at": "2021-11-01T00:00:00Z",
+                                "updated_at": "2021-11-01T00:00:00Z",
+                                "is_trashed": "false",
+                                "trashed_at": "null",
+                                "restored_at": "null",
+                                "name": "Travel Insurance",
+                                "description": "This is a travel insurance policy",
+                                "product_type": "Travel",
+                                "provider": "1fecef4b-76c4-4b0f-a01c-282c45b645db",
+                                "coverage_details": "null",
+                                "insurer": "Virgina Travel",
+                                "price": {
+                                    "amount": 1000.0,
+                                    "description": "Travel insurance premium",
+                                    "currency": "USD",
+                                    "discount_amount": 0.0,
+                                    "surcharges": 0.0,
+                                    "commission": 0.0,
+                                },
+                            },
+                        },
+                    ),
+                ],
+            ),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Bad Request Example",
+                        value={
+                            "error": "Bad Request",
+                            "detail": "Invalid request data",
+                        },
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+                examples=[
+                    OpenApiExample(
+                        "Internal Server Error Example",
+                        value={"error": "Internal Server Error"},
+                    )
+                ],
+            ),
         },
         examples=[
             travel_insurance_example,
