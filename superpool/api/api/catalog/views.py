@@ -26,6 +26,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from django.db.models import Q
 from rest_framework import filters
+from .openapi import (
+    travel_insurance_example,
+    health_insurance_example,
+    home_insurance_example,
+    gadget_insurance_example,
+    auto_insurance_example,
+)
 
 from .exceptions import ProductNotFoundError
 from .serializers import (
@@ -508,6 +515,10 @@ class QuoteDetailView(views.APIView):
 
         try:
             quote = service.get_quote(quote_code=quote_code)
+
+            # should fix the assertion error on the serializer instance
+            if isinstance(quote, QuoteSerializer):
+                quote = quote.data
             return Response(quote, status=status.HTTP_200_OK)
         except QuoteNotFoundError as api_err:
             return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
@@ -579,37 +590,65 @@ class RequestQuoteView(views.APIView):
 
     @extend_schema(
         summary="Request a policy quote",
-        request=QuoteRequestSerializer,
+        request=OpenApiRequest(
+            QuoteRequestSerializer,
+            examples=[
+                travel_insurance_example,
+                health_insurance_example,
+                home_insurance_example,
+                gadget_insurance_example,
+                auto_insurance_example,
+            ],
+        ),
         responses={
             200: QuoteSerializer,
+            400: OpenApiResponse(description="Bad Request"),
+            500: OpenApiResponse(description="Internal Server Error"),
         },
+        examples=[
+            travel_insurance_example,
+            health_insurance_example,
+            auto_insurance_example,
+        ],
     )
     def post(self, request):
-        mode = request.META.get("x-quote-mode", "testnet")
-
         # validate incoming data conforms to some predefined values
         req_serializer = QuoteRequestSerializer(data=request.data)
+
+        # logger.info(f"Incoming request data: {request.data}")
         if req_serializer.is_valid(raise_exception=True):
             request_data = req_serializer.validated_data
+            # logger.info(f"Validated request data: {request_data}")
+            insurance_details = request.data.pop("insurance_details", {})
 
-            if mode == "mainnet":
-                # make call to the API service
-                pass
-            # it means we in dev mode
-            quote_service = self.get_service()
             # retrieve the quote based on the parameters provided
-            quote = quote_service.get_quote(
-                product=request_data.get(
-                    "insurance_type"
-                ),  # an insurance type have to be provided e.g Auto, Travel, Health
-                product_name=request_data.get(
-                    "insurance_name"
-                ),  # as an addition, a policy name (Smart Health Insurance) can be provided
-                quote_code=request_data.get("quote_code"),
-            )
-            if quote:
-                return Response(quote.data, status=status.HTTP_200_OK)
-            return Response(quote.errors, status=status.HTTP_400_BAD_REQUEST)
+            quote_service = self.get_service()
+            try:
+                quote_data = quote_service.get_quote(
+                    product=request_data.get(
+                        "product_type"
+                    ),  # an insurance type have to be provided e.g Auto, Travel, Health
+                    product_name=request_data.get(
+                        "insurance_name"
+                    ),  # as an addition, a policy name (Smart Health Insurance) can be provided
+                    quote_code=request_data.get("quote_code"),
+                    insurance_details=insurance_details,
+                )
+                # this should fix the error that am passing serializer instance rather than .data or .errors
+                if isinstance(quote_data, QuoteSerializer):
+                    quote_data = quote_data.data
+                return Response(quote_data, status=status.HTTP_200_OK)
+            except (ProductNotFoundError, QuoteNotFoundError) as api_err:
+                logger.error(
+                    f'An error occurred while fetching quotes: "{str(api_err)}"'
+                )
+                return Response(
+                    {"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND
+                )
+            except ValueError as exc:
+                logger.error(f'ValueError: "{str(exc)}"')
+                return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        logger.error(f"Request data is invalid: {req_serializer.errors}")
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, NewType, Union
+from typing import Any, Dict, NewType, Union
 
 from rest_framework.generics import get_object_or_404
 
@@ -10,6 +10,9 @@ from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ProductService:
@@ -166,7 +169,15 @@ class PolicyService:
 ############################################################################################################
 class IQuote(ABC):
     @abstractmethod
-    def get_quote(self, product, product_name, quote_code=None, batch=False):
+    def get_quote(
+        self,
+        product,
+        product_name,
+        quote_code=None,
+        insurance_details=None,
+        batch=False,
+        **kwargs,
+    ):
         """Retrieves an insurance quotation on a policy. if batch is selected returns a list of quotes from multiple insurers instead."""
         raise NotImplementedError()
 
@@ -190,21 +201,48 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
-    def _get_all_quotes_for_product(self, product_type, product_name=None):
+    def _get_all_quotes_for_product(
+        self, product_type, product_name=None, insurance_details: Dict[str, Any] = None
+    ):
+        """
+        Retrieves all quotes for a given product type and optional product name.
+
+        Arguments:
+
+            product_type: The type of insurance product.
+            product_name: The specific name of the insurance product.
+            insurance_details: Additional details specific to the insurance type.
+
+        Returns:
+            A list of quotes.
+        """
         from api.catalog.serializers import QuoteSerializer
 
         try:
             if product_name:
-                product = Product.objects.filter(
-                    Q(product_type=product_type) | Q(product_name=product_name)
+                products = Product.objects.filter(
+                    Q(product_type=product_type) & Q(name=product_name)
                 )
-            product = Product.objects.get(product_type=product_type)
-            quotes = Quote.objects.filter(product=product)
-            if not quotes:
+            else:
+                products = Product.objects.filter(product_type=product_type)
+
+            if not products.exists():
+                logger.error(
+                    f"No products found for type {product_type} and name {product_name}"
+                )
+                raise ProductNotFoundError("Product not found.")
+
+            quotes = Quote.objects.filter(product_in=products)
+            if not quotes.exists():
+                logger.error(f"No quotes found for the given product: {product_name}")
                 raise QuoteNotFoundError("No quotes found for the given product.")
+
             serializer = QuoteSerializer(quotes, many=True)
-            return serializer
+            return serializer.data
         except Product.DoesNotExist:
+            logger.error(
+                f"Product does not exist for type {product_type} and name {product_name}"
+            )
             raise ProductNotFoundError("Product not found.")
 
     def _get_quote_by_code(self, quote_code):
@@ -222,18 +260,37 @@ class QuoteService(IQuote):
         product: Union[str, None] = None,
         product_name: Union[str, None] = None,
         quote_code: Union[str, None] = None,
-        batch=False,
+        insurance_details: Dict[str, Any] = None,
+        batch: bool = False,
+        **kwargs,
     ):
         """
         Retrieves insurance quotes for an insurance policy
+
+        Arguments:
+
+            product: The type of insurance product.
+            product_name: The specific name of the insurance product.
+            quote_code: A unique code for the insurance quote.
+            insurance_details: Additional details specific to the insurance type.
+            batch: Flag to indicate if multiple quotes should be retrieved.
+            kwargs: Additional arguments for future extensions.
+
+        Returns:
+            A quote or list of quotes.
         """
-        if product and product_name:
-            return self._get_all_quotes_for_product(
-                product_type=product, product_name=product_name
-            )
+        insurance_details = insurance_details or {}
+
+        if quote_code:
+            return self._get_quote_by_code(quote_code=quote_code)
         elif product:
-            return self._get_all_quotes_for_product(product_type=product)
-        return self._get_quote_by_code(quote_code=quote_code)
+            return self._get_all_quotes_for_product(
+                product_type=product,
+                product_name=product_name,
+                insurance_details=insurance_details,
+            )
+        else:
+            raise ValueError("Either product, or quote_code must be provided.")
 
     def update_quote(self, quote_code, data):
         """

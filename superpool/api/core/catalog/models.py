@@ -29,6 +29,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         AUTO = "Auto", "Auto Insurance"
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
+        HOME = "Home", "Home Insurance"
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True,
@@ -189,8 +190,9 @@ class Price(models.Model):
     Defines the pricing structure for an object e.g a product
     """
 
-    value = models.DecimalField(max_digits=10, decimal_places=2)
-    comission = models.DecimalField(
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(null=True, blank=True)
+    commision = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True
     )
     discount_amount = models.DecimalField(
@@ -238,6 +240,9 @@ class Quote(models.Model):
         help_text="The expiry date of the quote.",
     )
     status = models.CharField(max_length=20, choices=QUOTE_STATUS, default="pending")
+    additional_metadata = models.JSONField(
+        null=True, blank=True, help_text="Additional information about the quote"
+    )
 
     class Meta:
         verbose_name = "quote"
