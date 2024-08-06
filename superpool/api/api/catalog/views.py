@@ -630,14 +630,18 @@ class RequestQuoteView(views.APIView):
                     quote_code=request_data.get("quote_code"),
                     insurance_details=insurance_details,
                 )
-                response_serializer = QuoteSerializer(quote_data)
-                return Response(response_serializer.data, status=status.HTTP_200_OK)
+                return Response(quote_data, status=status.HTTP_200_OK)
             except (ProductNotFoundError, QuoteNotFoundError) as api_err:
+                logger.error(
+                    f'An error occurred while fetching quotes: "{str(api_err)}"'
+                )
                 return Response(
                     {"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND
                 )
             except ValueError as exc:
+                logger.error(f'ValueError: "{str(exc)}"')
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        logger.error(f"Request data is invalid: {req_serializer.errors}")
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

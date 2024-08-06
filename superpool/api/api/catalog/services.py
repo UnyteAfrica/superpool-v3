@@ -10,6 +10,9 @@ from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ProductService:
@@ -217,17 +220,29 @@ class QuoteService(IQuote):
 
         try:
             if product_name:
-                product = Product.objects.filter(
-                    Q(product_type=product_type) | Q(product_name=product_name)
+                products = Product.objects.filter(
+                    Q(product_type=product_type) & Q(name=product_name)
                 )
             else:
-                product = Product.objects.get(product_type=product_type)
-            quotes = Quote.objects.filter(product=product)
-            if not quotes:
+                products = Product.objects.filter(product_type=product_type)
+
+            if not products.exists():
+                logger.error(
+                    f"No products found for type {product_type} and name {product_name}"
+                )
+                raise ProductNotFoundError("Product not found.")
+
+            quotes = Quote.objects.filter(product_in=products)
+            if not quotes.exists():
+                logger.error(f"No quotes found for the given product: {product_name}")
                 raise QuoteNotFoundError("No quotes found for the given product.")
+
             serializer = QuoteSerializer(quotes, many=True)
-            return serializer
+            return serializer.data
         except Product.DoesNotExist:
+            logger.error(
+                f"Product does not exist for type {product_type} and name {product_name}"
+            )
             raise ProductNotFoundError("Product not found.")
 
     def _get_quote_by_code(self, quote_code):
@@ -266,18 +281,14 @@ class QuoteService(IQuote):
         """
         insurance_details = insurance_details or {}
 
-        if product and product_name:
+        if quote_code:
+            return self._get_quote_by_code(quote_code=quote_code)
+        elif product:
             return self._get_all_quotes_for_product(
                 product_type=product,
                 product_name=product_name,
                 insurance_details=insurance_details,
             )
-        elif product:
-            return self._get_all_quotes_for_product(
-                product_type=product, insurance_details=insurance_details
-            )
-        elif quote_code:
-            return self._get_quote_by_code(quote_code=quote_code)
         else:
             raise ValueError("Either product, or quote_code must be provided.")
 
