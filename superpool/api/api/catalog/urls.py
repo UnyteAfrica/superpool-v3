@@ -48,9 +48,9 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     #     name="policy-search",
     # ),
     path("quotes", RequestQuoteView.as_view(), name="request-quote"),
-    path(
-        "quotes/request/<str:product_name>/", QuoteListView.as_view(), name="quote-list"
-    ),
+    # path(
+    #     "quotes/request/<str:product_name>/", QuoteListView.as_view(), name="quote-list"
+    # ),
     path("quotes/<str:quote_code>/", QuoteDetailView.as_view(), name="quote-detail"),
     # path(
     #     "policies/purchase/",
