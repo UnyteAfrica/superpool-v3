@@ -515,6 +515,10 @@ class QuoteDetailView(views.APIView):
 
         try:
             quote = service.get_quote(quote_code=quote_code)
+
+            # should fix the assertion error on the serializer instance
+            if isinstance(quote, QuoteSerializer):
+                quote = quote.data
             return Response(quote, status=status.HTTP_200_OK)
         except QuoteNotFoundError as api_err:
             return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
