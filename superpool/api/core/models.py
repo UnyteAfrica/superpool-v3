@@ -1,5 +1,6 @@
 # Utility models that does not fit into domain-specific parts of the application
 
+from decimal import Decimal
 import hashlib
 import uuid
 
@@ -47,11 +48,12 @@ class Coverage(models.Model):
         help_text=_(
             "This is the maximum amount that the insurance company will pay for a claim"
         ),
+        default=Decimal("0.00"),
     )  # TODO: Add currency field here
     description: models.TextField = models.TextField(
         _("Description"), help_text=_("Description of the coverage")
     )
-    product_id: models.ForeignKey = models.ForeignKey(
+    product: models.ForeignKey = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         related_name="coverages",
