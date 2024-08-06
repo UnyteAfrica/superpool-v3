@@ -222,8 +222,9 @@ def test_request_quotes_successful(api_client, quotes):
             reverse("request-quote"), data=quote_data, format="json"
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() is not None
-        assert response.json()["quote_code"] == quote_data["quote_code"]
+        response_data = response.json()
+        assert response_data is not None
+        assert response_data["quote_code"] == quote_data["quote_code"]
 
 
 @pytest.mark.django_db
@@ -255,3 +256,4 @@ def test_request_quote_with_missing_required_fields_unsuccessful(api_client, quo
     }
     response = api_client.post(reverse("request-quote"), data=data, format="json")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
