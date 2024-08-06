@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Union
 
@@ -10,6 +11,8 @@ from django.db.models import Q
 from core.user.models import Customer
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class ProductSerializer(ModelSerializer):
@@ -332,11 +335,11 @@ class QuoteRequestSerializer(serializers.Serializer):
     quote_code = serializers.CharField(required=False)
     insurance_name = serializers.CharField(required=False)
     # customer_metadata = CustomerDetailsSerializer()
-    insurance_details = serializers.SerializerMethodField()
+    insurance_details = serializers.JSONField()
 
     def get_serializer_class(self, product_type):
         """Return the appropriate serializer class based on the product type"""
-        product_type = self.initial_data.get("insurance_type")
+        # product_type = self.initial_data.get("insurance_type")
         serializer_mapping = {
             "health": HealthInsuranceSerializer,
             "auto": AutoInsuranceSerializer,
@@ -347,32 +350,30 @@ class QuoteRequestSerializer(serializers.Serializer):
         }
         return serializer_mapping.get(product_type)
 
-    def get_insurance_details(self, instance):
+    def validate_insurance_details(self, value):
         """Return the insurance details based on the product type"""
-        # first we get the serializer class, by passing the product type from the instance
-        serializer_class = self.get_serializer_class(instance["product_type"])
-        if serializer_class:
-            # then we create an instance of the serializer class and pass the initial
-            instance_serializer = serializer_class(data=self.initial_data)
-            # we validate the instance and return the dataj
-            instance_serializer.is_valid(raise_exception=True)
-            return instance_serializer.data
-        return {}
+        product_type = self.initial_data.get("product_type")
+        serializer_class = self.get_serializer_class(product_type)
+
+        if not serializer_class:
+            raise ValidationError(f"Invalid product type: {product_type}")
+
+        insurance_serializer = serializer_class(data=value)
+        if not insurance_serializer.is_valid():
+            raise ValidationError(insurance_serializer.errors)
+
+        return insurance_serializer.validated_data
 
     def validate(self, data):
         """Validates the incoming request based on the product type"""
-        product_type = data.get("insurance_type")
-        serializer_class = self.get_serializer_class(product_type)
+        product_type = data.get("product_type")
         if not product_type:
             raise ValidationError("Product type must be provided.")
-        if not serializer_class:
-            raise ValidationError(f"Invalid product type: {product_type} provided.")
 
-        insurance_serializer = serializer_class(data=self.initial_data)
-        if not insurance_serializer.is_valid():
-            return ValidationError(insurance_serializer.errors)
-
-        data["insurance_details"] = insurance_serializer.data
+        data["insurance_details"] = self.validate_insurance_details(
+            data["insurance_details"]
+        )
+        logger.info(f"Validated data: {data}")
         return data
 
 
