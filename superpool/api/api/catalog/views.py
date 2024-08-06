@@ -630,6 +630,9 @@ class RequestQuoteView(views.APIView):
                     quote_code=request_data.get("quote_code"),
                     insurance_details=insurance_details,
                 )
+                # this should fix the error that am passing serializer instance rather than .data or .errors
+                if isinstance(quote_data, QuoteSerializer):
+                    quote_data = quote_data.data
                 return Response(quote_data, status=status.HTTP_200_OK)
             except (ProductNotFoundError, QuoteNotFoundError) as api_err:
                 logger.error(
