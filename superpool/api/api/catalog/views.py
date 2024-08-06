@@ -611,29 +611,33 @@ class RequestQuoteView(views.APIView):
         # validate incoming data conforms to some predefined values
         req_serializer = QuoteRequestSerializer(data=request.data)
 
-        logger.info(f"Incoming request data: {request.data}")
+        # logger.info(f"Incoming request data: {request.data}")
         if req_serializer.is_valid(raise_exception=True):
             request_data = req_serializer.validated_data
-
-            logger.info(f"Validated request data: {request_data}")
-
+            # logger.info(f"Validated request data: {request_data}")
             insurance_details = request.data.pop("insurance_details", {})
 
-            quote_service = self.get_service()
             # retrieve the quote based on the parameters provided
-            quote = quote_service.get_quote(
-                product=request_data.get(
-                    "product_type"
-                ),  # an insurance type have to be provided e.g Auto, Travel, Health
-                product_name=request_data.get(
-                    "insurance_name"
-                ),  # as an addition, a policy name (Smart Health Insurance) can be provided
-                quote_code=request_data.get("quote_code"),
-                insurance_details=insurance_details,
-            )
-            if quote:
-                return Response(quote.data, status=status.HTTP_200_OK)
-            return Response(quote.errors, status=status.HTTP_400_BAD_REQUEST)
+            quote_service = self.get_service()
+            try:
+                quote_data = quote_service.get_quote(
+                    product=request_data.get(
+                        "product_type"
+                    ),  # an insurance type have to be provided e.g Auto, Travel, Health
+                    product_name=request_data.get(
+                        "insurance_name"
+                    ),  # as an addition, a policy name (Smart Health Insurance) can be provided
+                    quote_code=request_data.get("quote_code"),
+                    insurance_details=insurance_details,
+                )
+                response_serializer = QuoteSerializer(quote_data)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            except (ProductNotFoundError, QuoteNotFoundError) as api_err:
+                return Response(
+                    {"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND
+                )
+            except ValueError as exc:
+                return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
