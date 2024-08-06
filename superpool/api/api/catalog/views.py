@@ -509,20 +509,20 @@ class QuoteDetailView(views.APIView):
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
-        parameters=[
-            OpenApiParameter(
-                name="quote_code",
-                description="Unique code assigned to the quote",
-                required=True,
-            )
-        ],
+        # parameters=[
+        #     OpenApiParameter(
+        #         name="quote_code",
+        #         description="Unique code assigned to the quote",
+        #         required=True,
+        #     )
+        # ],
         responses={
             200: OpenApiResponse(
                 description="Quote details",
                 response=QuoteSerializer,
                 examples=[
                     OpenApiExample(
-                        "Quote Example",
+                        "Health Insurance Quote Example",
                         value={
                             "quote_code": "QTE-2021-01-0001",
                             "base_price": 1000.0,
