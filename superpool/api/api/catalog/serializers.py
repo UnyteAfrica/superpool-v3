@@ -124,7 +124,7 @@ class BaseQuoteRequestSerializer(serializers.Serializer):
     Validate the base quote request payload
     """
 
-    customer_metadata = CustomerDetailsSerializer()
+    customer_metadata = CustomerDetailsSerializer(required=False)
 
 
 class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
