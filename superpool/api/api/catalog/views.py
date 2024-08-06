@@ -610,15 +610,20 @@ class RequestQuoteView(views.APIView):
     def post(self, request):
         # validate incoming data conforms to some predefined values
         req_serializer = QuoteRequestSerializer(data=request.data)
+
+        logger.info(f"Incoming request data: {request.data}")
         if req_serializer.is_valid(raise_exception=True):
             request_data = req_serializer.validated_data
+
+            logger.info(f"Validated request data: {request_data}")
+
             insurance_details = request.data.pop("insurance_details", {})
 
             quote_service = self.get_service()
             # retrieve the quote based on the parameters provided
             quote = quote_service.get_quote(
                 product=request_data.get(
-                    "insurance_type"
+                    "product_type"
                 ),  # an insurance type have to be provided e.g Auto, Travel, Health
                 product_name=request_data.get(
                     "insurance_name"
