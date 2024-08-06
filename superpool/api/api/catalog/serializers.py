@@ -485,7 +485,8 @@ class PolicyPurchaseSerializer(serializers.Serializer):
         # next we create each object with our information
         product = Product.objects.get(name=product_metadata["product_name"])
         coverage = Coverage.objects.get_or_create(
-            coverage_name=product_metadata["product_type"]
+            coverage_name=product_metadata["product_type"],
+            product=product,
         )
         merchant = Merchant.objects.get(id=validated_data["merchant_id"])
         provider = Partner.objects.get(name=product_metadata["insurer"])

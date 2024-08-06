@@ -35,6 +35,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         primary_key=True,
         help_text="Unique identifier for the package",
         default=uuid.uuid4,
+        editable=False,
     )
     provider: models.ForeignKey = models.ForeignKey(
         Partner,
