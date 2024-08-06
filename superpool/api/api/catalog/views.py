@@ -1,6 +1,7 @@
 import logging
 from uuid import uuid4
 import uuid
+from .openapi import products_response_example
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -98,8 +99,20 @@ class ProductListView(generics.ListAPIView):
         operation_id="list_products",
         description="List all products available in the system",
         responses={
-            200: ProductSerializer(many=True),
-            404: {"error": "No products are currently available"},
+            200: OpenApiResponse(
+                response=ProductSerializer(many=True),
+                examples=[products_response_example],
+            ),
+            404: OpenApiResponse(
+                response={"error": "No products found"},
+                description="No products found",
+                examples=[
+                    OpenApiExample(
+                        "No Products Found Example",
+                        value={"error": "No products found"},
+                    )
+                ],
+            ),
         },
     )
     def list(self, request: Request, *args: dict, **kwargs: dict) -> Response:
