@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import Union
 
 from api.catalog.services import PolicyService
@@ -390,19 +390,28 @@ class PaymentInformationSerializer(serializers.Serializer):
 
 
 class ActivationMetadataSerializer(serializers.Serializer):
-    policy_duration = serializers.DateField(write_only=True, input_formats=["%Y-%m-%d"])
+    policy_expiry_date = serializers.DateField(
+        write_only=True, input_formats=["%Y-%m-%d"]
+    )
     renew = serializers.BooleanField()
 
-    def validate_policy_duration(self, value) -> Union[bool, ValidationError]:
+    def validate_policy_duration(
+        self, value: Union[str, date]
+    ) -> Union[str, date, ValidationError]:
         """Ensures that a policy duration date is valid (not in the past)"""
-        today = datetime.now()
+        today = datetime.now().date()
 
         try:
-            policy_duration = datetime.strptime(value, "%Y-%m-%d")
-            if policy_duration <= today:
+            if isinstance(value, date):
+                policy_expiry_date = value
+            else:
+                policy_expiry_date = datetime.strptime(value, "%Y-%m-%d").date()
+
+            if policy_expiry_date <= today:
                 raise ValidationError("Policy duration must be a future date.")
         except ValueError:
             raise ValidationError("Invalid date format for policy duration")
+
         return value
 
 
@@ -445,7 +454,7 @@ class PolicyPurchaseSerializer(serializers.Serializer):
     customer_metadata = CustomerDetailsSerializer()
     product_metadata = ProductMetadataSerializer()
     payment_metadata = PaymentInformationSerializer()
-    acivation_metadata = ActivationMetadataSerializer()
+    activation_metadata = ActivationMetadataSerializer()
     agreement = serializers.BooleanField(write_only=True)
     confirmation = serializers.BooleanField(write_only=True)
 
@@ -470,16 +479,22 @@ class PolicyPurchaseSerializer(serializers.Serializer):
         # first we prep all information to use in creating the new policy
         customer_metadata = validated_data["customer_metadata"]
         product_metadata = validated_data["product_metadata"]
-        payment_information = validated_data["payment_information"]
-        activation_details = validated_data["activation_details"]
+        payment_information = validated_data["payment_metadata"]
+        activation_details = validated_data["activation_metadata"]
 
         # next we create each object with our information
         product = Product.objects.get(name=product_metadata["product_name"])
-        coverage = Coverage.objects.get(name=product_metadata["product_type"])
+        coverage = Coverage.objects.get_or_create(
+            coverage_name=product_metadata["product_type"]
+        )
         merchant = Merchant.objects.get(id=validated_data["merchant_id"])
         provider = Partner.objects.get(name=product_metadata["insurer"])
         policy_holder = Customer.objects.get_or_create(
-            email=customer_metadata["customer_email"]
+            email=customer_metadata["customer_email"],
+            first_name=customer_metadata["first_name"],
+            last_name=customer_metadata["last_name"],
+            phone_number=customer_metadata["customer_phone"],
+            address=customer_metadata["customer_address"],
         )
 
         # then we create the actual policy object and return the policy
