@@ -119,10 +119,11 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
     coverage: models.ForeignKey = models.ForeignKey(
         "core.Coverage",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         help_text="Coverage details for the policy",
+        null=True,
     )
-    merchant_id: models.ForeignKey = models.ForeignKey(
+    merchant: models.ForeignKey = models.ForeignKey(
         Merchant,
         on_delete=models.CASCADE,
         help_text="Merchant who sold the policy",

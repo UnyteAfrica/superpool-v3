@@ -1,8 +1,7 @@
 import uuid
 
 from core.mixins import TimestampMixin
-from django.contrib.auth.models import (AbstractBaseUser, AbstractUser,
-                                        PermissionsMixin)
+from django.contrib.auth.models import AbstractBaseUser, AbstractUser, PermissionsMixin
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
@@ -119,7 +118,7 @@ class Customer(TimestampMixin, models.Model):
         default=False, help_text="Designates if the customer has completed KYC"
     )
     dob = models.DateField(
-        _("Date of Birth"), help_text="Date of birth of the customer"
+        _("Date of Birth"), help_text="Date of birth of the customer", null=True
     )
     phone_number = models.CharField(
         _("Phone Number"), help_text="Phone number of the customer", max_length=20
@@ -128,16 +127,19 @@ class Customer(TimestampMixin, models.Model):
         _("Gender"),
         help_text="Gender of the customer, identified as: M for Male, F for Female",
         max_length=1,
+        null=True,
     )
     verification_type = models.CharField(
         _("Verification Type"),
         help_text="Type of verification document",
         max_length=20,
+        null=True,
     )
     verification_id = models.CharField(
         _("Verification ID"),
         help_text="ID of the verification document",
         max_length=20,
+        null=True,
     )
 
     def has_completed_verification(self) -> bool:

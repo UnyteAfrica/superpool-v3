@@ -31,6 +31,7 @@ class Coverage(models.Model):
     Represents a structure to help track complex coverage information
     """
 
+    # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     coverage_name: models.CharField = models.CharField(
         _("Coverage Name"),
         max_length=100,
@@ -40,6 +41,7 @@ class Coverage(models.Model):
         _("Coverage ID"),
         max_length=100,
         help_text=_("unique identifier to track coverage details"),
+        primary_key=True,
     )
     coverage_limit: models.DecimalField = models.DecimalField(
         _("Coverage Limit"),
@@ -48,17 +50,27 @@ class Coverage(models.Model):
         help_text=_(
             "This is the maximum amount that the insurance company will pay for a claim"
         ),
-        default=Decimal("0.00"),
+        null=True,
     )  # TODO: Add currency field here
     description: models.TextField = models.TextField(
         _("Description"), help_text=_("Description of the coverage")
     )
-    product: models.ForeignKey = models.ForeignKey(
+
+    product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         related_name="coverages",
         help_text=_("Product to which the coverage belongs"),
     )
+
+    def generate_coverage_id(self):
+        prefix = "COV_"
+        return prefix + get_random_string(length=12)
+
+    def save(self, *args, **kwargs):
+        if not self.coverage_id:
+            self.coverage_id = self.generate_coverage_id()
+        super().save(*args, **kwargs)
 
 
 class Address(models.Model):
