@@ -79,7 +79,15 @@ class NotificationService(INotification):
         """
         Stream the message through the specified channel
         """
-        pass
+        if not channel:
+            logger.error("No channel specified")
+            return
+        channel_class = self.NOTIFICATION_CHANNEL_REGISTRY.get(channel)
+        if not channel_class:
+            logger.error(f"Channel {channel} is not supported")
+            raise ValueError(f"Notification channel {channel} is not supported")
+
+        self.channel = channel_class()
 
     def send(self, recipient: str, subject: str, message: str) -> None:
         """
