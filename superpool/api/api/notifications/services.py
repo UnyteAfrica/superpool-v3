@@ -46,7 +46,9 @@ class PolicyNotificationService(NotificationService):
         message_data = service.prepare_message(action, "customer")
         print(f"Message data: {message_data}")
 
-        _channel = extra_kwargs.get("channel", NotificationService.EMAIL)
+        _channel = extra_kwargs.get("notification_channel", NotificationService.EMAIL)
+        print(f"Selected notification channel:  {_channel}")
+
         service.stream_through(_channel)
         service.send(
             recipient=recipient,
