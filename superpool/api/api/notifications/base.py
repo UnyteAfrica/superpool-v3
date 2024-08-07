@@ -80,11 +80,11 @@ class NotificationService(INotification):
         Stream the message through the specified channel
         """
         if not channel:
-            logger.error("No channel specified")
+            logger.error("No notification channel specified")
             return
         channel_class = self.NOTIFICATION_CHANNEL_REGISTRY.get(channel)
         if not channel_class:
-            logger.error(f"Channel {channel} is not supported")
+            logger.error(f"Notification channel {channel} is not supported")
             raise ValueError(f"Notification channel {channel} is not supported")
 
         self.channel = channel_class()
@@ -93,4 +93,16 @@ class NotificationService(INotification):
         """
         Send the message to the recipient
         """
-        pass
+        if not self.channel:
+            logger.error(
+                "Notification channel not set. Cannot send message \n"
+                "Call stream_through method to set the notification channel first"
+            )
+            return
+        self.channel.send(recipient, subject, message)
+        print(
+            f"Sending message to {recipient} with subject: {subject} and message: {message}"
+        )
+        logger.info(
+            f"Message sent to {recipient} through {self.channel.__class__.__name__}"
+        )
