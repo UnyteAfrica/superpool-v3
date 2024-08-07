@@ -12,7 +12,11 @@ Date created: 2024-07-28 12:32
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Union
 
+import logging
+
 from core.catalog.models import Policy
+
+logger = logging.getLogger(__name__)
 
 
 class INotification(ABC):
@@ -38,8 +42,7 @@ class NotificationService(INotification):
     Generic Notification Service
     """
 
-    from .channels import (EmailNotification, SMSNotification,
-                           WhatsAppNotification)
+    from .channels import EmailNotification, SMSNotification, WhatsAppNotification
 
     ACTION_REGISTRY = {
         "purchase_policy": {
@@ -79,7 +82,9 @@ class NotificationService(INotification):
     """ Registry of notification types and their corresponding classes"""
 
     @classmethod
-    def notify(cls, who: str, action: str, policy: "Policy") -> Dict[str, Any]:
+    def notify(
+        cls, who: str, action: str, policy: "Policy", customer_email=None
+    ) -> Dict[str, Any]:
         """
         Notify a stakeholder about an action that took place on this policy
 
@@ -92,17 +97,21 @@ class NotificationService(INotification):
             A dictionary with a status message
         """
         message_template = cls.ACTION_REGISTRY.get(action, {}).get(who)
+        print(f"Mssage template: {message_template}")
         if not message_template:
             raise ValueError("Invalid action or recipent type")
 
         # Build the notification information based on the passed parameters
         # we want to get recipent email  address based on who's being notified
         # and construct the message subject based on specific action.
-        recipient = (
-            policy.merchant_id.email
-            if who == "merchant"
-            else policy.policy_holder.email
-        )
+        if customer_email and who == "customer":
+            recipient = customer_email
+        else:
+            recipient = (
+                policy.merchant.business_email
+                if who == "merchant"
+                else policy.policy_holder.email
+            )
 
         subject = f"Policy Notification - {action}"
 
@@ -114,6 +123,8 @@ class NotificationService(INotification):
             notification_channel.send_message(subject, message_template, recipient)
         else:
             raise ValueError("Invalid notification channel")
+
+        logger.info(f"Notification sent to {recipient} successfully")
 
         return {"message": "Notification sent successfully", "status": "success"}
 

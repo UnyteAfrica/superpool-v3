@@ -1,12 +1,17 @@
 from api.notifications.base import INotification
 from django.conf import settings
 from django.core.mail import send_mail
+from typing import Any, Dict
 
 
 class EmailNotification(INotification):
     """
     Email Notification service
     """
+
+    @classmethod
+    def notify(cls, who, action, policy):
+        pass
 
     @staticmethod
     def send_message(subject: str, message: str, recipient: str) -> None:
