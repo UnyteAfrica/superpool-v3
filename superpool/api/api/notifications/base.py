@@ -28,23 +28,14 @@ class INotification(ABC):
 
     @abstractmethod
     def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
-        """
-        Prepare the message to be sent to the recipient
-        """
         raise NotImplementedError
 
     @abstractmethod
     def send(self, recipient: str, subject: str, message: str) -> None:
-        """
-        Send the message to the recipient
-        """
         raise NotImplementedError
 
     @abstractmethod
     def stream_through(self, channel: str) -> None:
-        """
-        Stream the message through the specified channel
-        """
         raise NotImplementedError
 
 
@@ -69,7 +60,29 @@ class NotificationService(INotification):
     }
     """ Registry of notification types and their corresponding classes"""
 
+    def __init__(self):
+        # Initialize the channel instance to None
+        self.channel = None
+
     def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
         """
         Prepare the message to be sent to the recipient
         """
+
+        message = self.ACTION_REGISTRY.get(action, {}).get(recipient, {})
+        if not message:
+            logger.error(f"Action {action} is not supported")
+            return {}
+        return message
+
+    def stream_through(self, channel: str) -> None:
+        """
+        Stream the message through the specified channel
+        """
+        pass
+
+    def send(self, recipient: str, subject: str, message: str) -> None:
+        """
+        Send the message to the recipient
+        """
+        pass
