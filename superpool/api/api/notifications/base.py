@@ -26,14 +26,11 @@ class INotification(ABC):
     Defines the methods that must be implemented by the Notification service
     """
 
-    @classmethod
     @abstractmethod
-    def notify(cls, who: str, action: str, policy: "Policy") -> Dict[str, Any]:
-        raise NotImplementedError
-
-    @staticmethod
-    @abstractmethod
-    def send_message(subject: str, message: str, recipient: str) -> None:
+    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
+        """
+        Prepare the message to be sent to the recipient
+        """
         raise NotImplementedError
 
 
@@ -127,10 +124,3 @@ class NotificationService(INotification):
         logger.info(f"Notification sent to {recipient} successfully")
 
         return {"message": "Notification sent successfully", "status": "success"}
-
-    @staticmethod
-    def send_message(subject: str, message: str, recipient: str) -> None:
-        """
-        Send a notification to the recipient
-        """
-        pass

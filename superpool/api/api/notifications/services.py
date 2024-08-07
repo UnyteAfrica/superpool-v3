@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict, Union
 
 from core.catalog.models import Policy
 
@@ -11,15 +11,15 @@ class PolicyNotificationService(NotificationService):
 
     """
 
-    @classmethod
-    def notify_merchant(cls, action: str, policy: "Policy") -> dict[str, Any]:
+    @staticmethod
+    def notify_merchant(action: str, policy: "Policy") -> Dict[str, Any]:
         """Send a notification to the merchant about the action that took place on the policy"""
-        return cls.notify("merchant", action, policy)
+        print(f"Sending notification to merchant for action: {action}")
 
-    @classmethod
+    @staticmethod
     def notify_customer(
-        cls, action: str, policy: "Policy", **extra_kwargs: dict[str, Any]
-    ) -> dict[str, Any]:
+        action: str, policy: "Policy", **extra_kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Send a notification to the customer about the action that took place on the policy"""
-        customer_email = extra_kwargs.get("customer_email")
-        return cls.notify("customer", action, policy, customer_email, **extra_kwargs)
+
+        print(f"Sending notification to customer for action: {action}")
