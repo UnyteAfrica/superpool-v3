@@ -20,6 +20,7 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -793,18 +794,39 @@ class PolicyPurchaseView(generics.CreateAPIView):
     @extend_schema(
         summary="Purchase a policy",
         description="Purchase a new policy for your customer",
-        request=PolicyPurchaseSerializer,
-        responses={201: PolicyPurchaseResponseSerializer},
+        request=OpenApiRequest(),
+        responses={
+            201: OpenApiResponse(),
+            400: OpenApiResponse(),
+            500: OpenApiResponse(),
+        },
     )
     def create(self, request, *args, **kwargs):
         """
-        Issue a new policy for a customer
+        Issue a new policy for your customer
+
+        Handles the purchase of an insurance policy
         """
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        policy = serializer.save()
-        response_serializer = PolicyPurchaseResponseSerializer(policy)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            # Call the service to handle the actual policy creation
+            policy = serializer.save()
+            response_serializer = PolicyPurchaseResponseSerializer(policy)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            logger.error(f"Validation error: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except APIException as e:
+            logger.error(f"API exception: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return Response(
+                {"error": "An unexpected error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class PolicyCancellationView(generics.GenericAPIView):
