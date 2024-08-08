@@ -397,12 +397,10 @@ class PaymentInformationSerializer(serializers.Serializer):
 
 
 class ActivationMetadataSerializer(serializers.Serializer):
-    policy_expiry_date = serializers.DateField(
-        write_only=True, input_formats=["%Y-%m-%d"]
-    )
+    policy_expiry_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     renew = serializers.BooleanField()
 
-    def validate_policy_duration(
+    def validate_policy_expiry_date(
         self, value: Union[str, date]
     ) -> Union[str, date, ValidationError]:
         """Ensures that a policy duration date is valid (not in the past)"""
@@ -437,22 +435,6 @@ class PolicyPurchaseSerializer(serializers.Serializer):
     merchant_code = serializers.CharField(
         max_length=50, help_text="Merchant short code"
     )
-
-    def validate(self, data):
-        required_fields = [
-            "quote_code",
-            "customer_metadata",
-            "product_metadata",
-            "payment_metadata",
-            "activation_metadata",
-            "agreement",
-            "confirmation",
-            "merchant_code",
-        ]
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            raise ValidationError(f"Missing required fields: {missing_fields}")
-        return data
 
     def validate_agreement(self, value):
         if not value:

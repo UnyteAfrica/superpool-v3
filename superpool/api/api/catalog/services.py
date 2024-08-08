@@ -214,6 +214,13 @@ class PolicyService:
                 activation_details,
                 renewal_date=renewal_date,
             )
+
+            # notify the merchant and customer
+            PolicyNotificationService.notify_merchant("purchase_policy", policy)
+            PolicyNotificationService.notify_customer(
+                "purchase_policy", policy, customer_metadata["customer_email"]
+            )
+
             return policy
         except ObjectDoesNotExist:
             logger.error("Policy not found")
