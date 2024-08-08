@@ -187,6 +187,10 @@ class PolicyService:
             if not quote_data:
                 raise ValidationError(f"Quote with code {quote_code} does not exist")
 
+            # extract information about the product and the applicable premium from the quote
+            product = quote_data.data.get("product")
+            premium = quote_data.data.get("price", {}).get("amount")
+
             # validate incoming data where neccessary
             customer_metadata = validated_data["customer_metadata"]
             product_metadata = validated_data["product_metadata"]
@@ -194,7 +198,7 @@ class PolicyService:
             activation_details = validated_data["activation_metadata"]
 
             # handle payment validation
-            PolicyService._validate_payment(payment_information, quote_data["premium"])
+            PolicyService._validate_payment(payment_information, premium)
 
             # are we renewing the policy?
             renewal_date = (
@@ -209,8 +213,8 @@ class PolicyService:
             # process policy purchase
             policy = PolicyService._create_policy(
                 customer,
-                quote_data["product"],
-                quote_data["premium"],
+                product,
+                premium,
                 merchant,
                 quote_data["provider"],
                 activation_details,
