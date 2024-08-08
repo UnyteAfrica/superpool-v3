@@ -228,13 +228,18 @@ class PolicyService:
             )
 
             return policy
-        except ObjectDoesNotExist:
-            logger.error("Policy not found")
-            raise ValidationError("Policy not found")
+        except ObjectDoesNotExist as exc:
+            logger.error(f"ObjectDoesNotExist: {str(exc)}")
+            raise ValidationError("Required object does not exist")
+
+        except KeyError as exc:
+            logger.error(f"KeyError: {str(exc)}")
+            raise ValidationError(f"Missing required data: {str(exc)}")
 
         except Exception as exc:
             logger.error(
-                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}"
+                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}",
+                exc_info=True,
             )
             raise APIException(
                 "An unexpected error occurred while processing the policy purchase."
