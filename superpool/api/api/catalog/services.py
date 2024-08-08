@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Dict, NewType, Union
 
 from rest_framework.generics import get_object_or_404
@@ -183,13 +184,27 @@ class PolicyService:
         try:
             # retrieve quote information and process it
             quote_code = validated_data["quote_code"]
-            quote_data = quote_service._get_quote_by_code(quote_code)
-            if not quote_data:
+
+            # quote here, is actually a serializer and not the actual data
+            # from serializr, LoL.
+            quote_serializer = quote_service._get_quote_by_code(quote_code)
+            if not quote_serializer:
                 raise ValidationError(f"Quote with code {quote_code} does not exist")
 
             # extract information about the product and the applicable premium from the quote
-            product = quote_data.data.get("product")
-            premium = quote_data.data.get("price", {}).get("amount")
+            quote_data = quote_serializer.data  # shoudl be a dict with serialized data
+            product = quote_data.get("product")
+            price_data = quote_data.get("price", {})
+            print(price_data)
+            premium = price_data.get("amount")
+
+            # we want to ensure to handle adequate type conversion for the premium amount
+            # django often stores Decimal values as strings in the database
+            if isinstance(premium, str):
+                try:
+                    premium = Decimal(premium)  # Convert to Decimal
+                except ValueError:
+                    raise ValidationError("Invalid premium amount format")
 
             # validate incoming data where neccessary
             customer_metadata = validated_data["customer_metadata"]
@@ -198,7 +213,7 @@ class PolicyService:
             activation_details = validated_data["activation_metadata"]
 
             # handle payment validation
-            PolicyService._validate_payment(payment_information, premium)
+            PolicyService._validate_payment(payment_information, price_data)
 
             # are we renewing the policy?
             renewal_date = (
@@ -326,7 +341,7 @@ class PolicyService:
 
         # Check if the amount paid matches the policy price
         if premium_amount := payment_information.get("premium_amount"):
-            if premium_amount != policy_price.amount:
+            if premium_amount != policy_price.get("amount"):
                 raise ValidationError("Amount paid does not match the policy price")
         return payment_information
 
