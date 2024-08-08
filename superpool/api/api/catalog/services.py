@@ -10,6 +10,9 @@ from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.exceptions import APIException
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -160,6 +163,154 @@ class PolicyService:
             raise Exception("Policy not found")
         except Exception as exc:
             raise Exception(f"An error occured during policy cancellation: {str(exc)}")
+
+    @staticmethod
+    def purchase_policy(validated_data: dict) -> Policy:
+        """
+        Purchase a policy using the given policy data
+
+        Returns:
+
+            Policy created policy object
+        """
+        from api.notifications.services import PolicyNotificationService
+
+        quote_service = QuoteService()
+        quote_code = validated_data["quote_code"]
+
+        try:
+            # retrieve quote information and process it
+            quote_code = validated_data["quote_code"]
+            quote_data = quote_service.get_quote_by_code(quote_code)
+            if not quote_data:
+                raise ValidationError(f"Quote with code {quote_code} does not exist")
+
+            # validate incoming data where neccessary
+            customer_metadata = validated_data["customer_metadata"]
+            product_metadata = validated_data["product_metadata"]
+            payment_information = validated_data["payment_metadata"]
+            activation_details = validated_data["activation_metadata"]
+
+            # handle payment validation
+            PolicyService._validate_payment(payment_information, quote_data["premium"])
+
+            # are we renewing the policy?
+            renewal_date = (
+                activation_details.get("policy_expiry_date") + timedelta(days=1)
+                if activation_details.get("renew")
+                else None
+            )
+            # next, we want to process merhant and customer information
+            customer = PolicyService._create_or_get_customer(customer_metadata)
+            merchant = PolicyService._get_merchant(validated_data["merchant_code"])
+
+            # process policy purchase
+            policy = PolicyService._create_policy(
+                customer,
+                quote_data["product"],
+                quote_data["premium"],
+                merchant,
+                quote_data["provider"],
+                activation_details,
+                renewal_date=renewal_date,
+            )
+            return policy
+        except ObjectDoesNotExist:
+            logger.error("Policy not found")
+            raise ValidationError("Policy not found")
+
+        except Exception as exc:
+            logger.error(
+                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}"
+            )
+            raise APIException(
+                "An unexpected error occurred while processing the policy purchase."
+            )
+
+    def _create_policy(
+        customer,
+        product,
+        policy_price,
+        merchant,
+        policy_provider,
+        activation_details,
+        **kwargs,
+    ):
+        """
+        Handles the actual creation of a policy
+
+        Arguments:
+            customer: The customer object
+            product: The product object
+            policy_price: The price of the policy
+            merchant: The merchant object
+            policy_provider: The insurance provider of the policy
+            activation_details: The polcy activation details
+            kwargs: Additional keyword arguments
+
+        Returns:
+            The created policy object
+        """
+
+        renewal_date = kwargs.get("renewal_date", None)
+        return Policy.objects.create(
+            policy_holder=customer,
+            product=product,
+            premium=policy_price,
+            merchant=merchant,
+            provider_id=policy_provider,
+            renewable=activation_details.get("renew"),
+            renewal_date=renewal_date,
+            effective_from=datetime.now().date(),
+            effective_through=activation_details.get("policy_expiry_date"),
+        )
+
+    @staticmethod
+    def _get_merchant(merchant_code):
+        """
+        Retrieves a merchant by their unique code
+        """
+        from core.merchant.models import Merchant
+
+        try:
+            merchant = Merchant.objects.get(short_code=merchant_code, status="active")
+        except Merchant.DoesNotExist:
+            raise ValidationError(
+                f'Merchant with the provided short code "{merchant}" not found'
+            )
+        return merchant
+
+    @staticmethod
+    def _create_or_retrieve_customer(customer_data):
+        """
+        Creates a new policy holder or retrieves an existing one
+        """
+        return Customer.objects.get_or_create(
+            email=customer_data["customer_email"],
+            defaults={
+                "first_name": customer_data["first_name"],
+                "last_name": customer_data["last_name"],
+                "phone_number": customer_data["customer_phone"],
+                "address": customer_data["customer_address"],
+                "dob": customer_data["customer_date_of_birth"],
+                "gender": customer_data["customer_gender"],
+            },
+        )[0]
+
+    @staticmethod
+    def _validate_payment(payment_information, policy_price):
+        """
+        Validates the payment information of a given policy
+        """
+        # Check if payment status is sucessful
+        if payment_information["payment_status"] != "completed":
+            raise ValidationError("Payment status must be completed to proceed")
+
+        # Check if the amount paid matches the policy price
+        if premium_amount := payment_information.get("premium_amount"):
+            if premium_amount != policy_price.amount:
+                raise ValidationError("Amount paid does not match the policy price")
+        return payment_information
 
 
 ############################################################################################################
