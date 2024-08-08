@@ -425,36 +425,6 @@ class ActivationMetadataSerializer(serializers.Serializer):
 class PolicyPurchaseSerializer(serializers.Serializer):
     """
     Validates the purchase request payload
-
-    For example:
-
-    ```json
-        {
-          "customer_information": {
-            "customer_name": "John Doe",
-            "customer_email": "john.doe@example.com",
-            "customer_phone": "123-456-7890",
-            "customer_address": "123 Main St, Anytown, Country",
-          },
-          'quote_code': 'quo_DADDY_HELP_ME',
-          "product_selection": {
-            "product_name": "Smart Motorist Protection Plan",
-            "product_type": "Basic",
-            "insurer": "NEM"
-          },
-          "payment_information": {
-            "payment_method": "credit_card",
-            'payment_status': 'completed',
-            "premium_amount": 2000.00,
-          },
-          "activation_details": {
-            "policy_duration": "1 year"
-            'renew': True # or False
-          },
-          "agreement": true,
-          "confirmation": true
-        }
-    ```
     """
 
     quote_code = serializers.CharField()
@@ -462,11 +432,27 @@ class PolicyPurchaseSerializer(serializers.Serializer):
     product_metadata = ProductMetadataSerializer()
     payment_metadata = PaymentInformationSerializer()
     activation_metadata = ActivationMetadataSerializer()
-    agreement = serializers.BooleanField(write_only=True)
-    confirmation = serializers.BooleanField(write_only=True)
+    agreement = serializers.BooleanField()
+    confirmation = serializers.BooleanField()
     merchant_code = serializers.CharField(
         max_length=50, help_text="Merchant short code"
     )
+
+    def validate(self, data):
+        required_fields = [
+            "quote_code",
+            "customer_metadata",
+            "product_metadata",
+            "payment_metadata",
+            "activation_metadata",
+            "agreement",
+            "confirmation",
+            "merchant_code",
+        ]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            raise ValidationError(f"Missing required fields: {missing_fields}")
+        return data
 
     def validate_agreement(self, value):
         if not value:
@@ -486,103 +472,8 @@ class PolicyPurchaseSerializer(serializers.Serializer):
         """
         Creates and save the policy in the database
         """
-
-        # Prep all information to create the policy
-        # We need to get the quote data to get the product and price information
-        # as well need to get the customer information from the body of the request,
-        # and the payment information
-        # If a quote code is provided, we can get the policy information from the quote,
-        # then we purchase that policy with the additional information from the request
-        # otherwise, we can get the policy information from the product metadata
-
-        logger.info(f"Validated data: {validated_data}")
-
-        customer_metadata = validated_data["customer_metadata"]
-        product_metadata = validated_data["product_metadata"]
-        payment_information = validated_data["payment_metadata"]
-        activation_details = validated_data["activation_metadata"]
-
-        quote_code = validated_data["quote_code"]
-
-        quote = Quote.objects.get(quote_code=quote_code)
-
-        # Get the product and price information from the quote
-        product = quote.product
-        policy_price = quote.premium
-        policy_provider = product.provider
-
-        # Check if payment status is sucessful
-        if payment_information["payment_status"] != "completed":
-            raise ValidationError("Payment status must be completed to proceed")
-
-        # Check if the amount paid matches the policy price
-        if premium_amount := payment_information.get("premium_amount"):
-            if premium_amount != policy_price.amount:
-                raise ValidationError("Amount paid does not match the policy price")
-
-        # check for agreeement and confirmation
-        if "agreement" not in validated_data or "confirmation" not in validated_data:
-            raise ValidationError(
-                "Agreement and confirmation must be provided to proceed with the purchase of this policy"
-            )
-
-        # Next policy renewal_date should be the following day after the expiry date
-        # and should be only happen if policy renewal is set to True
-        if activation_details.get("renew"):
-            renewal_date = activation_details.get("policy_expiry_date") + timedelta(
-                days=1
-            )
-        else:
-            renewal_date = None
-
-        # We might have a customer before with this name, email and phone number
-        # We want to retrieve that customer if it exists, otherwise we create a new customer
-        customer, created = Customer.objects.get_or_create(
-            email=customer_metadata["customer_email"],
-            defaults={
-                "first_name": customer_metadata["first_name"],
-                "last_name": customer_metadata.get("last_name", ""),
-                "phone_number": customer_metadata.get("customer_phone", ""),
-                "address": customer_metadata.get("customer_address", ""),
-                "dob": customer_metadata.get("customer_date_of_birth"),
-                "gender": customer_metadata.get("customer_gender"),
-            },
-        )
-
-        # Detect the merchant via the merchant's short code
-        merchant = Merchant.objects.get(short_code=validated_data.get("merchant_code"))
-        if not merchant:
-            raise ValidationError(
-                f'Merchant with the provided short code "{merchant}" not found'
-            )
-
-        # to create the policy
-        policy = Policy.objects.create(
-            policy_holder=customer,
-            product=product,
-            premium=policy_price.amount,
-            merchant=merchant,
-            provider_id=policy_provider,
-            renewable=activation_details.get("renew"),
-            renewal_date=renewal_date,
-            effective_from=datetime.now().date(),
-            effective_through=activation_details.get("policy_expiry_date"),
-        )
-
-        # Notify the merchant and the customer of the successful purchase
-        # This could be done using a message broker or a notification service
-        # or by sending an email to the customer and the merchant
-        # TODO: maybe i would use signals to send the notification
-
-        PolicyNotificationService.notify_merchant("purchase_policy", policy)
-        PolicyNotificationService.notify_customer(
-            "purchase_policy",
-            policy,
-            customer_email=customer_metadata["customer_email"],
-        )
-
-        logger.info(f"Policy created: {policy}")
-        return policy
+        logger.debug(f"Validated data: {validated_data}")
+        PolicyService.purchase_policy(validated_data)
 
 
 class PolicyCancellationRequestSerializer(serializers.Serializer):
