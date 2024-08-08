@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, NewType, Union
 
 from rest_framework.generics import get_object_or_404
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
 from core.catalog.models import Policy, Product, Quote
+from core.merchants.models import Merchant
+from core.user.models import Customer
 from django.core.mail import send_mail
 from django.db import models
 from django.db.models import Q, QuerySet
@@ -181,7 +183,7 @@ class PolicyService:
         try:
             # retrieve quote information and process it
             quote_code = validated_data["quote_code"]
-            quote_data = quote_service.get_quote_by_code(quote_code)
+            quote_data = quote_service._get_quote_by_code(quote_code)
             if not quote_data:
                 raise ValidationError(f"Quote with code {quote_code} does not exist")
 
@@ -201,7 +203,7 @@ class PolicyService:
                 else None
             )
             # next, we want to process merhant and customer information
-            customer = PolicyService._create_or_get_customer(customer_metadata)
+            customer = PolicyService._create_or_retrieve_customer(customer_metadata)
             merchant = PolicyService._get_merchant(validated_data["merchant_code"])
 
             # process policy purchase
@@ -234,6 +236,7 @@ class PolicyService:
                 "An unexpected error occurred while processing the policy purchase."
             )
 
+    @staticmethod
     def _create_policy(
         customer,
         product,
@@ -277,13 +280,12 @@ class PolicyService:
         """
         Retrieves a merchant by their unique code
         """
-        from core.merchant.models import Merchant
 
         try:
             merchant = Merchant.objects.get(short_code=merchant_code, status="active")
         except Merchant.DoesNotExist:
             raise ValidationError(
-                f'Merchant with the provided short code "{merchant}" not found'
+                f'Merchant with the provided short code "{merchant_code}" not found'
             )
         return merchant
 
