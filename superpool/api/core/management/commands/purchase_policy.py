@@ -123,9 +123,23 @@ class Command(BaseCommand):
         try:
             policy_data = {
                 "quote_code": options["quote_code"],
-                "customer_metadata": {},
-                "payment_metadata": {},
-                "activation_metadata": {},
+                "customer_metadata": {
+                    "first_name": options["first_name"],
+                    "last_name": options["last_name"],
+                    "customer_email": options["customer_email"],
+                    "customer_phone": options["customer_phone"],
+                    "customer_address": options.get("customer_address"),
+                    "customer_date_of_birth": options.get("customer_date_of_birth"),
+                    "customer_gender": options.get("customer_gender"),
+                },
+                "payment_metadata": {
+                    "payment_status": options["payment_status"],
+                    "premium_amount": options["premium_amount"],
+                },
+                "activation_metadata": {
+                    "policy_expiry_date": parse_date(options["policy_expiry_date"]),
+                    "renew": options.get("renew", False),
+                },
                 "merchant_code": options["merchant_code"],
             }
 
