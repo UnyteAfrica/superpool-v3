@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
+from core.providers.models import Provider as InsurancePartner
 
 from rest_framework.generics import get_object_or_404
 
@@ -195,6 +196,8 @@ class PolicyService:
             # extract information about the product and the applicable premium from the quote
             quote_data = quote_serializer.data  # shoudl be a dict with serialized data
             product_data = quote_data.get("product")
+            # print(f"Product data: {product_data}")
+
             price_data = quote_data.get("price", {})
             premium = price_data.get("amount")
 
@@ -230,7 +233,8 @@ class PolicyService:
             # next, we want to process merhant and customer information
             customer = PolicyService._create_or_retrieve_customer(customer_metadata)
             merchant = PolicyService._get_merchant(validated_data["merchant_code"])
-            insurer = quote_data["product"]["provider"]
+            insurer_id = quote_data["product"]["provider"]
+            insurer = get_object_or_404(InsurancePartner, id=insurer_id)
 
             # process policy purchase
             policy = PolicyService._create_policy(
@@ -302,10 +306,8 @@ class PolicyService:
 
         renewal_date = kwargs.get("renewal_date", None)
 
-        # if isinstance(product, uuid):
+        # if product and isinstance(product, uuid):
         #     product = get_object_or_404(Product, id=product)
-        # elif isinstance(product, str):
-        #     product = get_object_or_404(Product, name=product)
 
         return Policy.objects.create(
             policy_holder=customer,
