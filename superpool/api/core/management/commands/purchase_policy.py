@@ -4,6 +4,8 @@ from django.utils.dateparse import parse_date
 import sys
 from decimal import Decimal
 
+from rest_framework.generics import RetrieveUpdateAPIView
+
 from core.catalog.models import Quote, Policy
 from core.merchants.models import Merchant
 from api.catalog.services import PolicyService
@@ -21,19 +23,37 @@ class Command(BaseCommand):
             "quote_code", type=str, help="Quote code to purchase policy for"
         )
         parser.add_argument(
-            "--first_name", type=str, help="First name of the policy holder"
+            "--first_name",
+            type=str,
+            help="First name of the policy holder",
+            required=True,
         )
         parser.add_argument(
-            "--last_name", type=str, help="Last name of the policy holder"
+            "--last_name",
+            type=str,
+            help="Last name of the policy holder",
+            required=True,
         )
-        parser.add_argument("customer_email", type=str, help="Email of the customer")
         parser.add_argument(
-            "--customer_phone", type=str, help="Phone number of the customer"
+            "customer_email", type=str, help="Email of the customer", required=True
+        )
+        parser.add_argument(
+            "--customer_phone",
+            type=str,
+            help="Phone number of the customer",
+            required=True,
+        )
+        parser.add_argument(
+            "--customer_address",
+            type=str,
+            help="Address of the policy holder",
+            required=False,
         )
         parser.add_argument(
             "--customer_date_of_birth",
             type=str,
             help="Date of birth of the policy holder",
+            required=False,
         )
         parser.add_argument(
             "--customer_gender",
@@ -62,6 +82,8 @@ class Command(BaseCommand):
             type=str,
             help="Payment method to use for the purchase",
             choices=["card", "wallet", "bank_transfer", "online_banking"],
+            default="card",
+            required=False,
         )
         parser.add_argument(
             "payment_reference",
@@ -80,7 +102,6 @@ class Command(BaseCommand):
             "premium_amount",
             type=Decimal,
             help="Amount paid for the policy",
-            required=False,
         )
         parser.add_argument(
             "policy_expiry_date",
