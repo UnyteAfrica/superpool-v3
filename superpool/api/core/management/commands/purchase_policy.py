@@ -68,7 +68,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--policy_name",
             type=str,
-            required=True,
+            required=False,
             help="Name of the insurance policy (or product) to purchase",
         )
         parser.add_argument(
@@ -119,6 +119,7 @@ class Command(BaseCommand):
             "--renew",
             action="store_true",
             help="Flag to indicate if the policy should be renewed",
+            required=False,
         )
         parser.add_argument(
             "--merchant_code",
@@ -127,8 +128,27 @@ class Command(BaseCommand):
             help="Unique short code identifier assigned to the merchant",
         )
 
-    def handle(self, args, options):
+    def handle(self, *args, **options):
         try:
+            # ensure all required options are provided
+            if not all(
+                [
+                    options.get("quote_code"),
+                    options.get("first_name"),
+                    options.get("last_name"),
+                    options.get("customer_email"),
+                    options.get("customer_phone"),
+                    options.get("premium_amount"),
+                    options.get("policy_expiry_date"),
+                    options.get("merchant_code"),
+                ]
+            ):
+                self.stderr.write(
+                    "Error: Missing required arguments \n {}".format(options)
+                )
+                return
+
+            # construct the policy data
             policy_data = {
                 "quote_code": options["quote_code"],
                 "customer_metadata": {
