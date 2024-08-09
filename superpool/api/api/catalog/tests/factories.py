@@ -1,6 +1,6 @@
 import factory
 from api.merchants.tests.factories import MerchantFactory
-from core.catalog.models import Policy, Product
+from core.catalog.models import Policy, Product, Quote, Price
 from core.merchants.models import Merchant
 from core.providers.models import Provider as Partner
 from core.user.models import Customer
@@ -76,6 +76,6 @@ class QuoteFactory(factory.django.DjangoModelFactory):
 
     base_price = fake.random_number(digits=3)
     product = factory.SubFactory(ProductFactory)
-    premium = fake.random_number(digits=3)
+    premium = factory.SubFactory(PriceFactory)
     expires_in = fake.date_time_this_year()
     status = factory.Iterator(["pending", "accepted", "declined"])
