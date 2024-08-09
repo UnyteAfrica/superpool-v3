@@ -195,7 +195,6 @@ class PolicyService:
             quote_data = quote_serializer.data  # shoudl be a dict with serialized data
             product = quote_data.get("product")
             price_data = quote_data.get("price", {})
-            print(price_data)
             premium = price_data.get("amount")
 
             # we want to ensure to handle adequate type conversion for the premium amount
@@ -331,19 +330,23 @@ class PolicyService:
         )[0]
 
     @staticmethod
-    def _validate_payment(payment_information, policy_price):
+    def _validate_payment(payment_information: dict, policy_price: dict):
         """
         Validates the payment information of a given policy
         """
-        # Check if payment status is sucessful
-        if payment_information["payment_status"] != "completed":
-            raise ValidationError("Payment status must be completed to proceed")
+        try:
+            paid_amount = Decimal(payment_information.get("premium_amount", 0))
+            policy_price_amount = Decimal(policy_price.get("amount", 0))
 
-        # Check if the amount paid matches the policy price
-        if premium_amount := payment_information.get("premium_amount"):
-            if premium_amount != policy_price.get("amount"):
+            # Check if payment status is sucessful
+            if payment_information["payment_status"] != "completed":
+                raise ValidationError("Payment status must be completed to proceed")
+
+            # Check if the amount paid matches the policy price
+            if paid_amount != policy_price_amount:
                 raise ValidationError("Amount paid does not match the policy price")
-        return payment_information
+        except ValueError as exc:
+            raise ValidationError(f"Invalid amount information: {str(exc)}")
 
 
 ############################################################################################################
