@@ -20,8 +20,8 @@ class PolicyNotificationService(NotificationService):
 
         print(f"Sending notification to merchant for action: {action}")
         service = NotificationService()
-        message_data = service.prepare_message(action, "merchant")
         service.stream_through(NotificationService.EMAIL)
+        message_data = service.prepare_message(action, "merchant")
         service.send(
             recipient=policy.merchant.business_email,
             subject=message_data["subject"],
@@ -43,13 +43,12 @@ class PolicyNotificationService(NotificationService):
         # We would assume the policy holder is to be notified if the user information
         # is not passed to this function
         recipient = customer_email or policy.policy_holder.email
+        _channel = extra_kwargs.get("notification_channel", NotificationService.EMAIL)
+        print(f"Selected notification channel:  {_channel}")
+        service.stream_through(_channel)
         message_data = service.prepare_message(action, "customer")
         print(f"Message data: {message_data}")
 
-        _channel = extra_kwargs.get("notification_channel", NotificationService.EMAIL)
-        print(f"Selected notification channel:  {_channel}")
-
-        service.stream_through(_channel)
         service.send(
             recipient=recipient,
             subject=message_data["subject"],
