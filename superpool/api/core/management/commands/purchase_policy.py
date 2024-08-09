@@ -120,4 +120,27 @@ class Command(BaseCommand):
         )
 
     def handle(self, args, options) -> "Policy" | None:
-        pass
+        try:
+            policy_data = {
+                "quote_code": options["quote_code"],
+                "customer_metadata": {},
+                "payment_metadata": {},
+                "activation_metadata": {},
+                "merchant_code": options["merchant_code"],
+            }
+
+            policy = PolicyService.purchase_policy(policy_data)
+            sys.stdout.write(
+                f"Policy purchased successfully for quote {options['quote_code']}: {policy.id} \n"
+            )
+            sys.stdout.write(f"Policy details: {policy}\n")
+        except ValueError as e:
+            sys.stderr.write(f"An error occurred: {e}\n")
+        except ValidationError as e:
+            sys.stderr.write(f"Validation error: {e}\n")
+        except Quote.DoesNotExist:
+            sys.stderr.write("Quote does not exist\n")
+        except Merchant.DoesNotExist:
+            sys.stderr.write("Merchant does not exist\n")
+        except Exception as e:
+            sys.stderr.write(f"An error occurred: {e}\n")
