@@ -160,6 +160,10 @@ class Command(BaseCommand):
                     "customer_date_of_birth": options.get("customer_date_of_birth"),
                     "customer_gender": options.get("customer_gender"),
                 },
+                "product_metadata": {
+                    "product_type": options["product_type"],
+                    "product_name": options.get("policy_name"),
+                },
                 "payment_metadata": {
                     "payment_status": options["payment_status"],
                     "premium_amount": options["premium_amount"],
