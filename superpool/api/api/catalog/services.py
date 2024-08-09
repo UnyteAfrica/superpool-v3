@@ -244,10 +244,17 @@ class PolicyService:
             )
 
             # notify the merchant and customer
-            PolicyNotificationService.notify_merchant("purchase_policy", policy)
-            PolicyNotificationService.notify_customer(
-                "purchase_policy", policy, customer_metadata["customer_email"]
-            )
+            try:
+                PolicyNotificationService.notify_merchant("purchase_policy", policy)
+                PolicyNotificationService.notify_customer(
+                    "purchase_policy", policy, customer_metadata["customer_email"]
+                )
+            except TypeError as exc:
+                raise Exception(f"Error sending notification: \n{str(exc)}")
+            except Exception as exc:
+                raise Exception(
+                    f"An error occured while attempting to send notification for policy purchase: \n{str(exc)}",
+                )
 
             return policy
         except ObjectDoesNotExist as exc:
