@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
@@ -193,17 +194,23 @@ class PolicyService:
 
             # extract information about the product and the applicable premium from the quote
             quote_data = quote_serializer.data  # shoudl be a dict with serialized data
-            product = quote_data.get("product")
+            product_data = quote_data.get("product")
             price_data = quote_data.get("price", {})
             premium = price_data.get("amount")
 
             # we want to ensure to handle adequate type conversion for the premium amount
             # django often stores Decimal values as strings in the database
+            #
+            # convert the premium amount to a Decimal if it is a string
             if isinstance(premium, str):
                 try:
                     premium = Decimal(premium)  # Convert to Decimal
                 except ValueError:
                     raise ValidationError("Invalid premium amount format")
+
+            # extract product information from the product data
+            product_id = product_data.get("id")
+            product = get_object_or_404(Product, id=product_id)
 
             # validate incoming data where neccessary
             customer_metadata = validated_data["customer_metadata"]
@@ -223,6 +230,7 @@ class PolicyService:
             # next, we want to process merhant and customer information
             customer = PolicyService._create_or_retrieve_customer(customer_metadata)
             merchant = PolicyService._get_merchant(validated_data["merchant_code"])
+            insurer = quote_data["product"]["provider"]
 
             # process policy purchase
             policy = PolicyService._create_policy(
@@ -230,7 +238,7 @@ class PolicyService:
                 product,
                 premium,
                 merchant,
-                quote_data["provider"],
+                insurer,
                 activation_details,
                 renewal_date=renewal_date,
             )
@@ -286,6 +294,12 @@ class PolicyService:
         """
 
         renewal_date = kwargs.get("renewal_date", None)
+
+        # if isinstance(product, uuid):
+        #     product = get_object_or_404(Product, id=product)
+        # elif isinstance(product, str):
+        #     product = get_object_or_404(Product, name=product)
+
         return Policy.objects.create(
             policy_holder=customer,
             product=product,
@@ -305,7 +319,7 @@ class PolicyService:
         """
 
         try:
-            merchant = Merchant.objects.get(short_code=merchant_code, status="active")
+            merchant = Merchant.objects.get(short_code=merchant_code)
         except Merchant.DoesNotExist:
             raise ValidationError(
                 f'Merchant with the provided short code "{merchant_code}" not found'
