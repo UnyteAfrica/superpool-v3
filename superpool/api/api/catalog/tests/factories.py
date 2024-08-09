@@ -13,6 +13,10 @@ class PartnerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Partner
 
+    name = fake.company()
+    support_email = fake.company_email()
+    support_phone = fake.phone_number()
+
 
 class ProductFactory(factory.django.DjangoModelFactory):
     class Meta:
