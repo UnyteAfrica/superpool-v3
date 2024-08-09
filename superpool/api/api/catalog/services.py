@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
+import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Dict, NewType, Union
+from core.providers.models import Provider as InsurancePartner
 
 from rest_framework.generics import get_object_or_404
 
@@ -183,9 +186,34 @@ class PolicyService:
         try:
             # retrieve quote information and process it
             quote_code = validated_data["quote_code"]
-            quote_data = quote_service._get_quote_by_code(quote_code)
-            if not quote_data:
+
+            # quote here, is actually a serializer and not the actual data
+            # from serializr, LoL.
+            quote_serializer = quote_service._get_quote_by_code(quote_code)
+            if not quote_serializer:
                 raise ValidationError(f"Quote with code {quote_code} does not exist")
+
+            # extract information about the product and the applicable premium from the quote
+            quote_data = quote_serializer.data  # shoudl be a dict with serialized data
+            product_data = quote_data.get("product")
+            # print(f"Product data: {product_data}")
+
+            price_data = quote_data.get("price", {})
+            premium = price_data.get("amount")
+
+            # we want to ensure to handle adequate type conversion for the premium amount
+            # django often stores Decimal values as strings in the database
+            #
+            # convert the premium amount to a Decimal if it is a string
+            if isinstance(premium, str):
+                try:
+                    premium = Decimal(premium)  # Convert to Decimal
+                except ValueError:
+                    raise ValidationError("Invalid premium amount format")
+
+            # extract product information from the product data
+            product_id = product_data.get("id")
+            product = get_object_or_404(Product, id=product_id)
 
             # validate incoming data where neccessary
             customer_metadata = validated_data["customer_metadata"]
@@ -194,7 +222,7 @@ class PolicyService:
             activation_details = validated_data["activation_metadata"]
 
             # handle payment validation
-            PolicyService._validate_payment(payment_information, quote_data["premium"])
+            PolicyService._validate_payment(payment_information, price_data)
 
             # are we renewing the policy?
             renewal_date = (
@@ -205,32 +233,46 @@ class PolicyService:
             # next, we want to process merhant and customer information
             customer = PolicyService._create_or_retrieve_customer(customer_metadata)
             merchant = PolicyService._get_merchant(validated_data["merchant_code"])
+            insurer_id = quote_data["product"]["provider"]
+            insurer = get_object_or_404(InsurancePartner, id=insurer_id)
 
             # process policy purchase
             policy = PolicyService._create_policy(
                 customer,
-                quote_data["product"],
-                quote_data["premium"],
+                product,
+                premium,
                 merchant,
-                quote_data["provider"],
+                insurer,
                 activation_details,
                 renewal_date=renewal_date,
             )
 
             # notify the merchant and customer
-            PolicyNotificationService.notify_merchant("purchase_policy", policy)
-            PolicyNotificationService.notify_customer(
-                "purchase_policy", policy, customer_metadata["customer_email"]
-            )
+            try:
+                PolicyNotificationService.notify_merchant("purchase_policy", policy)
+                PolicyNotificationService.notify_customer(
+                    "purchase_policy", policy, customer_metadata["customer_email"]
+                )
+            except TypeError as exc:
+                raise Exception(f"Error sending notification: \n{str(exc)}")
+            except Exception as exc:
+                raise Exception(
+                    f"An error occured while attempting to send notification for policy purchase: \n{str(exc)}",
+                )
 
             return policy
-        except ObjectDoesNotExist:
-            logger.error("Policy not found")
-            raise ValidationError("Policy not found")
+        except ObjectDoesNotExist as exc:
+            logger.error(f"ObjectDoesNotExist: {str(exc)}")
+            raise ValidationError("Required object does not exist")
+
+        except KeyError as exc:
+            logger.error(f"KeyError: {str(exc)}")
+            raise ValidationError(f"Missing required data: {str(exc)}")
 
         except Exception as exc:
             logger.error(
-                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}"
+                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}",
+                exc_info=True,
             )
             raise APIException(
                 "An unexpected error occurred while processing the policy purchase."
@@ -263,6 +305,10 @@ class PolicyService:
         """
 
         renewal_date = kwargs.get("renewal_date", None)
+
+        # if product and isinstance(product, uuid):
+        #     product = get_object_or_404(Product, id=product)
+
         return Policy.objects.create(
             policy_holder=customer,
             product=product,
@@ -282,7 +328,7 @@ class PolicyService:
         """
 
         try:
-            merchant = Merchant.objects.get(short_code=merchant_code, status="active")
+            merchant = Merchant.objects.get(short_code=merchant_code)
         except Merchant.DoesNotExist:
             raise ValidationError(
                 f'Merchant with the provided short code "{merchant_code}" not found'
@@ -307,19 +353,23 @@ class PolicyService:
         )[0]
 
     @staticmethod
-    def _validate_payment(payment_information, policy_price):
+    def _validate_payment(payment_information: dict, policy_price: dict):
         """
         Validates the payment information of a given policy
         """
-        # Check if payment status is sucessful
-        if payment_information["payment_status"] != "completed":
-            raise ValidationError("Payment status must be completed to proceed")
+        try:
+            paid_amount = Decimal(payment_information.get("premium_amount", 0))
+            policy_price_amount = Decimal(policy_price.get("amount", 0))
 
-        # Check if the amount paid matches the policy price
-        if premium_amount := payment_information.get("premium_amount"):
-            if premium_amount != policy_price.amount:
+            # Check if payment status is sucessful
+            if payment_information["payment_status"] != "completed":
+                raise ValidationError("Payment status must be completed to proceed")
+
+            # Check if the amount paid matches the policy price
+            if paid_amount != policy_price_amount:
                 raise ValidationError("Amount paid does not match the policy price")
-        return payment_information
+        except ValueError as exc:
+            raise ValidationError(f"Invalid amount information: {str(exc)}")
 
 
 ############################################################################################################
