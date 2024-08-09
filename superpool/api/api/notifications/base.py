@@ -45,7 +45,6 @@ class NotificationService(INotification):
     """
 
     from .channels import EmailNotification, SMSNotification, WhatsAppNotification
-    from .constants import ACTION_REGISTRY
 
     WHATSAPP = "whatsapp"
     SMS = "sms"
@@ -68,12 +67,9 @@ class NotificationService(INotification):
         """
         Prepare the message to be sent to the recipient
         """
-
-        message = self.ACTION_REGISTRY.get(action, {}).get(recipient, {})
-        if not message:
-            logger.error(f"Action {action} is not supported")
-            return {}
-        return message
+        if not self.channel:
+            raise Exception("Notification channel not set. Cannot prepare message \n")
+        return self.channel.prepare_message(action, recipient)
 
     def stream_through(self, channel: str) -> None:
         """
@@ -98,7 +94,7 @@ class NotificationService(INotification):
                 "Notification channel not set. Cannot send message \n"
                 "Call stream_through method to set the notification channel first"
             )
-            return
+            raise Exception("Notification channel not set. Cannot send message")
         self.channel.send(recipient, subject, message)
         print(
             f"Sending message to {recipient} with subject: {subject} and message: {message}"
