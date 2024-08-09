@@ -57,3 +57,25 @@ class PolicyFactory(factory.django.DjangoModelFactory):
     premium = fake.random_number(digits=3)
     merchant_id = factory.SubFactory(MerchantFactory)
     provider_id = factory.SubFactory(PartnerFactory)
+
+
+class PriceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Price
+
+    amount = fake.random_number(digits=3)
+    description = fake.sentence()
+    comssion = fake.random_number(digits=3)
+    discount = fake.random_number(digits=3)
+    surcharge = fake.random_number(digits=3)
+
+
+class QuoteFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Quote
+
+    base_price = fake.random_number(digits=3)
+    product = factory.SubFactory(ProductFactory)
+    premium = fake.random_number(digits=3)
+    expires_in = fake.date_time_this_year()
+    status = factory.Iterator(["pending", "accepted", "declined"])
