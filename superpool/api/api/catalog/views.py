@@ -34,6 +34,8 @@ from .openapi import (
     home_insurance_example,
     gadget_insurance_example,
     auto_insurance_example,
+    insurance_policy_purchase_req_example,
+    insurance_policy_purchase_res_example,
 )
 
 from .exceptions import ProductNotFoundError
@@ -796,13 +798,13 @@ class PolicyPurchaseView(generics.GenericAPIView):
         description="Purchase a new policy for your customer",
         request=OpenApiRequest(
             request=PolicyPurchaseSerializer,
-            examples=[],
+            examples=[insurance_policy_purchase_req_example],
         ),
         responses={
             201: OpenApiResponse(
                 description="Policy purchase successful",
                 response=PolicyPurchaseResponseSerializer,
-                examples=[],
+                examples=[insurance_policy_purchase_res_example],
             ),
             400: OpenApiResponse(
                 description="Bad Request",
