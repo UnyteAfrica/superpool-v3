@@ -269,14 +269,9 @@ class PolicyService:
             logger.error(f"KeyError: {str(exc)}")
             raise ValidationError(f"Missing required data: {str(exc)}")
 
-        except Exception as exc:
-            logger.error(
-                f"Unexpected error occurred in PolicyService while purhcasing the policy: {str(exc)}",
-                exc_info=True,
-            )
-            raise APIException(
-                "An unexpected error occurred while processing the policy purchase."
-            )
+        except Quote.DoesNotExist as exc:
+            logger.error(f"Quote does not exist: {str(exc)}")
+            raise ValidationError("Quote does not exist for the provided quote code")
 
     @staticmethod
     def _create_policy(

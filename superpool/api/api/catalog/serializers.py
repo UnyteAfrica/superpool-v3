@@ -48,16 +48,52 @@ class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
     """
 
     policy_reference_number = serializers.CharField(source="policy_number")
+    customer_information = serializers.SerializerMethodField()
+    renewal_information = serializers.SerializerMethodField()
+    insurer = serializers.CharField(source="provider_id.name")
+    product_information = serializers.SerializerMethodField()
 
     class Meta:
         model = Policy
         fields = [
             "policy_id",
             "policy_reference_number",
-            "product",
+            "effective_from",
+            "effective_through",
             "premium",
+            "insurer",
+            "policy_status",
+            "product_information",
+            "customer_information",
+            "renewal_information",
         ]
-        depth = 1
+        # depth = 1
+
+    def get_customer_information(self, instance):
+        """Returns the customer information as a dictionary"""
+        return {
+            "customer_name": f"{instance.policy_holder.full_name}",
+            "customer_email": instance.policy_holder.email,
+            "customer_phone": instance.policy_holder.phone_number,
+            "customer_address": instance.policy_holder.address,
+        }
+
+    def get_renewal_information(self, instance):
+        """Returns the renewal information as a dictionary"""
+        if instance.renewable:
+            return {
+                "renewable": instance.renewable,
+                "renewal_date": instance.renewal_date,
+            }
+        return {"renewable": instance.renewable}
+
+    def get_product_information(self, instance):
+        """Returns the product information as a dictionary"""
+        return {
+            "product_name": instance.product.name,
+            "product_type": instance.product.product_type,
+            "product_description": instance.product.description,
+        }
 
 
 class PriceSerializer(serializers.ModelSerializer):
@@ -417,6 +453,11 @@ class PaymentInformationSerializer(serializers.Serializer):
     payment_method = serializers.CharField(max_length=50)
     payment_status = serializers.CharField(max_length=50)
     premium_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    def validate_premium_amount(self, value):
+        if value <= 0:
+            raise ValidationError("Premium amount must be greater than zero.")
+        return value
 
     def validate(self, attrs):
         VALID_PAYMENT_METHODS = [

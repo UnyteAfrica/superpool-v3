@@ -1,5 +1,6 @@
 import random
 import pytest
+from django.urls import reverse
 from api.catalog.services import PolicyService
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -18,7 +19,7 @@ def client():
     return APIClient()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def purchase_policy_data():
     customer = CustomerFactory()
     partner = PartnerFactory()
@@ -43,7 +44,7 @@ def purchase_policy_data():
         },
         "payment_metadata": {
             "payment_method": random.choice(
-                ["credit_card", "debit_card", "online_banking", "bank_transfer"]
+                ["credit_card", "debit_card", "cash", "bank_transfer"]
             ),
             "premium_amount": quote.premium.amount,
         },
@@ -92,3 +93,13 @@ def test_purchase_policy_missing_data_fails():
 
 # INTEGRATION TESTS
 # Integration tests test the service classes with the Django framework (through the APIs).
+#
+# Test Case 4: Test the purchase policy API with valid data
+def test_purchase_policy_api_valid_data_is_successful(client, purchase_policy_data):
+    response = client.post(
+        reverse("purchase-policy"),
+        purchase_policy_data,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data

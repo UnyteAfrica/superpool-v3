@@ -783,7 +783,7 @@ class RequestQuoteView(views.APIView):
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PolicyPurchaseView(generics.CreateAPIView):
+class PolicyPurchaseView(generics.GenericAPIView):
     """
     This view allows you to generate a new policy for your
     customer
@@ -801,7 +801,7 @@ class PolicyPurchaseView(generics.CreateAPIView):
             500: OpenApiResponse(),
         },
     )
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         """
         Issue a new policy for your customer
 
@@ -809,24 +809,28 @@ class PolicyPurchaseView(generics.CreateAPIView):
         """
         serializer = self.get_serializer(data=request.data)
 
-        try:
-            serializer.is_valid(raise_exception=True)
-            # Call the service to handle the actual policy creation
-            policy = serializer.save()
-            response_serializer = PolicyPurchaseResponseSerializer(policy)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            logger.error(f"Validation error: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except APIException as e:
-            logger.error(f"API exception: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            return Response(
-                {"error": "An unexpected error occurred."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        if serializer.is_valid():
+            logger.info(f"Validated data: {serializer.validated_data}")
+            service = PolicyService()
+
+            try:
+                policy = service.purchase_policy(serializer.validated_data)
+                if policy:
+                    response_serializer = PolicyPurchaseResponseSerializer(policy)
+                    return Response(
+                        response_serializer.data, status=status.HTTP_201_CREATED
+                    )
+            except (ValidationError, Quote.DoesNotExist) as api_err:
+                logger.error(f"An error occurred: {str(api_err)}")
+                return Response(
+                    {"error": str(api_err)}, status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as exc:
+                logger.error(f"An error occurred: {str(exc)}")
+                return Response(
+                    {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PolicyCancellationView(generics.GenericAPIView):
