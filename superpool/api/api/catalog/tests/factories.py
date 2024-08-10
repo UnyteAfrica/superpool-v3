@@ -1,4 +1,5 @@
 import factory
+from decimal import Decimal
 from api.merchants.tests.factories import MerchantFactory
 from core.catalog.models import Policy, Product, Quote, Price
 from core.merchants.models import Merchant
@@ -7,6 +8,12 @@ from core.user.models import Customer
 from faker import Faker
 
 fake = Faker()
+
+
+def generate_decimal():
+    value = Decimal(f"{fake.pydecimal(right_digits=2, positive=True)}")
+    # limit to 2 decimal places
+    return value.quantize(Decimal("0.01"))
 
 
 class PartnerFactory(factory.django.DjangoModelFactory):
@@ -63,16 +70,18 @@ class PriceFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Price
 
-    amount = fake.random_number(digits=3)
+    amount = factory.LazyFunction(generate_decimal)
     description = fake.sentence()
-    comssion = fake.random_number(digits=3)
-    discount = fake.random_number(digits=3)
-    surcharge = fake.random_number(digits=3)
+    commision = factory.LazyFunction(generate_decimal)
+    discount_amount = factory.LazyFunction(generate_decimal)
+    surcharges = factory.LazyFunction(generate_decimal)
 
 
 class QuoteFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Quote
+        # handles the create or retrieve instance that causes dupicate key errors
+        django_get_or_create = ("quote_code",)
 
     base_price = fake.random_number(digits=3)
     product = factory.SubFactory(ProductFactory)
