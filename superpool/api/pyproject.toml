@@ -49,6 +49,7 @@ norecursedirs = ["migrations", "__pycache__"]
 python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
 
 [tool.mypy]
+plugins = ["mypy_django_plugin.main"]
 ignore_missing_imports = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
@@ -60,8 +61,8 @@ no_implicit_optional = true
 incremental = true # make mypy faster by rechecking only changed files
 follow_imports = "silent" # report missing imports, but don't fail
 
-[tool.mypy.mypy_django_plugin]
-ignore_missing_model_attributes = true
+# [mypy.plugins.django-stubs]
+# ignore_missing_model_attributes = true
 
 [tool.django-stubs]
 django_settings_module = "config.settings"

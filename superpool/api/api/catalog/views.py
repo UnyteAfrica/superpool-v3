@@ -20,6 +20,7 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -33,6 +34,8 @@ from .openapi import (
     home_insurance_example,
     gadget_insurance_example,
     auto_insurance_example,
+    insurance_policy_purchase_req_example,
+    insurance_policy_purchase_res_example,
 )
 
 from .exceptions import ProductNotFoundError
@@ -782,7 +785,7 @@ class RequestQuoteView(views.APIView):
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PolicyPurchaseView(generics.CreateAPIView):
+class PolicyPurchaseView(generics.GenericAPIView):
     """
     This view allows you to generate a new policy for your
     customer
@@ -793,18 +796,69 @@ class PolicyPurchaseView(generics.CreateAPIView):
     @extend_schema(
         summary="Purchase a policy",
         description="Purchase a new policy for your customer",
-        request=PolicyPurchaseSerializer,
-        responses={201: PolicyPurchaseResponseSerializer},
+        request=OpenApiRequest(
+            request=PolicyPurchaseSerializer,
+            examples=[insurance_policy_purchase_req_example],
+        ),
+        responses={
+            201: OpenApiResponse(
+                description="Policy purchase successful",
+                response=PolicyPurchaseResponseSerializer,
+                examples=[insurance_policy_purchase_res_example],
+            ),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Bad Request Example",
+                        value={
+                            "error": "Bad Request",
+                            "detail": "Invalid request data",
+                        },
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+                examples=[
+                    OpenApiExample(
+                        "Internal Server Error Example",
+                        value={"error": "Internal Server Error"},
+                    )
+                ],
+            ),
+        },
     )
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         """
-        Issue a new policy for a customer
+        Issue a new policy for your customer
+
+        Handles the purchase of an insurance policy
         """
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        policy = serializer.save()
-        response_serializer = PolicyPurchaseResponseSerializer(policy)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        if serializer.is_valid():
+            logger.info(f"Validated data: {serializer.validated_data}")
+            service = PolicyService()
+
+            try:
+                policy = service.purchase_policy(serializer.validated_data)
+                if policy:
+                    response_serializer = PolicyPurchaseResponseSerializer(policy)
+                    return Response(
+                        response_serializer.data, status=status.HTTP_201_CREATED
+                    )
+            except (ValidationError, Quote.DoesNotExist) as api_err:
+                logger.error(f"An error occurred: {str(api_err)}")
+                return Response(
+                    {"error": str(api_err)}, status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as exc:
+                logger.error(f"An error occurred: {str(exc)}")
+                return Response(
+                    {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PolicyCancellationView(generics.GenericAPIView):

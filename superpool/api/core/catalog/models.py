@@ -35,6 +35,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         primary_key=True,
         help_text="Unique identifier for the package",
         default=uuid.uuid4,
+        editable=False,
     )
     provider: models.ForeignKey = models.ForeignKey(
         Partner,
@@ -118,10 +119,11 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
     coverage: models.ForeignKey = models.ForeignKey(
         "core.Coverage",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         help_text="Coverage details for the policy",
+        null=True,
     )
-    merchant_id: models.ForeignKey = models.ForeignKey(
+    merchant: models.ForeignKey = models.ForeignKey(
         Merchant,
         on_delete=models.CASCADE,
         help_text="Merchant who sold the policy",
@@ -167,7 +169,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
 
     def __str__(self) -> str:
-        return f"#{self.policy_id} bought by User: {self.policy_holder.username}"
+        return f"#{self.policy_id} bought by User: {self.policy_holder.full_name}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """

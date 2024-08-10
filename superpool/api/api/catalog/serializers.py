@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Union
 
 from api.catalog.services import PolicyService
+from api.notifications.services import PolicyNotificationService
 from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
@@ -47,16 +48,53 @@ class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
     """
 
     policy_reference_number = serializers.CharField(source="policy_number")
+    customer_information = serializers.SerializerMethodField()
+    renewal_information = serializers.SerializerMethodField()
+    insurer = serializers.CharField(source="provider_id.name")
+    product_information = serializers.SerializerMethodField()
+    policy_status = serializers.CharField(source="status")
 
     class Meta:
         model = Policy
         fields = [
             "policy_id",
             "policy_reference_number",
-            "product",
+            "effective_from",
+            "effective_through",
             "premium",
+            "insurer",
+            "policy_status",
+            "product_information",
+            "customer_information",
+            "renewal_information",
         ]
-        depth = 1
+        # depth = 1
+
+    def get_customer_information(self, instance):
+        """Returns the customer information as a dictionary"""
+        return {
+            "customer_name": f"{instance.policy_holder.full_name}",
+            "customer_email": instance.policy_holder.email,
+            "customer_phone": instance.policy_holder.phone_number,
+            "customer_address": instance.policy_holder.address,
+        }
+
+    def get_renewal_information(self, instance):
+        """Returns the renewal information as a dictionary"""
+        if instance.renewable:
+            return {
+                "renewable": instance.renewable,
+                "renewal_date": instance.renewal_date,
+            }
+        return {"renewable": instance.renewable}
+
+    def get_product_information(self, instance):
+        """Returns the product information as a dictionary"""
+        return {
+            "product_name": instance.product.name,
+            "product_type": instance.product.product_type,
+            "product_description": instance.product.description,
+        }
 
 
 class PriceSerializer(serializers.ModelSerializer):
@@ -113,10 +151,24 @@ class CustomerDetailsSerializer(serializers.Serializer):
     """
 
     first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100, required=False)
+    last_name = serializers.CharField(max_length=100)
     customer_email = serializers.EmailField()
     customer_phone = serializers.CharField(max_length=20, required=False)
     customer_address = serializers.CharField()
+    customer_date_of_birth = serializers.DateField(
+        input_formats=["%d-%m-%Y"], required=False
+    )
+    customer_gender = serializers.ChoiceField(
+        choices=[("M", "Male"), ("F", "Female")], required=False
+    )
+
+    def validate_customer_date_of_birth(self, value):
+        """Ensures that the date of birth is valid (not in the future)"""
+        today = datetime.now().date()
+
+        if value >= today:
+            raise ValidationError("Date of birth must be in the past.")
+        return value
 
 
 class BaseQuoteRequestSerializer(serializers.Serializer):
@@ -378,8 +430,23 @@ class QuoteRequestSerializer(serializers.Serializer):
 
 
 class ProductMetadataSerializer(serializers.Serializer):
-    product_name = serializers.CharField(max_length=255, required=False)
-    product_type = serializers.CharField(max_length=50)
+    HEALTH = "health"
+    AUTO = "auto"
+    TRAVEL = "travel"
+    PERSONAL_ACCIDENT = "personal_accident"
+    HOME = "home"
+    GADGET = "gadget"
+
+    VALID_PRODUCT_TYPES = [
+        HEALTH,
+        AUTO,
+        TRAVEL,
+        PERSONAL_ACCIDENT,
+        HOME,
+        GADGET,
+    ]
+    product_type = serializers.ChoiceField(choices=VALID_PRODUCT_TYPES)
+    product_name = serializers.CharField(max_length=100, required=False)
     insurer = serializers.CharField(max_length=100, required=False)
 
 
@@ -388,66 +455,67 @@ class PaymentInformationSerializer(serializers.Serializer):
     payment_status = serializers.CharField(max_length=50)
     premium_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
 
+    def validate_premium_amount(self, value):
+        if value <= 0:
+            raise ValidationError("Premium amount must be greater than zero.")
+        return value
+
+    def validate(self, attrs):
+        VALID_PAYMENT_METHODS = [
+            "credit_card",
+            "debit_card",
+            "bank_transfer",
+            "cash",
+        ]
+        VALID_PAYMENT_STATUS = ["completed", "pending", "failed"]
+
+        if attrs.get("payment_method") not in VALID_PAYMENT_METHODS:
+            raise ValidationError("Invalid payment method.")
+
+        if attrs.get("payment_status") not in VALID_PAYMENT_STATUS:
+            raise ValidationError("Invalid payment status")
+        return attrs
+
 
 class ActivationMetadataSerializer(serializers.Serializer):
-    policy_duration = serializers.DateField(write_only=True, input_formats=["%Y-%m-%d"])
-    renew = serializers.BooleanField()
+    policy_expiry_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    renew = serializers.BooleanField(default=False, required=False)
 
-    def validate_policy_duration(self, value) -> Union[bool, ValidationError]:
+    def validate_policy_expiry_date(
+        self, value: Union[str, date]
+    ) -> Union[str, date, ValidationError]:
         """Ensures that a policy duration date is valid (not in the past)"""
-        today = datetime.now()
+        today = datetime.now().date()
 
         try:
-            policy_duration = datetime.strptime(value, "%Y-%m-%d")
-            if policy_duration <= today:
+            if isinstance(value, date):
+                policy_expiry_date = value
+            else:
+                policy_expiry_date = datetime.strptime(value, "%Y-%m-%d").date()
+
+            if policy_expiry_date <= today:
                 raise ValidationError("Policy duration must be a future date.")
         except ValueError:
             raise ValidationError("Invalid date format for policy duration")
+
         return value
 
 
 class PolicyPurchaseSerializer(serializers.Serializer):
     """
     Validates the purchase request payload
-
-    For example:
-
-    ```json
-        {
-          "customer_information": {
-            "customer_name": "John Doe",
-            "customer_email": "john.doe@example.com",
-            "customer_phone": "123-456-7890",
-            "customer_address": "123 Main St, Anytown, Country",
-          },
-          'quote_code': 'quo_DADDY_HELP_ME',
-          "product_selection": {
-            "product_name": "Smart Motorist Protection Plan",
-            "product_type": "Basic",
-            "insurer": "NEM"
-          },
-          "payment_information": {
-            "payment_method": "credit_card",
-            'payment_status': 'completed',
-            "premium_amount": 2000.00,
-          },
-          "activation_details": {
-            "policy_duration": "1 year"
-            'renew': True # or False
-          },
-          "agreement": true,
-          "confirmation": true
-        }
-    ```
     """
 
     quote_code = serializers.CharField()
     customer_metadata = CustomerDetailsSerializer()
     product_metadata = ProductMetadataSerializer()
     payment_metadata = PaymentInformationSerializer()
-    acivation_metadata = ActivationMetadataSerializer()
-    agreement = serializers.BooleanField(write_only=True)
-    confirmation = serializers.BooleanField(write_only=True)
+    activation_metadata = ActivationMetadataSerializer()
+    agreement = serializers.BooleanField()
+    confirmation = serializers.BooleanField()
+    merchant_code = serializers.CharField(
+        max_length=50, help_text="Merchant short code"
+    )
 
     def validate_agreement(self, value):
         if not value:
@@ -463,42 +531,20 @@ class PolicyPurchaseSerializer(serializers.Serializer):
             )
         return value
 
-    def create(self, validated_data):
-        """
-        Creates and save the policy in the database
-        """
-        # first we prep all information to use in creating the new policy
-        customer_metadata = validated_data["customer_metadata"]
-        product_metadata = validated_data["product_metadata"]
-        payment_information = validated_data["payment_information"]
-        activation_details = validated_data["activation_details"]
+    def validate_quote_code(self, value):
+        if not value.startswith("Q"):
+            raise ValidationError("Invalid quote code. Must start with 'Q'")
 
-        # next we create each object with our information
-        product = Product.objects.get(name=product_metadata["product_name"])
-        coverage = Coverage.objects.get(name=product_metadata["product_type"])
-        merchant = Merchant.objects.get(id=validated_data["merchant_id"])
-        provider = Partner.objects.get(name=product_metadata["insurer"])
-        policy_holder = Customer.objects.get_or_create(
-            email=customer_metadata["customer_email"]
-        )
+        if not value:
+            raise ValidationError("Quote code must be provided.")
+        return value
 
-        # then we create the actual policy object and return the policy
-        policy = Policy.objects.create(
-            policy_holder=policy_holder,
-            product=product,
-            coverage=coverage,
-            premium=payment_information["premium_amount"],
-            effective_from=datetime.now(),
-            effective_through=datetime.strptime(
-                activation_details["policy_duration"], "%Y-%m-%d"
-            ),
-            merchant_id=merchant,
-            provider_id=provider,
-            renewable=activation_details["renew"],
-            inspection_required=False,
-            certification_required=False,
-        )
-        return policy
+    def validate(self, attrs):
+        # validate merchant code
+        VALID_MERCHANT_CODE_LENGTH = 8
+        if len(attrs.get("merchant_code")) != VALID_MERCHANT_CODE_LENGTH:
+            raise ValidationError("Invalid merchant code. Must be 7 characters long")
+        return attrs
 
 
 class PolicyCancellationRequestSerializer(serializers.Serializer):
@@ -510,24 +556,24 @@ class PolicyCancellationRequestSerializer(serializers.Serializer):
     policy_number = serializers.CharField(max_length=255, required=False)
     cancellation_reason = serializers.CharField(max_length=500)
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validates a policy exist wth the given policy ID or policy reference number"""
-        if not data.get("policy_id") and not data.get("policy_number"):
+        if not attrs.get("policy_id") and not attrs.get("policy_number"):
             raise ValidationError("Either policy_id or policy_number must be provided.")
 
-        if data.get("policy_id"):
+        if attrs.get("policy_id"):
             if not Policy.objects.filter(
-                policy_id=data["policy_id"], status="active"
+                policy_id=attrs["policy_id"], status="active"
             ).exists():
                 raise ValidationError("Policy not found or already cancelled.")
 
-        if data.get("policy_number"):
+        if attrs.get("policy_number"):
             if not Policy.objects.filter(
-                policy_number=data["policy_number"], status="active"
+                policy_number=attrs["policy_number"], status="active"
             ).exists():
                 raise ValidationError("Policy not found or already cancelled.")
 
-        return data
+        return attrs
 
 
 class PolicyCancellationSerializer(serializers.ModelSerializer):

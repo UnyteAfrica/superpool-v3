@@ -1,49 +1,83 @@
+from abc import abstractmethod, ABC
 from api.notifications.base import INotification
 from django.conf import settings
 from django.core.mail import send_mail
+from typing import Any, Dict
+import logging
+from .constants import ACTION_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 
-class EmailNotification(INotification):
+class NotificationChannel(ABC):
+    """
+    Interface for notification channels.
+    """
+
+    @abstractmethod
+    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
+        """
+        Prepare the message for the recipient.
+        """
+        pass
+
+    @abstractmethod
+    def send(self, recipient: str, subject: str, message: str) -> None:
+        """
+        Send the message to the recipient.
+        """
+        pass
+
+
+class EmailNotification(NotificationChannel):
     """
     Email Notification service
     """
 
-    @staticmethod
-    def send_message(subject: str, message: str, recipient: str) -> None:
+    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
+        message = ACTION_REGISTRY.get(action, {}).get(recipient, {})
+        if not message:
+            logger.error(f"Action {action} is not supported")
+            return {}
+        return message
+
+    def send(self, recipient: str, subject: str, message: str) -> None:
         """
-        Sends a message to a recipient via Email
+        Send the email message to the recipient
         """
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [recipient],
+        print(
+            f"Sending email to {recipient} with subject: {subject} and message: {message}"
         )
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [recipient],
+                fail_silently=False,
+            )
+            logger.info(f"Email sent to {recipient} with subject: {subject}")
+        except Exception as e:
+            print(f"Failed to send email to {recipient}")
+            logger.error(f"An error occurred while sending message: \n{e}")
 
 
-class SMSNotification(INotification):
+class SMSNotification(NotificationChannel):
     """
     SMS Notification service
     """
 
-    @staticmethod
-    def send_message(subject: str, message: str, recipient: str) -> None:
+    def send(self, recipient: str, subject: str, message: str) -> None:
         """
-        Sends a message to a recipient via SMS
+        Send the SMS message to the recipient
         """
-        # TODO: In future, we can implement the SMS service
+        print(
+            f"Sending SMS to {recipient} with subject: {subject} and message: {message}"
+        )
         pass
 
 
-class WhatsAppNotification(INotification):
+class WhatsAppNotification(NotificationChannel):
     """
     WhatsApp Notification service
     """
-
-    @staticmethod
-    def send_message(message: str, recipient: str) -> None:
-        """
-        Sends a message to a recipient via Whatsapp
-        """
-        # TODO: In future, we can implement the WhatsApp APIs
-        pass
