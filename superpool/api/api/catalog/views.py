@@ -794,11 +794,37 @@ class PolicyPurchaseView(generics.GenericAPIView):
     @extend_schema(
         summary="Purchase a policy",
         description="Purchase a new policy for your customer",
-        request=OpenApiRequest(),
+        request=OpenApiRequest(
+            request=PolicyPurchaseSerializer,
+            examples=[],
+        ),
         responses={
-            201: OpenApiResponse(),
-            400: OpenApiResponse(),
-            500: OpenApiResponse(),
+            201: OpenApiResponse(
+                description="Policy purchase successful",
+                response=PolicyPurchaseResponseSerializer,
+                examples=[],
+            ),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Bad Request Example",
+                        value={
+                            "error": "Bad Request",
+                            "detail": "Invalid request data",
+                        },
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+                examples=[
+                    OpenApiExample(
+                        "Internal Server Error Example",
+                        value={"error": "Internal Server Error"},
+                    )
+                ],
+            ),
         },
     )
     def post(self, request, *args, **kwargs):
