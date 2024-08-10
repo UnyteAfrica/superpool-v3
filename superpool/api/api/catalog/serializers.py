@@ -114,7 +114,7 @@ class CustomerDetailsSerializer(serializers.Serializer):
     """
 
     first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100, required=False)
+    last_name = serializers.CharField(max_length=100)
     customer_email = serializers.EmailField()
     customer_phone = serializers.CharField(max_length=20, required=False)
     customer_address = serializers.CharField()
@@ -124,6 +124,14 @@ class CustomerDetailsSerializer(serializers.Serializer):
     customer_gender = serializers.ChoiceField(
         choices=[("M", "Male"), ("F", "Female")], required=False
     )
+
+    def validate_customer_date_of_birth(self, value):
+        """Ensures that the date of birth is valid (not in the future)"""
+        today = datetime.now().date()
+
+        if value >= today:
+            raise ValidationError("Date of birth must be in the past.")
+        return value
 
 
 class BaseQuoteRequestSerializer(serializers.Serializer):
@@ -385,8 +393,23 @@ class QuoteRequestSerializer(serializers.Serializer):
 
 
 class ProductMetadataSerializer(serializers.Serializer):
-    product_name = serializers.CharField(max_length=255, required=False)
-    product_type = serializers.CharField(max_length=50)
+    HEALTH = "health"
+    AUTO = "auto"
+    TRAVEL = "travel"
+    PERSONAL_ACCIDENT = "personal_accident"
+    HOME = "home"
+    GADGET = "gadget"
+
+    VALID_PRODUCT_TYPES = [
+        HEALTH,
+        AUTO,
+        TRAVEL,
+        PERSONAL_ACCIDENT,
+        HOME,
+        GADGET,
+    ]
+    product_type = serializers.ChoiceField(choices=VALID_PRODUCT_TYPES)
+    product_name = serializers.CharField(max_length=100, required=False)
     insurer = serializers.CharField(max_length=100, required=False)
 
 
@@ -395,10 +418,26 @@ class PaymentInformationSerializer(serializers.Serializer):
     payment_status = serializers.CharField(max_length=50)
     premium_amount = serializers.DecimalField(max_digits=10, decimal_places=2)
 
+    def validate(self, attrs):
+        VALID_PAYMENT_METHODS = [
+            "credit_card",
+            "debit_card",
+            "bank_transfer",
+            "cash",
+        ]
+        VALID_PAYMENT_STATUS = ["completed", "pending", "failed"]
+
+        if attrs.get("payment_method") not in VALID_PAYMENT_METHODS:
+            raise ValidationError("Invalid payment method.")
+
+        if attrs.get("payment_status") not in VALID_PAYMENT_STATUS:
+            raise ValidationError("Invalid payment status")
+        return attrs
+
 
 class ActivationMetadataSerializer(serializers.Serializer):
     policy_expiry_date = serializers.DateField(input_formats=["%Y-%m-%d"])
-    renew = serializers.BooleanField()
+    renew = serializers.BooleanField(default=False, required=False)
 
     def validate_policy_expiry_date(
         self, value: Union[str, date]
@@ -450,12 +489,20 @@ class PolicyPurchaseSerializer(serializers.Serializer):
             )
         return value
 
-    def create(self, validated_data):
-        """
-        Creates and save the policy in the database
-        """
-        logger.debug(f"Validated data: {validated_data}")
-        PolicyService.purchase_policy(validated_data)
+    def validate_quote_code(self, value):
+        if not value.startswith("Q"):
+            raise ValidationError("Invalid quote code. Must start with 'Q'")
+
+        if not value:
+            raise ValidationError("Quote code must be provided.")
+        return value
+
+    def validate(self, attrs):
+        # validate merchant code
+        VALID_MERCHANT_CODE_LENGTH = 8
+        if len(attrs.get("merchant_code")) != VALID_MERCHANT_CODE_LENGTH:
+            raise ValidationError("Invalid merchant code. Must be 7 characters long")
+        return attrs
 
 
 class PolicyCancellationRequestSerializer(serializers.Serializer):
@@ -467,24 +514,24 @@ class PolicyCancellationRequestSerializer(serializers.Serializer):
     policy_number = serializers.CharField(max_length=255, required=False)
     cancellation_reason = serializers.CharField(max_length=500)
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Validates a policy exist wth the given policy ID or policy reference number"""
-        if not data.get("policy_id") and not data.get("policy_number"):
+        if not attrs.get("policy_id") and not attrs.get("policy_number"):
             raise ValidationError("Either policy_id or policy_number must be provided.")
 
-        if data.get("policy_id"):
+        if attrs.get("policy_id"):
             if not Policy.objects.filter(
-                policy_id=data["policy_id"], status="active"
+                policy_id=attrs["policy_id"], status="active"
             ).exists():
                 raise ValidationError("Policy not found or already cancelled.")
 
-        if data.get("policy_number"):
+        if attrs.get("policy_number"):
             if not Policy.objects.filter(
-                policy_number=data["policy_number"], status="active"
+                policy_number=attrs["policy_number"], status="active"
             ).exists():
                 raise ValidationError("Policy not found or already cancelled.")
 
-        return data
+        return attrs
 
 
 class PolicyCancellationSerializer(serializers.ModelSerializer):
