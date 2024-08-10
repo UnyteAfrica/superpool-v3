@@ -52,6 +52,7 @@ class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
     renewal_information = serializers.SerializerMethodField()
     insurer = serializers.CharField(source="provider_id.name")
     product_information = serializers.SerializerMethodField()
+    policy_status = serializers.CharField(source="status")
 
     class Meta:
         model = Policy
