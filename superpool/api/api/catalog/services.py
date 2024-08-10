@@ -233,6 +233,7 @@ class PolicyService:
             # next, we want to process merhant and customer information
             customer = PolicyService._create_or_retrieve_customer(customer_metadata)
             merchant = PolicyService._get_merchant(validated_data["merchant_code"])
+
             insurer_id = quote_data["product"]["provider"]
             insurer = get_object_or_404(InsurancePartner, id=insurer_id)
 
@@ -324,7 +325,11 @@ class PolicyService:
 
         try:
             merchant = Merchant.objects.get(short_code=merchant_code)
+            logger.info(f"Merchant found: {merchant}")
         except Merchant.DoesNotExist:
+            logger.error(
+                f"Merchant with the provided short code {merchant_code} not found"
+            )
             raise ValidationError(
                 f'Merchant with the provided short code "{merchant_code}" not found'
             )
