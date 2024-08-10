@@ -204,3 +204,62 @@ products_response_example = OpenApiExample(
         },
     ],
 )
+
+
+# POLICIES EXAMPLE
+insurance_policy_purchase_req_example = OpenApiExample(
+    name="Policy Request Example",
+    value={
+        "quote_code": "QH001",
+        "customer_metadata": {
+            "customer_email": "test@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "customer_phone": "1234567890",
+            "customer_address": "123 Elm St",
+            "customer_date_of_birth": "1980-01-01",
+            "customer_gender": "M",
+        },
+        "product_metadata": {
+            "product_name": "Health Insurance",
+            "product_type": "Basic",
+            "insurer": "NEM",
+        },
+        "payment_metadata": {
+            "payment_method": "credit_card",
+            "payment_status": "completed",
+            "premium_amount": 1000.00,
+        },
+        "activation_metadata": {"policy_expiry_date": "2024-08-06", "renew": True},
+        "agreement": False,
+        "confirmation": False,
+        "merchant_code": "MERCHANT123",
+    },
+)
+
+insurance_policy_purchase_res_example = OpenApiExample(
+    name="Successful policy purchase example",
+    value={
+        "policy_id": "ba4fc272-5591-4812-9f36-48c3ffb27a69",
+        "policy_reference_number": "EXAMPLE-POLICY-NUMBER",
+        "effective_from": "2022-08-10",
+        "effective_through": "2024-12-11",
+        "premium": "10000.00",
+        "insurer": "AXA",
+        "policy_status": "active",
+        "product_information": {
+            "product_name": "Home Insurance",
+            "product_type": "Home",
+            "product_description": "Home",
+        },
+        "customer_information": {
+            "customer_name": "John Doe",
+            "customer_email": "john.doestar@email.com",
+            "customer_phone": "1234567890",
+            "customer_address": "123 Main St, Springfield, IL",
+        },
+        "renewal_information": {
+            "renewable": False,
+        },
+    },
+)
