@@ -19,6 +19,7 @@ def generate_decimal():
 class PartnerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Partner
+        django_get_or_create = ("name",)
 
     name = fake.company()
     support_email = fake.company_email()
@@ -30,9 +31,8 @@ class ProductFactory(factory.django.DjangoModelFactory):
         model = Product
 
     name = fake.company()  # Use a company name for product name
-    product_type = factory.Iterator(["Life", "Health", "Auto", "Gadget", "Travel"])
-    coverage_details = fake.paragraph()  # Use a paragraph for coverage details
-    base_price = fake.random_number(digits=5)  # Adjust as needed
+    product_type = factory.Iterator(["life", "health", "auto", "gadget", "travel"])
+    coverage_details = fake.paragraph()
     provider = factory.SubFactory(PartnerFactory)
 
 
