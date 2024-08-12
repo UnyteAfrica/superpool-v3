@@ -139,7 +139,12 @@ class PolicyService:
             ]
             policy.save(update_fields=update_fields)
 
-            PolicyNotificationService.notify_merchant("renew_policy", policy)
+            try:
+                PolicyNotificationService.notify_merchant("renew_policy", policy)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"An error occured while attempting to send notification for policy renewal: {str(exc)}"
+                )
 
         except Policy.DoesNotExist:
             raise ValueError("Policy not found")
