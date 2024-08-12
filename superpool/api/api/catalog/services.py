@@ -95,7 +95,6 @@ class PolicyService:
         policy_number: str | None = None,
         policy_start_date=None,
         policy_expiry_date=None,
-        next_renewal_date=None,
         include_additional_coverage=False,
         modify_exisitng_coverage=False,
         coverage_details: dict | None = None,
@@ -111,8 +110,6 @@ class PolicyService:
                 policy = Policy.objects.get(policy_id=policy_id)
             elif policy_number:
                 policy = Policy.objects.get(policy_number=policy_number)
-            else:
-                raise ValueError("Either policy_id or policy_number must be provided.")
 
             if policy.status != "active":
                 policy.status = "active"
@@ -121,8 +118,7 @@ class PolicyService:
                 policy.effective_from = policy_start_date
             if policy_expiry_date:
                 policy.effective_through = policy_expiry_date
-            if next_renewal_date:
-                policy.renewal_date = next_renewal_date
+            policy.renewal_date = policy_expiry_date + timedelta(days=1)
 
             if include_additional_coverage:
                 # TODO: Implement this later
