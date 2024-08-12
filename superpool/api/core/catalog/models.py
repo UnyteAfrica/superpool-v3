@@ -82,7 +82,15 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     Insurance policy purchased by a user
     """
 
-    POLICY_STATUS = (("accepted", _("Accepted")), ("cancelled", _("Cancelled")))
+    ACCEPTED = "accepted"
+    CANCELLED = "cancelled"
+    ACTIVE = "active"
+
+    POLICY_STATUS = (
+        (ACCEPTED, "Accepted"),
+        (CANCELLED, "Cancelled"),
+        (ACTIVE, "Active"),
+    )
     """ Describes the current status of the policy """
 
     policy_id = models.UUIDField(
@@ -152,7 +160,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     status = models.CharField(
         max_length=20,
         choices=POLICY_STATUS,
-        default="active",
+        default=ACTIVE,
         help_text="Current status of the policy",
     )
     cancellation_initiator = models.CharField(
