@@ -13,6 +13,7 @@ from core.catalog.models import Policy, Product, Quote
 from core.merchants.models import Merchant
 from core.user.models import Customer
 from django.core.mail import send_mail
+from django.utils import timezone
 from django.db import models
 from django.db.models import Q, QuerySet
 from rest_framework.serializers import ValidationError
@@ -164,48 +165,61 @@ class PolicyService:
         ).select_related("product", "provider_id")
 
     @staticmethod
-    def cancel_policy(policy_identifier: str, reason: str) -> dict | Exception:
+    def get_policy(policy_id=None, policy_number=None):
+        try:
+            if policy_id:
+                return Policy.objects.get(policy_id=policy_id)
+            elif policy_number:
+                return Policy.objects.get(policy_number=policy_number)
+            else:
+                raise ValueError("Either policy_id or policy_number must be provided.")
+        except ObjectDoesNotExist:
+            raise ValueError("Policy not found.")
+
+    @staticmethod
+    def cancel_policy(
+        policy_id: str | None = None,
+        policy_number: str | None = None,
+        reason: str | None = None,
+        cancellation_date=None,
+    ):
         """
         Initiate a cancellation request using the given policy data
 
         Policy cancellation can be initiated either using the policy reference number or the assigned
         policy ID.
-
-        Returns:
-
-            PolicyCancellationResponseSerializer (dict) a formatted response object in form of a python dictionary
-
-            OR
-
-            Exception an error message indicating failure of opertion
         """
         from api.notifications.services import PolicyNotificationService
+        from django.db import transaction
 
-        # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
-        # with the provided information, and return it back to the merchant
-        try:
-            policy = Policy.objects.get(policy_id=policy_identifier)
+        policy = Policy.objects.get(policy_id=policy_id)
 
-            policy.status = "cancelled"
+        if policy_id:
+            policy = Policy.objects.get(policy_id=policy_id)
+        elif policy_number:
+            policy = Policy.objects.get(policy_number=policy_number)
+        else:
+            raise ValueError("Either policy_id or policy_number must be provided.")
+
+        with transaction.atomic():
+            policy.status = policy.CANCELLED
             policy.cancellation_reason = reason
-            policy.cancellation_date = datetime.now()
-            policy.save()
+            policy.cancellation_date = cancellation_date or timezone.now()
+
+            # set the cancellation initiator to the merchant
+            policy.cancellation_initiator = policy.merchant.name
+
+            policy.save(
+                update_fields=["status", "cancellation_reason", "cancellation_date"]
+            )
 
             # send notification emails to stakeholders - in this case, our merchant  and their customer
-            PolicyNotificationService.notify_merchant("cancel_policy", policy)
-            PolicyNotificationService.notify_customer("cancel_policy", policy)
-
-            return {
-                "message": "Policy cancelled successfully.",
-                "status": policy.status,
-                "policy_id": policy.policy_id,
-                "cancellation_reason": policy.cancellation_reason,
-                "cancellation_date": policy.cancellation_date,
-            }
-        except Policy.DoesNotExist:
-            raise Exception("Policy not found")
-        except Exception as exc:
-            raise Exception(f"An error occured during policy cancellation: {str(exc)}")
+            try:
+                PolicyNotificationService.notify_merchant("cancel_policy", policy)
+            except Exception as mail_exc:
+                raise Exception(
+                    "An error occured while initiating notification to merchant"
+                ) from mail_exc
 
     @staticmethod
     def purchase_policy(validated_data: dict) -> Policy:

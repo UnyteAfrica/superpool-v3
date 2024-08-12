@@ -289,3 +289,28 @@ full_policy_renewal_example = OpenApiExample(
         "auto_renew": False,
     },
 )
+
+policy_cancellation_request_example = OpenApiExample(
+    "Policy Cancellation Example",
+    value={
+        "policy_id": "d5c36562-b86f-4e97-8288-8c6cb2da35ef",
+        "policy_number": "INS-2023-00001",
+        "cancellation_reason": "No longer interested in the policy",
+    },
+)
+
+policy_cancellation_request_example_2 = OpenApiExample(
+    "Policy Cancellation Example 2",
+    value={
+        "policy_id": "d5c36562-b86f-4e97-8288-8c6cb2da35ef",
+        "policy_number": "INS-2023-00001",
+        "cancellation_reason": "I found a better policy elsewhere",
+        "alternative_offerings": {
+            "alternative_policy": "INS-2023-00002",
+            "alternative_policy_name": "Comprehensive Health Insurance",
+            "alternative_policy_premium": 1500.00,
+            "alternative_policy_provider": "AXA",
+        },
+        "merchant_feedback": "The customer found a better policy elsewhere. So we are cancelling this policy",
+    },
+)
