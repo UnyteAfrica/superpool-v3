@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
+from api.notifications.base import NotificationService
 from core.providers.models import Provider as InsurancePartner
 
 from rest_framework.generics import get_object_or_404
@@ -89,25 +90,62 @@ class PolicyService:
         return policy_id or policy_number
 
     @staticmethod
-    def renew_policy(policy: Policy, expiry_date: datetime) -> Policy:
+    def renew_policy(
+        policy_id: str | None = None,
+        policy_number: str | None = None,
+        policy_start_date=None,
+        policy_expiry_date=None,
+        include_additional_coverage=False,
+        modify_exisitng_coverage=False,
+        coverage_details: dict | None = None,
+        auto_renew=False,
+    ):
         """
         Renews a policy using the given policy data
         """
         from api.notifications.services import PolicyNotificationService
 
-        # In production, We want to update the status of a policy in our db, consequently sending an api call to the insurer
-        # with the provided information, and return it back to the merchant
-        policy.effective_through = expiry_date
-        policy.save()
+        try:
+            if policy_id:
+                policy = Policy.objects.get(policy_id=policy_id)
+            elif policy_number:
+                policy = Policy.objects.get(policy_number=policy_number)
 
-        # send notification emails to stakeholders - in this case, our merchant  and their customer
-        PolicyNotificationService.notify_merchant("renew_policy", policy)
-        PolicyNotificationService.notify_customer("renew_policy", policy)
+            if policy.status != "active":
+                policy.status = "active"
 
-        # Trigger background task to renew policy with the insurer and set the policy status to renewed
-        # Once policy is renewed, notify the merchant of a status update and notify the merchant of the renewal
+            if policy_start_date:
+                policy.effective_from = policy_start_date
+            if policy_expiry_date:
+                policy.effective_through = policy_expiry_date
+            policy.renewal_date = policy_expiry_date + timedelta(days=1)
 
-        return policy
+            if include_additional_coverage:
+                # TODO: Implement this later
+                raise NotImplementedError
+            if modify_exisitng_coverage:
+                # TODO: implement this later
+                raise NotImplementedError
+
+            update_fields = [
+                "status",
+                "effective_from",
+                "effective_through",
+                "renewal_date",
+            ]
+            policy.save(update_fields=update_fields)
+
+            try:
+                PolicyNotificationService.notify_merchant("renew_policy", policy)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"An error occured while attempting to send notification for policy renewal: {str(exc)}"
+                )
+
+        except Policy.DoesNotExist:
+            raise ValueError("Policy not found")
+        except Exception as exc:
+            raise RuntimeError(f"An error occured: {str(exc)}")
 
     @staticmethod
     def list_policies() -> QuerySet:

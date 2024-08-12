@@ -2,6 +2,7 @@ import logging
 from uuid import uuid4
 import uuid
 from .openapi import products_response_example
+from datetime import datetime, timedelta
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -36,6 +37,8 @@ from .openapi import (
     auto_insurance_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
+    limited_policy_renewal_example,
+    full_policy_renewal_example,
 )
 
 from .exceptions import ProductNotFoundError
@@ -236,8 +239,12 @@ class PolicyAPIViewSet(
     queryset = PolicyService.list_policies()
 
     def get_serializer_class(self):
-        if self.action == "create":
-            return PolicyPurchaseSerializer
+        if self.action == "renew":
+            return PolicyRenewalRequestSerializer
+        elif self.action == "update_policy":
+            return PolicySerializer
+        elif self.action == "search":
+            return PolicySerializer
         return PolicySerializer
 
     def get_service(self):
@@ -245,7 +252,13 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Renew a policy",
-        request=PolicyRenewalRequestSerializer,
+        request=OpenApiRequest(
+            request=PolicyRenewalRequestSerializer,
+            examples=[
+                limited_policy_renewal_example,
+                full_policy_renewal_example,
+            ],
+        ),
         responses={
             200: OpenApiResponse(
                 description="Insurance Policy Renewal successful",
@@ -318,55 +331,58 @@ class PolicyAPIViewSet(
         This action allows you as a merchant to submit a renewal
         request for your customer
         """
-        policy_id = request.data.get("policy_id")
-        policy_number = request.data.get("policy_number")
-
-        if not policy_number or not policy_id:
-            return Response(
-                {
-                    "error": "An error occured, please provide the Policy Refrence Number or the Policy unique's iD"
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = PolicyRenewalRequestSerializer(data=request.data)
+        policy_service = self.get_service()
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            data = serializer.validated_data
-            policy_identifier = data.get("policy_identifier")
-
             try:
-                policy = Policy.objects.get(
-                    Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier)
+                validated_data = serializer.validated_data
+                policy_service.renew_policy(
+                    policy_id=validated_data.get("policy_id"),
+                    policy_number=validated_data.get("policy_number"),
+                    policy_start_date=validated_data.get("preferred_policy_start_date"),
+                    policy_expiry_date=validated_data.get("preferred_policy_start_date")
+                    + timedelta(days=validated_data.get("policy_duration", 0)),
+                    include_additional_coverage=validated_data.get(
+                        "include_additional_coverage"
+                    ),
+                    modify_exisitng_coverage=validated_data.get(
+                        "modify_exisitng_coverage"
+                    ),
+                    coverage_details=validated_data.get("coverage_details"),
+                    auto_renew=validated_data.get("auto_renew"),
                 )
-                renewed_policy = PolicyService.renew_policy(
-                    policy, data.get("policy_end_date")
-                )
-                response_serializer = PolicyRenewalSerializer(renewed_policy)
                 response_data = {
                     "renewal_status": "success",
-                    "message": "Policy Renewal successful",
-                    "data": response_serializer.data,
+                    "message": "Policy successfully renewed!",
                 }
                 return Response(response_data, status=status.HTTP_200_OK)
-            except Policy.DoesNotExist:
-                response_data = {
-                    "renewal_status": "failed",
-                    "error": "Policy not found",
-                }
-                return Response(response_data, status=status.HTTP_404_NOT_FOUND)
-            except Exception as exc:
-                response_data = {
-                    "renewal_status": "failed",
-                    "error": str(exc),
-                }
+            except ValueError as e:
                 return Response(
-                    response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    {"renewal_status": "failed", "error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-
-        response_data = {
-            "renewal_status": "failed",
-            "error": serializer.errors,
-        }
+            except NotImplementedError as e:
+                ERR_CODE = "ERR_NOT_IMPLEMENTED"
+                ERR_MESSAGE = (
+                    "We are aware of this error, and are actively working on this feature. Please check back later."
+                    "If you have any questions, please contact us at tech@unyte.com"
+                    "As an alternative, we have provided a workaround for you to use."
+                    "Please review the examples and try sending the payload in the other format."
+                    "Thank you for your understanding."
+                )
+                return Response(
+                    {
+                        "renewal_status": "failed",
+                        "err_code": ERR_CODE,
+                        "error_detail": ERR_MESSAGE,
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except RuntimeError as e:
+                return Response(
+                    {"renewal_status": "failed", "error": str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
@@ -525,13 +541,6 @@ class QuoteDetailView(views.APIView):
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
-        # parameters=[
-        #     OpenApiParameter(
-        #         name="quote_code",
-        #         description="Unique code assigned to the quote",
-        #         required=True,
-        #     )
-        # ],
         responses={
             200: OpenApiResponse(
                 description="Quote details",
