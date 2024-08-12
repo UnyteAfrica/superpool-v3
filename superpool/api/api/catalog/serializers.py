@@ -579,14 +579,24 @@ class PolicyCancellationRequestSerializer(serializers.Serializer):
                 "Only one of Policy ID or Policy Number must be provided in a request"
             )
         if policy_id and not Policy.objects.filter(policy_id=policy_id).exists():
-            raise ValidationError("Policy not found or already cancelled.")
+            raise ValidationError("Policy not found")
 
         if (
             policy_number
             and not Policy.objects.filter(policy_number=policy_number).exists()
         ):
-            raise ValidationError("Policy not found or already cancelled.")
+            raise ValidationError("Policy not found")
 
+        # check if a policy had been previously cancelled, YOU CAN'T CANCEL AN ALREADY CANCELLED POLICY
+        if policy_id or policy_number:
+            filters = {}
+            if policy_id:
+                filters["policy_id"] = policy_id
+            if policy_number:
+                filters["policy_number"] = policy_number
+
+            if Policy.objects.filter(**filters, status="cancelled").exists():
+                raise ValidationError("Policy has already been cancelled")
         return attrs
 
 

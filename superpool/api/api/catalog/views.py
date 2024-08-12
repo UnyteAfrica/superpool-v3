@@ -39,6 +39,8 @@ from .openapi import (
     insurance_policy_purchase_res_example,
     limited_policy_renewal_example,
     full_policy_renewal_example,
+    policy_cancellation_request_example,
+    policy_cancellation_request_example_2,
 )
 
 from .exceptions import ProductNotFoundError
@@ -893,8 +895,43 @@ class PolicyCancellationView(generics.GenericAPIView):
             ),
         ],
         description="Cancel an active policy subscription using the policy id or the policy number provided by the insurer",
-        request=PolicyCancellationRequestSerializer,
-        responses={200: PolicyCancellationResponseSerializer, 400: {"error": "string"}},
+        request=OpenApiRequest(
+            request=PolicyCancellationRequestSerializer,
+            examples=[
+                policy_cancellation_request_example,
+                policy_cancellation_request_example_2,
+            ],
+        ),
+        responses={
+            200: OpenApiResponse(
+                description="Policy cancellation successful",
+                response={
+                    "cancellaton_status": "string",
+                    "message": "string",
+                },
+                examples=[
+                    OpenApiExample(
+                        "Policy Cancellation Success Example",
+                        value={
+                            "cancellaton_status": "success",
+                            "message": "Policy has been successfully cancelled",
+                        },
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Bad Request Example",
+                        value={
+                            "error": "Bad Request",
+                            "detail": "Invalid request data",
+                        },
+                    )
+                ],
+            ),
+        },
     )
     def post(self, request):
         """
@@ -904,12 +941,16 @@ class PolicyCancellationView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             validated_data = serializer.validated_data
-            print(f"Validated data: {validated_data}")
+
+            policy_id = validated_data.get("policy_id")
+            policy_number = validated_data.get("policy_number")
+            cancellation_reason = validated_data.get("cancellation_reason")
+
             try:
                 service.cancel_policy(
-                    policy_id=validated_data["policy_id"],
-                    policy_number=validated_data["policy_number"],
-                    reason=validated_data["cancellation_reason"],
+                    policy_id=policy_id,
+                    policy_number=policy_number,
+                    reason=cancellation_reason,
                 )
 
                 response_data = {
