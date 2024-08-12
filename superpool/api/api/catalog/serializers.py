@@ -614,9 +614,6 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
     policy_number = serializers.CharField(required=False)
     preferred_policy_start_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     policy_duration = serializers.IntegerField(min_value=1, max_value=365)
-    next_renewal_date = serializers.DateField(
-        input_formats=["%Y-%m-%d"], read_only=True, required=False
-    )
     include_additional_coverage = serializers.BooleanField(default=False)
     modify_exisitng_coverage = serializers.BooleanField(default=False)
     coverage_details = serializers.JSONField(required=False)
@@ -624,28 +621,35 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         # validate only one of Policy ID or Policy Number can be present in a given request
-        if attrs.get("policy_id") and attrs.get("policy_number"):
+        policy_id = attrs.get("policy_id")
+        policy_number = attrs.get("policy_number")
+        preferred_policy_start_date = attrs.get("preferred_policy_start_date")
+
+        if policy_id and policy_number:
             raise ValidationError(
                 "Only one of Policy ID or Policy Number must be provided in a request"
             )
 
         # validate a policy is renewable
-        if attrs.get("policy_id"):
-            try:
+        try:
+            if policy_id:
                 policy = Policy.objects.get(policy_id=attrs["policy_id"])
-            except Policy.DoesNotExist:
-                raise ValidationError("Policy not found with the provided policy ID")
-            if not policy.renewable:
-                raise ValidationError("Policy is not renewable")
-        elif attrs.get("policy_number"):
-            try:
-                policy = Policy.objects.get(policy_number=attrs["policy_number"])
-            except Policy.DoesNotExist:
-                raise ValidationError(
-                    "Policy not found with the provided policy number"
-                )
-            if not policy.renewable:
-                raise ValidationError("Policy is not renewable")
+            if policy_number:
+                policy = Policy.objects.get(policy_id=attrs["policy_id"])
+        except Policy.DoesNotExist:
+            raise ValidationError("Policy not found with the provided policy ID")
+        if not policy.renewable:
+            raise ValidationError("Policy is not renewable")
+
+        # guard against un-nessary renewal in as much policy is active within effective date
+        now = datetime.now().date()
+        if (
+            policy.status == "active"
+            and policy.effective_from <= now <= policy.effective_through
+        ):
+            raise ValidationError(
+                "Policy is currently active and within its valid effective period. Renewal is not needed."
+            )
 
         # merchant can choose to modify coverage based on customer preferance or
         # include additional coverage as part of the renewal
@@ -666,15 +670,34 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
                     "Coverage details must be provided when modifying or including additional coverage"
                 )
 
+        # additional security layer!
+        # supplmentary to
+        # you can't set current preferred policy start date is < than that previously on the db
+        preferred_policy_start_date = attrs.get("preferred_policy_start_date")
+        if preferred_policy_start_date:
+            if (
+                policy.effective_through
+                and preferred_policy_start_date <= policy.effective_through
+            ):
+                raise ValidationError(
+                    "Preferred start date must be after the current policy's effective end date."
+                )
+            if (
+                policy.effective_from
+                and preferred_policy_start_date <= policy.effective_from
+            ):
+                raise ValidationError(
+                    "Preferred start date must be after the current policy's effective start date."
+                )
         return attrs
 
-    def validate_preferred_renewal_date(self, value):
-        """Ensures that the preferred renewal date is valid (not in the past)"""
+    def validate_preferred_policy_start_date(self, value):
+        """Ensures that the preferred start date is valid (not in the past)"""
         today = datetime.now().date()
 
         # check the preferred renewal date is in the future
         if value <= today:
-            raise ValidationError("Preferred renewal date must be in the future.")
+            raise ValidationError("Preferred start date must be in the future.")
 
         # TODO: check the preffered renewal date is whithin the renewal window
         return value
@@ -728,6 +751,7 @@ class PolicyRenewalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Policy
         fields = [
+            "policy_id",
             "policy_number",
             "policy_duration",
             "policy_metadata",
