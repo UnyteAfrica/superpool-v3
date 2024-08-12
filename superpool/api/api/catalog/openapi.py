@@ -263,3 +263,29 @@ insurance_policy_purchase_res_example = OpenApiExample(
         },
     },
 )
+
+limited_policy_renewal_example = OpenApiExample(
+    "Policy Renewal Example",
+    value={
+        "policy_id": "ba4fc272-5591-4812-9f36-48c3ffb27a69",
+        "preferred_policy_start_date": "2025-02-02",
+        "policy_duration": 180,
+    },
+)
+full_policy_renewal_example = OpenApiExample(
+    "Detailed Policy Renewal Example",
+    value={
+        "policy_id": "d5c36562-b86f-4e97-8288-8c6cb2da35ef",
+        "policy_number": "INS-2023-00001",
+        "preferred_policy_start_date": "2024-01-01",
+        "policy_duration": 180,
+        "include_additional_coverage": True,
+        "modify_exisitng_coverage": True,
+        "coverage_details": {
+            "coverage_type": "Extended Health Coverage",
+            "additional_amount": 5000,
+            "covered_items": ["Dental", "Vision", "Physiotherapy"],
+        },
+        "auto_renew": False,
+    },
+)
