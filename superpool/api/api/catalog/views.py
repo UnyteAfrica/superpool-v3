@@ -37,6 +37,8 @@ from .openapi import (
     auto_insurance_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
+    limited_policy_renewal_example,
+    full_policy_renewal_example,
 )
 
 from .exceptions import ProductNotFoundError
@@ -250,7 +252,13 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Renew a policy",
-        request=PolicyRenewalRequestSerializer,
+        request=OpenApiRequest(
+            request=PolicyRenewalRequestSerializer,
+            examples=[
+                limited_policy_renewal_example,
+                full_policy_renewal_example,
+            ],
+        ),
         responses={
             200: OpenApiResponse(
                 description="Insurance Policy Renewal successful",
@@ -352,6 +360,23 @@ class PolicyAPIViewSet(
                 return Response(
                     {"renewal_status": "failed", "error": str(e)},
                     status=status.HTTP_400_BAD_REQUEST,
+                )
+            except NotImplementedError as e:
+                ERR_CODE = "ERR_NOT_IMPLEMENTED"
+                ERR_MESSAGE = (
+                    "We are aware of this error, and are actively working on this feature. Please check back later."
+                    "If you have any questions, please contact us at tech@unyte.com"
+                    "As an alternative, we have provided a workaround for you to use."
+                    "Please review the examples and try sending the payload in the other format."
+                    "Thank you for your understanding."
+                )
+                return Response(
+                    {
+                        "renewal_status": "failed",
+                        "err_code": ERR_CODE,
+                        "error_detail": ERR_MESSAGE,
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
                 )
             except RuntimeError as e:
                 return Response(
