@@ -192,11 +192,14 @@ class PolicyService:
         from api.notifications.services import PolicyNotificationService
         from django.db import transaction
 
-        policy = PolicyService.get_policy(
-            policy_id=policy_id, policy_number=policy_number
-        )
-        if not policy:
-            raise ValueError("Policy must be retrieved before cancellation.")
+        policy = Policy.objects.get(policy_id=policy_id)
+
+        if policy_id:
+            policy = Policy.objects.get(policy_id=policy_id)
+        elif policy_number:
+            policy = Policy.objects.get(policy_number=policy_number)
+        else:
+            raise ValueError("Either policy_id or policy_number must be provided.")
 
         with transaction.atomic():
             policy.status = policy.CANCELLED
@@ -204,7 +207,7 @@ class PolicyService:
             policy.cancellation_date = cancellation_date or timezone.now()
 
             # set the cancellation initiator to the merchant
-            policy.cancellation_initiator = policy.merchant
+            policy.cancellation_initiator = policy.merchant.name
 
             policy.save(
                 update_fields=["status", "cancellation_reason", "cancellation_date"]
