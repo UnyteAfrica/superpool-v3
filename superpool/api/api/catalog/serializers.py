@@ -611,37 +611,72 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
     """
 
     policy_id = serializers.UUIDField(required=False)
-    policy_number = serializers.CharField(max_length=255, required=False)
-    policy_end_date = serializers.DateField()
-    auto_renew = serializers.BooleanField(required=False)
+    policy_number = serializers.CharField(required=False)
+    preferred_policy_start_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    policy_duration = serializers.IntegerField(min_value=1, max_value=365)
+    next_renewal_date = serializers.DateField(
+        input_formats=["%Y-%m-%d"], read_only=True, required=False
+    )
+    include_additional_coverage = serializers.BooleanField(default=False)
+    modify_exisitng_coverage = serializers.BooleanField(default=False)
+    coverage_details = serializers.JSONField(required=False)
+    auto_renew = serializers.BooleanField(default=False)
 
-    def validate(self, data):
-        """Validates the existence of a policy with the given policy ID or policy reference number"""
-        policy_identifier = PolicyService.validate_policy(
-            policy_id=data.get("policy_id"), policy_number=data.get("policy_number")
-        )
-        self.validate_auto_renew(policy_identifier, data.get("auto_renew"))
-        data["policy_identifier"] = policy_identifier
-        return data
+    def validate(self, attrs):
+        # validate only one of Policy ID or Policy Number can be present in a given request
+        if attrs.get("policy_id") and attrs.get("policy_number"):
+            raise ValidationError(
+                "Only one of Policy ID or Policy Number must be provided in a request"
+            )
 
-    def validate_auto_renew(self, policy_identifier, auto_renew):
-        """Ensure that auto_renew is only possible if model instance contains a 'renewable' field set to True"""
-        if auto_renew:
-            # check for an existing policy with this policy number (or ID), that could be autorenewed
-            if not Policy.objects.filter(
-                Q(policy_id=policy_identifier) | Q(policy_number=policy_identifier),
-                renewable=True,
-            ).exists():
+        # validate a policy is renewable
+        if attrs.get("policy_id"):
+            try:
+                policy = Policy.objects.get(policy_id=attrs["policy_id"])
+            except Policy.DoesNotExist:
+                raise ValidationError("Policy not found with the provided policy ID")
+            if not policy.renewable:
+                raise ValidationError("Policy is not renewable")
+        elif attrs.get("policy_number"):
+            try:
+                policy = Policy.objects.get(policy_number=attrs["policy_number"])
+            except Policy.DoesNotExist:
                 raise ValidationError(
-                    "Policy does not support auto-renewal. Please contact suppport team to renew manually."
+                    "Policy not found with the provided policy number"
+                )
+            if not policy.renewable:
+                raise ValidationError("Policy is not renewable")
+
+        # merchant can choose to modify coverage based on customer preferance or
+        # include additional coverage as part of the renewal
+        # however, both options cannot be selected at the same time
+        if attrs.get("modify_exisitng_coverage") and attrs.get(
+            "include_additional_coverage"
+        ):
+            raise ValidationError(
+                "Only one of modify_exisitng_coverage or include_additional_coverage must be selected"
+            )
+
+        # if one of these above are set, we can then require the coverage details
+        if attrs.get("modify_exisitng_coverage") or attrs.get(
+            "include_additional_coverage"
+        ):
+            if not attrs.get("coverage_details"):
+                raise ValidationError(
+                    "Coverage details must be provided when modifying or including additional coverage"
                 )
 
-    def validate_policy_end_date(self, value):
-        """Ensures that the policy end date is valid (not in the past)"""
-        today = datetime.now()
+        return attrs
 
+    def validate_preferred_renewal_date(self, value):
+        """Ensures that the preferred renewal date is valid (not in the past)"""
+        today = datetime.now().date()
+
+        # check the preferred renewal date is in the future
         if value <= today:
-            raise ValidationError("Policy end date must be a future date.")
+            raise ValidationError("Preferred renewal date must be in the future.")
+
+        # TODO: check the preffered renewal date is whithin the renewal window
         return value
 
 
