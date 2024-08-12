@@ -555,23 +555,37 @@ class PolicyCancellationRequestSerializer(serializers.Serializer):
     policy_id = serializers.UUIDField(required=False)
     policy_number = serializers.CharField(max_length=255, required=False)
     cancellation_reason = serializers.CharField(max_length=500)
+    alternative_offerings = serializers.JSONField(
+        required=False,
+        help_text=(
+            "Optional: Information on alternative policies or offers that might suit the policyholder needs, provided by the merchant before proceeding with cancellation"
+        ),
+    )
+    merchant_feedback = serializers.CharField(
+        max_length=500,
+        required=False,
+        help_text=(
+            "Optional: Feedback or comments from the merchant on the policyholder's request for cancellation"
+        ),
+    )
 
     def validate(self, attrs):
         """Validates a policy exist wth the given policy ID or policy reference number"""
-        if not attrs.get("policy_id") and not attrs.get("policy_number"):
-            raise ValidationError("Either policy_id or policy_number must be provided.")
+        policy_id = attrs.get("policy_id")
+        policy_number = attrs.get("policy_number")
 
-        if attrs.get("policy_id"):
-            if not Policy.objects.filter(
-                policy_id=attrs["policy_id"], status="active"
-            ).exists():
-                raise ValidationError("Policy not found or already cancelled.")
+        if policy_id and policy_number:
+            raise ValidationError(
+                "Only one of Policy ID or Policy Number must be provided in a request"
+            )
+        if policy_id and not Policy.objects.filter(policy_id=policy_id).exists():
+            raise ValidationError("Policy not found or already cancelled.")
 
-        if attrs.get("policy_number"):
-            if not Policy.objects.filter(
-                policy_number=attrs["policy_number"], status="active"
-            ).exists():
-                raise ValidationError("Policy not found or already cancelled.")
+        if (
+            policy_number
+            and not Policy.objects.filter(policy_number=policy_number).exists()
+        ):
+            raise ValidationError("Policy not found or already cancelled.")
 
         return attrs
 
@@ -595,14 +609,10 @@ class PolicyCancellationResponseSerializer(serializers.Serializer):
     Formats response information for cancellation request
     """
 
-    message = serializers.CharField()
-    status = serializers.CharField()
     policy_id = serializers.UUIDField()
+    policy_number = serializers.CharField()
     cancellation_reason = serializers.CharField()
-    cancellation_date = serializers.DateTimeField()
-    refund_amount = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False
-    )
+    cancellation_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
 
 
 class PolicyRenewalRequestSerializer(serializers.Serializer):

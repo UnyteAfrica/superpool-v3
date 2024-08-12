@@ -901,26 +901,23 @@ class PolicyCancellationView(generics.GenericAPIView):
         Cancel a policy subscription using the policy ID or the policy number
         """
         service = self.get_service()
-        policy_number = request.data.get("policy_number")
-        policy_id = request.data.get("policy_id")
-
-        if not policy_id or not policy_number:
-            return Response(
-                {
-                    "error": "Either policy number or policy number must be provided",
-                    "detail": "Please provide a valid policy reference number or policy id to perform this action",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            validated_data = serializer.validated_data
+            print(f"Validated data: {validated_data}")
             try:
-                response = service.cancel_policy(
-                    policy_identifier=serializer.validated_data["policy_id"],
-                    reason=serializer.validated_data["cancellation_reason"],
+                service.cancel_policy(
+                    policy_id=validated_data["policy_id"],
+                    policy_number=validated_data["policy_number"],
+                    reason=validated_data["cancellation_reason"],
                 )
-                response_serializer = PolicyCancellationResponseSerializer(response)
-                return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+                response_data = {
+                    "cancellaton_status": "success",
+                    "message": "Policy has been successfully cancelled",
+                }
+                return Response(response_data, status=status.HTTP_200_OK)
             except Exception as exc:
+                logger.error(f"An unkown error occured: {str(exc)}")
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
