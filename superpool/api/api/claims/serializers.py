@@ -162,6 +162,43 @@ class WitnessSerializer(serializers.Serializer):
     )
     witness_contact_phone = serializers.CharField()
     witness_contact_email = serializers.EmailField(required=False)
+    witness_statement = serializers.CharField(
+        help_text="A brief statement from the witness about the incident"
+    )
+
+
+class ClaimDetailsSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for capturing claim details
+    """
+
+    ACCIDENT = "accident"
+    DEATH = "death"
+    ILLNESS = "illness"
+    THEFT = "theft"
+    OTHER = "other"
+
+    CLAIM_TYPES = [
+        (ACCIDENT, "Accident"),
+        (DEATH, "Death"),
+        (ILLNESS, "Illness"),
+        (THEFT, "Theft"),
+        (OTHER, "Other"),
+    ]
+    claim_type = serializers.ChoiceField(choices=CLAIM_TYPES)
+    incident_description = serializers.CharField(
+        required=False, help_text="Detailed account of the event that led to the claim"
+    )
+    incident_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    claim_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        help_text='Estimated amount of the claim in the format "1000.00"',
+    )
+    supporting_documents = serializers.FileField(
+        required=False, help_text="Upload supporting documents for the claim"
+    )
 
 
 class ClaimRequestSerializer(serializers.Serializer):
@@ -169,15 +206,9 @@ class ClaimRequestSerializer(serializers.Serializer):
     Validates incoming request data for creating a new claim.
     """
 
-    CLAIM_TYPES = [
-        ("accident", "Accident"),
-        ("death", "Death"),
-        ("illness", "Illness"),
-        ("theft", "Theft"),
-        ("other", "Other"),
-    ]
-
     claimant_metadata = ClaimantMetadataSerializer()
+    claim_details = ClaimDetailsSerializer()
     policy_id = serializers.UUIDField(required=False)
     policy_number = serializers.CharField(required=False)
-    claim_type = serializers.ChoiceField(choices=CLAIM_TYPES)
+    witness_details = WitnessSerializer(many=True, required=False)
+    authority_report = AuthorityReportSerializer(required=False)
