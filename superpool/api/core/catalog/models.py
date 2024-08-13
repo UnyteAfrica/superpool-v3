@@ -196,6 +196,13 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     cancellation_date = models.DateTimeField(
         null=True, blank=True, help_text="Date when the policy was cancelled"
     )
+    beneficiaries = models.ManyToManyField(
+        Beneficiary,
+        related_name="beneficiaries",
+        verbose_name=_("Beneficiaries"),
+        help_text=_("Beneficiaries of this policy"),
+        blank=True,
+    )
 
     def __str__(self) -> str:
         return f"#{self.policy_id} bought by User: {self.policy_holder.full_name}"
