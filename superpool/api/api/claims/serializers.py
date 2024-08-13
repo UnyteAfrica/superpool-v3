@@ -123,3 +123,61 @@ class ClaimWriteSerializer(serializers.ModelSerializer):
             "claim_reference_number": {"read_only": True},
             "claim_id": {"read_only": True},
         }
+
+
+class ClaimantMetadataSerializer(serializers.Serializer):
+    """
+    Validates incoming request data for creating a new claim.
+    """
+
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    birth_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    email = serializers.EmailField()
+    phone_number = serializers.CharField(required=False)
+    relationship = serializers.CharField(
+        help_text="The relationship of the claimant to the policyholder"
+    )
+
+
+class AuthorityReportSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for the Authority Report e.g Police Report
+    """
+
+    report_number = serializers.CharField()
+    report_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    filing_station = serializers.CharField(required=False)
+
+
+class WitnessSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for capturing witness information of a claim
+
+    There can be 0 - n witnesses for a claim
+    """
+
+    witness_name = serializers.CharField(
+        help_text='Full name of the witness in the format, "First Name Last Name"'
+    )
+    witness_contact_phone = serializers.CharField()
+    witness_contact_email = serializers.EmailField(required=False)
+
+
+class ClaimRequestSerializer(serializers.Serializer):
+    """
+    Validates incoming request data for creating a new claim.
+    """
+
+    CLAIM_TYPES = [
+        ("accident", "Accident"),
+        ("death", "Death"),
+        ("illness", "Illness"),
+        ("theft", "Theft"),
+        ("other", "Other"),
+    ]
+
+    claimant_metadata = ClaimantMetadataSerializer()
+    policy_id = serializers.UUIDField(required=False)
+    policy_number = serializers.CharField(required=False)
+    claim_type = serializers.ChoiceField(choices=CLAIM_TYPES)
