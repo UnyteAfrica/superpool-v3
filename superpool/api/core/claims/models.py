@@ -143,12 +143,13 @@ class ClaimDocument(models.Model):
         verbose_name=_("Document Name"),
         help_text=_("Name of the document uploaded."),
     )
-    blob = models.CharField(
+    document_url = models.URLField(
         max_length=1024,
         verbose_name=_("File Reference"),
         help_text=_(
             "Reference to the stored document (e.g., Google Cloud Storage blob name)."
         ),
+        null=True,
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
