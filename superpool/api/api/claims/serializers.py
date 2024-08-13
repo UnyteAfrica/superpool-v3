@@ -167,6 +167,12 @@ class WitnessSerializer(serializers.Serializer):
     )
 
 
+class ClaimDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClaimDocument
+        fields = ["document_name", "evidence_type", "blob", "uploaded_at"]
+
+
 class ClaimDetailsSerializer(serializers.Serializer):
     """
     Specifies the data structure for capturing claim details
