@@ -1,3 +1,4 @@
+from django.http import Http404
 from core.claims.models import Claim
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
@@ -124,10 +125,27 @@ class ClaimsViewSet(viewsets.ViewSet):
         serializer = ClaimRequestSerializer(data=request.data)
 
         if serializer.is_valid():
-            claim = service.submit_claim(serializer.validated_data)
-            response = ClaimSerializer(claim)
-            return Response(response.data, status=status.HTTP_201_CREATED)
-        return Response("You are doing well", status=status.HTTP_200_OK)
+            try:
+                claim = service.submit_claim(serializer.validated_data)
+                response_serializer = ClaimSerializer(claim)
+
+                response_data = {
+                    "status": "success",
+                    "message": "Claim submitted successfully. Note: Witness creation and authority report are not implemented yet, but will be available soon.",
+                    "data": response_serializer.data,
+                }
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            except ValidationError as err:
+                return Response(
+                    {"error": str(err)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except Exception as exc:
+                return Response(
+                    {"error": str(exc)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary="Update the details of a previously filed claim by a cutstomer",
