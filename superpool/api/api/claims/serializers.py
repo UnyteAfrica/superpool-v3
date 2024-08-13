@@ -102,14 +102,16 @@ class ClaimResponseSerializer(serializers.ModelSerializer):
 
     claim_id = serializers.UUIDField(source="id")
     claim_status = serializers.CharField(source="status")
-    policy_number = serializers.CharField(source="policy.policy_id")
+    policy_id = serializers.CharField(source="policy.policy_id")
     insurer = serializers.CharField(source="policy.provider.name")
 
     class Meta:
         model = Claim
         fields = [
             "claim_id",
+            "policy_id",
             "claim_status",
+            "insurer",
         ]
 
 
@@ -158,7 +160,7 @@ class WitnessSerializer(serializers.Serializer):
 class ClaimDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClaimDocument
-        fields = ["document_name", "evidence_type", "blob", "uploaded_at"]
+        fields = ["document_name", "evidence_type", "document_url", "uploaded_at"]
 
 
 class ClaimDetailsSerializer(serializers.Serializer):
