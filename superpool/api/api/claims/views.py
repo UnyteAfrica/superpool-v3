@@ -7,8 +7,11 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .exceptions import NotFound
-from .serializers import ClaimSerializer, ClaimWriteSerializer
+from .serializers import ClaimRequestSerializer, ClaimSerializer, ClaimWriteSerializer
 from .services import ClaimService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ClaimsViewSet(viewsets.ViewSet):
@@ -17,6 +20,12 @@ class ClaimsViewSet(viewsets.ViewSet):
         Returns the instance of our Claims Service
         """
         return ClaimService()
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return ClaimRequestSerializer
+        else:
+            return ClaimSerializer
 
     @extend_schema(
         summary="View all claims made by your customers",
@@ -111,28 +120,14 @@ class ClaimsViewSet(viewsets.ViewSet):
         """
         Endpoint to submit a new claim
         """
-        serializer = ClaimWriteSerializer(data=request.data)
+        service = self.get_service()
+        serializer = ClaimRequestSerializer(data=request.data)
+
         if serializer.is_valid():
-            try:
-                service = self.get_service()
-                claim = service.submit_claim(serializer.validated_data)
-                response_serializer = ClaimSerializer(claim)
-                return Response(
-                    {
-                        "data": response_serializer.data,
-                        "message": "Claim successfully submitted",
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
-            except ValidationError as err:
-                return (
-                    Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST),
-                )
-            except Exception as exc:
-                return (
-                    Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST),
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            claim = service.submit_claim(serializer.validated_data)
+            response = ClaimSerializer(claim)
+            return Response(response.data, status=status.HTTP_201_CREATED)
+        return Response("You are doing well", status=status.HTTP_200_OK)
 
     @extend_schema(
         summary="Update the details of a previously filed claim by a cutstomer",
