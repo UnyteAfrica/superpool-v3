@@ -232,8 +232,8 @@ class ClaimsViewSet(viewsets.ViewSet):
             )
 
         service = self.get_service()
-        update_serializer = self.get_serializer_class()
-        serializer = update_serializer(data=request.data)
+        serializer_class = self.get_serializer_class()
+        serializer = serializer_class(data=request.data, partial=True)
         try:
             instance = service.get_claim(claim_id=pk)
         except Claim.DoesNotExist:

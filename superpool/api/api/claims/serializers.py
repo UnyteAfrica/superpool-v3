@@ -266,11 +266,14 @@ class ClaimUpdateSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         authority_report = attrs.get("authority_report")
+        claimant_metadata = attrs.get("claimant_metadata")
+        claim_information = attrs.get("claim_details")
         witness_information = attrs.get("witness_details")
+
         if not any(
             [
-                attrs.get("claimant_metadata"),
-                attrs.get("claim_details"),
+                claimant_metadata,
+                claim_information,
                 witness_information,
                 authority_report,
             ]
@@ -282,14 +285,22 @@ class ClaimUpdateSerializer(serializers.Serializer):
 
         if authority_report:
             raise serializers.ValidationError(
-                "Updating the authority report is not supported yet. "
-                "Please contact the support team for assistance."
+                "Updating the authority report is not supported yet. \n"
+                "Please contact the support team for assistance. \n"
+                "Error Code: AUTHORITY_REPORT_UPDATE_NOT_SUPPORTED"
             )
 
         if witness_information:
             raise serializers.ValidationError(
-                "Updating witness information is not supported yet. "
-                "Please contact the support team for assistance."
+                "Updating witness information is not supported yet. \n"
+                "Please contact the support team for assistance. \n"
+                "Error code: WITNESS_INFO_NOT_SUPPORTED."
+            )
+        if claimant_metadata:
+            raise serializers.ValidationError(
+                "At the moment, updating the claim's information is not support yet. "
+                "We are aware of this, and are working to ensure this is possible for your customer "
+                "Please reach out to support team with error code: CLAIMANT_UPDATE_NOT_SUPPORTED"
             )
 
         return attrs
