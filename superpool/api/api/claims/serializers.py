@@ -43,17 +43,18 @@ class ClaimProviderSerializer(serializers.ModelSerializer):
 
 
 class StatusTimelineSerializer(serializers.ModelSerializer):
+    time_stamp = serializers.DateTimeField(
+        source="timestamp", format="%Y-%m-%d %H:%M:%S"
+    )
+
     class Meta:
         model = StatusTimeline
-        fields = ["status", "timestamp"]
+        fields = ["status", "time_stamp"]
 
     def to_representation(self, instance):
         repr = super().to_representation(instance)
         repr["name"] = repr.pop("status")
-        repr["time_stamp"] = repr.pop("timestamp").strftime(
-            # This allows us to be able to convert the timestamp to: Month Day, Year Hour:Minute AM/PM
-            "%b %d, %Y %I:%M %p"
-        )
+        # repr["time_stamp"] = repr.pop("timestamp")
         return repr
 
 
@@ -68,7 +69,8 @@ class ClaimSerializer(serializers.ModelSerializer):
 
     product = ClaimProductSerializer()
     customer = ClaimOwnerSerializer()
-    insurer = ClaimProviderSerializer()
+    # insurer = ClaimProviderSerializer()
+    insurer = serializers.CharField(source="provider.name")
     claim_amount = serializers.DecimalField(
         source="amount", max_digits=10, decimal_places=2
     )
