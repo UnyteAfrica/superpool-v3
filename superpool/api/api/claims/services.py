@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Union
 
@@ -7,10 +8,11 @@ from core.catalog.models import Policy
 from core.claims.models import Claim
 from django.db import transaction
 from django.db.models import F, Q, QuerySet
+from django.shortcuts import get_object_or_404
 
 from core.user.models import Customer
 from core.claims.models import StatusTimeline, ClaimDocument, Claim
-import logging
+from api.notifications.services import PolicyNotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,8 @@ class ClaimService(IClaim):
             ClaimService._create_claim(validated_data)
         except Exception as exc:
             raise ValidationError(
-                f"An error occurred while processing the claim.\n {str(exc)}"
+                f"An error occurred while processing the claim."
+                f" Please try again later. Error: {exc}"
             ) from exc
 
     @staticmethod
@@ -117,8 +120,10 @@ class ClaimService(IClaim):
         # e.g. policy, product, provider, customer
         policy_id = validated_data.get("policy_id")
 
-        policy = Policy.objects.get(id=policy_id)
-        customer = Customer.objects.get(id=claimant_metadata.get("customer_id"))
+        # policy = Policy.objects.get(id=policy_id)
+        # customer = Customer.objects.get(id=claimant_metadata.get("customer_id"))
+        policy = get_object_or_404(Policy, policy_id=policy_id)
+        customer = get_object_or_404(Customer, id=claimant_metadata.get("customer_id"))
 
         product = policy.product
         provider = product.provider
@@ -137,19 +142,13 @@ class ClaimService(IClaim):
             product=product,
             status="pending",
         )
-        claim = Claim.objects.create(
-            incident_date=claim_details["incident_date"],
-        )
 
         ClaimService._create_claim_documents(
             claim, claim_details.get("supporting_documents", [])
         )
-
-        if witness_information:
-            ClaimService._create_witnesses(claim, witness_information)
-
-        if authority_report:
-            ClaimService._create_authority_report(claim, authority_report)
+        ClaimService._handle_witnesses_and_report(
+            claim, witness_information, authority_report
+        )
 
         StatusTimeline.objects.create(claim=claim, status="pending")
 
@@ -179,18 +178,46 @@ class ClaimService(IClaim):
             ) from exc
 
     @staticmethod
-    def _create_witnesses(claim, witnesses=None):
+    def _handle_witnesses_and_report(claim, witnesses, report):
+        """
+        Attempts to create witnesses and authority report for the claim, with graceful error handling
+
+        NO ONE HERE IS A WIZARD COOK!
+        """
+        try:
+            ClaimService._create_witnesses(claim, witnesses)
+        except NotImplementedError as feature_exc:
+            logger.error(
+                f"Feature not implemented: {feature_exc}",
+                exc_info=True,
+            )
+
+        # handle authority report creation
+        try:
+            ClaimService._create_authority_report(claim, report)
+        except NotImplementedError as feature_exc:
+            logger.error(
+                f"Feature not implemented: {feature_exc}",
+                exc_info=True,
+            )
+
+    @staticmethod
+    def _create_witnesses(claim, witnesses):
         """
         Create witnesses for the claim
         """
-        pass
+        if witnesses:
+            # TODO: Implement this at a later date
+            raise NotImplementedError
 
     @staticmethod
     def _create_authority_report(claim, report):
         """
         Create an authority report for the claim
         """
-        pass
+        if report:
+            # TODO: Implement this at a later date
+            raise NotImplementedError
 
     @transaction.atomic
     def update_claim(self, claim_number: str | int, data: dict[str, Any]):

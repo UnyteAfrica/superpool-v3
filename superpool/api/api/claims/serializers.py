@@ -1,4 +1,5 @@
-from core.catalog.models import Product
+from api.claims.services import ClaimService
+from core.catalog.models import Policy, Product
 from core.claims.models import Claim, ClaimDocument, StatusTimeline
 from core.providers.models import Provider
 from core.user.models import Customer
@@ -241,4 +242,10 @@ class ClaimRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "You cannot provide both a policy ID and a policy number"
             )
+
+        if not Policy.objects.filter(**namespace).exists():
+            raise serializers.ValidationError("Policy does not exist")
         return attrs
+
+    def create(self, validated_data):
+        ClaimService.submit_claim(validated_data)
