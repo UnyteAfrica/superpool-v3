@@ -46,6 +46,7 @@ class Claim(TimestampMixin, models.Model):
         db_index=True,
         verbose_name=_("Date at which a claim is created"),
     )
+    incident_date = models.DateField(verbose_name=_("Date of Incident"), null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     estimated_loss = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     payout_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -60,11 +61,13 @@ class Claim(TimestampMixin, models.Model):
         related_name="claims",
         verbose_name=_("Documents"),
         help_text=_("Documents uploaded by the policyholder as part of the claim"),
+        blank=True,
     )
 
     class Meta:
         verbose_name = "claim"
         verbose_name_plural = "claims"
+        ordering = ["-claim_date", "-created_at"]
         indexes = [
             # For performance reasons, we want to index the timestamps and claims number
             # as they would be used during audit processes
@@ -125,7 +128,7 @@ class ClaimDocument(models.Model):
     )
     claim = models.ForeignKey(
         "Claim",
-        related_name="documents",
+        related_name="claim_documents",
         on_delete=models.CASCADE,
         verbose_name=_("Related Claim"),
     )
