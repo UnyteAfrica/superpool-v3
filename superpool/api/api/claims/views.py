@@ -2,15 +2,29 @@ from django.http import Http404
 from core.claims.models import Claim
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .exceptions import NotFound
-from .serializers import ClaimRequestSerializer, ClaimSerializer, ClaimWriteSerializer
+from .serializers import (
+    ClaimRequestSerializer,
+    ClaimSerializer,
+    ClaimResponseSerializer,
+)
 from .services import ClaimService
 import logging
+from .openapi import (
+    full_claim_request_payload_example,
+    minimal_request_payload_example,
+    claim_request_payload_example,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +127,19 @@ class ClaimsViewSet(viewsets.ViewSet):
         operation_id="submit_claim",
         summary="Submit a claim",
         description="Submits a new claim entry on behalf of a customer",
+        request=OpenApiRequest(
+            request=ClaimRequestSerializer,
+            examples=[
+                claim_request_payload_example,
+                minimal_request_payload_example,
+                full_claim_request_payload_example,
+            ],
+        ),
         responses={
-            200: ClaimSerializer,
+            200: OpenApiResponse(
+                description="Claim submitted successfully",
+                response=ClaimResponseSerializer,
+            )
         },
     )
     def create(self, request, *args, **kwargs):
@@ -127,7 +152,7 @@ class ClaimsViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             try:
                 claim = service.submit_claim(serializer.validated_data)
-                response_serializer = ClaimSerializer(claim)
+                response_serializer = ClaimResponseSerializer(claim)
 
                 response_data = {
                     "status": "success",
