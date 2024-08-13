@@ -276,18 +276,19 @@ class ClaimUpdateSerializer(serializers.Serializer):
             ]
         ):
             raise serializers.ValidationError(
-                "You must provide at least one field to update"
+                "You must provide at least one field to update. "
+                "Updates include: claimant_metadata, claim_details, witness_details, authority_report"
             )
 
         if authority_report:
             raise serializers.ValidationError(
-                "Updating the authority report is not supported yet"
+                "Updating the authority report is not supported yet. "
                 "Please contact the support team for assistance."
             )
 
         if witness_information:
             raise serializers.ValidationError(
-                "Updating witness information is not supported yet"
+                "Updating witness information is not supported yet. "
                 "Please contact the support team for assistance."
             )
 

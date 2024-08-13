@@ -19,6 +19,7 @@ from .serializers import (
     ClaimRequestSerializer,
     ClaimSerializer,
     ClaimResponseSerializer,
+    ClaimUpdateSerializer,
 )
 from .services import ClaimService
 import logging
@@ -42,6 +43,8 @@ class ClaimsViewSet(viewsets.ViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return ClaimRequestSerializer
+        elif self.action == "update":
+            return ClaimUpdateSerializer
         else:
             return ClaimSerializer
 
@@ -209,34 +212,45 @@ class ClaimsViewSet(viewsets.ViewSet):
         ],
         responses={200: ClaimSerializer},
     )
-    def update(self, request, claim_number):
+    def update(self, request, pk=None):
         """
         Endpoint to update an existing filed claim
         """
-        serializer = ClaimWriteSerializer(data=request.data)
+        # validate claim id is always present
+        if not pk:
+            return Response(
+                {"error": "Claim ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # We don't want malicious uuid sent in here
+        try:
+            uuid.UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid UUID format."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        data = serializer.validated_data
+        service = self.get_service()
+        update_serializer = self.get_serializer_class()
+        serializer = update_serializer(data=request.data)
+        try:
+            instance = service.get_claim(claim_id=pk)
+        except Claim.DoesNotExist:
+            return Response(
+                {"error": "Claim not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ClaimUpdateSerializer(instance, data=request.data, partial=True)
         if serializer.is_valid():
-            service = self.get_service()
-            # We want to retrive the claim instance then update it with the new details
-            instance = service.get_claim(claim_number=data["claim_number"])
-
-            if instance:
-                claim = service.update_claim(
-                    claim_number=data["claim_number"], data=data
-                )
-                response_serializer = ClaimSerializer(claim)
-                return Response(
-                    {
-                        "data": response_serializer.data,
-                        "message": "Claim updated successfully",
-                    },
-                    status=status.HTTP_200_OK,
-                )
+            updated_claim = serializer.save()
+            response_serializer = ClaimSerializer(updated_claim)
             return Response(
                 {
-                    "error": "It seems we fcked up! Please contact support for swift resolution!",
+                    "status": "success",
+                    "message": "Claim updated successfully.",
+                    "data": response_serializer.data,
                 },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
