@@ -1,5 +1,6 @@
-from core.catalog.models import Product
-from core.claims.models import Claim, StatusTimeline
+from api.claims.services import ClaimService
+from core.catalog.models import Policy, Product
+from core.claims.models import Claim, ClaimDocument, StatusTimeline
 from core.providers.models import Provider
 from core.user.models import Customer
 from rest_framework import serializers
@@ -94,31 +95,154 @@ class ClaimSerializer(serializers.ModelSerializer):
         }
 
 
-class ClaimWriteSerializer(serializers.ModelSerializer):
+class ClaimResponseSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating new Claim objects.
-
-    This serializer is used for creating and updating claim objects.
-    It provides fields needed only for write-operations and excludes
-    all forms of computed fields
-
-    NOTE: It shuld be used in write-only operations
+    V2 Serializer for formating responses when
     """
 
-    claim_reference_number = serializers.CharField(source="claim_number")
-    customer = ClaimOwnerSerializer()
     claim_id = serializers.UUIDField(source="id")
+    claim_status = serializers.CharField(source="status")
+    policy_number = serializers.CharField(source="policy.policy_id")
+    insurer = serializers.CharField(source="policy.provider.name")
 
     class Meta:
         model = Claim
         fields = [
             "claim_id",
-            "claim_reference_number",
             "claim_status",
-            "customer",
-            # TODO: documents and other stuff should be used in this serializer and not in the read serializer
         ]
-        extra_kwargs = {
-            "claim_reference_number": {"read_only": True},
-            "claim_id": {"read_only": True},
-        }
+
+
+class ClaimantMetadataSerializer(serializers.Serializer):
+    """
+    Validates incoming request data for creating a new claim.
+    """
+
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    birth_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    email = serializers.EmailField()
+    phone_number = serializers.CharField(required=False)
+    relationship = serializers.CharField(
+        help_text="The relationship of the claimant to the policyholder"
+    )
+
+
+class AuthorityReportSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for the Authority Report e.g Police Report
+    """
+
+    report_number = serializers.CharField()
+    report_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    filing_station = serializers.CharField(required=False)
+
+
+class WitnessSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for capturing witness information of a claim
+
+    There can be 0 - n witnesses for a claim
+    """
+
+    witness_name = serializers.CharField(
+        help_text='Full name of the witness in the format, "First Name Last Name"'
+    )
+    witness_contact_phone = serializers.CharField()
+    witness_contact_email = serializers.EmailField(required=False)
+    witness_statement = serializers.CharField(
+        help_text="A brief statement from the witness about the incident"
+    )
+
+
+class ClaimDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClaimDocument
+        fields = ["document_name", "evidence_type", "blob", "uploaded_at"]
+
+
+class ClaimDetailsSerializer(serializers.Serializer):
+    """
+    Specifies the data structure for capturing claim details
+    """
+
+    ACCIDENT = "accident"
+    DEATH = "death"
+    ILLNESS = "illness"
+    THEFT = "theft"
+    OTHER = "other"
+
+    CLAIM_TYPES = [
+        (ACCIDENT, "Accident"),
+        (DEATH, "Death"),
+        (ILLNESS, "Illness"),
+        (THEFT, "Theft"),
+        (OTHER, "Other"),
+    ]
+    claim_type = serializers.ChoiceField(choices=CLAIM_TYPES)
+    incident_description = serializers.CharField(
+        required=False, help_text="Detailed account of the event that led to the claim"
+    )
+    incident_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    claim_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        help_text='Estimated amount of the claim in the format "1000.00"',
+    )
+    supporting_documents = ClaimDocumentSerializer(
+        many=True,
+        required=False,
+        help_text=(
+            'List of supporting documents in the format [{"document_name": "Name of Document", "evidence_type": "Type of Evidence", "blob": "Base64 encoded document"}]'
+        ),
+    )
+
+
+class ClaimRequestSerializer(serializers.Serializer):
+    """
+    Validates incoming request data for creating a new claim.
+    """
+
+    claimant_metadata = ClaimantMetadataSerializer()
+    claim_details = ClaimDetailsSerializer()
+    policy_id = serializers.UUIDField(required=False)
+    policy_number = serializers.CharField(required=False)
+    witness_details = WitnessSerializer(many=True, required=False)
+    authority_report = AuthorityReportSerializer(required=False)
+
+    def validate(self, attrs):
+        policy_id = attrs.get("policy_id")
+        policy_number = attrs.get("policy_number")
+
+        namespace = {}
+        if policy_id:
+            namespace["policy_id"] = policy_id
+        if policy_number:
+            namespace["policy_number"] = policy_number
+
+        if not namespace:
+            raise serializers.ValidationError(
+                "You must provide either a policy ID or a policy number"
+            )
+        if policy_id and policy_number:
+            raise serializers.ValidationError(
+                "You cannot provide both a policy ID and a policy number"
+            )
+        # check if a policy with the provided ID exists
+        if not Policy.objects.filter(**namespace).exists():
+            raise serializers.ValidationError("Policy does not exist")
+
+        # enforce that the same policy cannot be claimed twice
+        # we may need to add a claim type to this validation, therefore
+        # validating the claim type against the policy id
+        claim_type = attrs["claim_details"].get("claim_type")
+        if Claim.objects.filter(policy=policy_id, claim_type=claim_type).exists():
+            raise serializers.ValidationError(
+                "A claim of this type has already been submitted for this policy. Please await a status update before submitting another claim."
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        ClaimService.submit_claim(validated_data)

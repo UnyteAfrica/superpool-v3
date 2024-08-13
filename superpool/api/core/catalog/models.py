@@ -77,6 +77,27 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         ]
 
 
+class Beneficiary(models.Model):
+    """
+    Represents a beneficiary of an insurance policy other than the policy holder
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    first_name = models.CharField(max_length=40)
+    middle_name = models.CharField(max_length=40, blank=True, null=True)
+    last_name = models.CharField(max_length=40)
+    email = models.EmailField(unique=True, blank=False, null=False)
+    phone_number = models.CharField(max_length=15)
+    address = models.TextField(null=True)
+    relationship = models.CharField(
+        max_length=40, help_text="Relationship to the policy holder"
+    )
+    date_of_birth = models.DateField(
+        help_text="Date of birth of the beneficiary",
+        null=True,
+    )
+
+
 class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     """
     Insurance policy purchased by a user
@@ -174,6 +195,13 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
     )
     cancellation_date = models.DateTimeField(
         null=True, blank=True, help_text="Date when the policy was cancelled"
+    )
+    beneficiaries = models.ManyToManyField(
+        Beneficiary,
+        related_name="beneficiaries",
+        verbose_name=_("Beneficiaries"),
+        help_text=_("Beneficiaries of this policy"),
+        blank=True,
     )
 
     def __str__(self) -> str:

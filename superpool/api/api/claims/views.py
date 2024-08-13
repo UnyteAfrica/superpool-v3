@@ -1,14 +1,32 @@
+from django.http import Http404
 from core.claims.models import Claim
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from .exceptions import NotFound
-from .serializers import ClaimSerializer, ClaimWriteSerializer
+from .serializers import (
+    ClaimRequestSerializer,
+    ClaimSerializer,
+    ClaimResponseSerializer,
+)
 from .services import ClaimService
+import logging
+from .openapi import (
+    full_claim_request_payload_example,
+    minimal_request_payload_example,
+    claim_request_payload_example,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ClaimsViewSet(viewsets.ViewSet):
@@ -17,6 +35,12 @@ class ClaimsViewSet(viewsets.ViewSet):
         Returns the instance of our Claims Service
         """
         return ClaimService()
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return ClaimRequestSerializer
+        else:
+            return ClaimSerializer
 
     @extend_schema(
         summary="View all claims made by your customers",
@@ -103,34 +127,48 @@ class ClaimsViewSet(viewsets.ViewSet):
         operation_id="submit_claim",
         summary="Submit a claim",
         description="Submits a new claim entry on behalf of a customer",
+        request=OpenApiRequest(
+            request=ClaimRequestSerializer,
+            examples=[
+                claim_request_payload_example,
+                minimal_request_payload_example,
+                full_claim_request_payload_example,
+            ],
+        ),
         responses={
-            200: ClaimSerializer,
+            200: OpenApiResponse(
+                description="Claim submitted successfully",
+                response=ClaimResponseSerializer,
+            )
         },
     )
     def create(self, request, *args, **kwargs):
         """
         Endpoint to submit a new claim
         """
-        serializer = ClaimWriteSerializer(data=request.data)
+        service = self.get_service()
+        serializer = ClaimRequestSerializer(data=request.data)
+
         if serializer.is_valid():
             try:
-                service = self.get_service()
                 claim = service.submit_claim(serializer.validated_data)
-                response_serializer = ClaimSerializer(claim)
-                return Response(
-                    {
-                        "data": response_serializer.data,
-                        "message": "Claim successfully submitted",
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
+                response_serializer = ClaimResponseSerializer(claim)
+
+                response_data = {
+                    "status": "success",
+                    "message": "Claim submitted successfully. Note: Witness creation and authority report are not implemented yet, but will be available soon.",
+                    "data": response_serializer.data,
+                }
+                return Response(response_data, status=status.HTTP_201_CREATED)
             except ValidationError as err:
-                return (
-                    Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST),
+                return Response(
+                    {"error": str(err)},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             except Exception as exc:
-                return (
-                    Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST),
+                return Response(
+                    {"error": str(exc)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
