@@ -1,5 +1,5 @@
 from core.catalog.models import Product
-from core.claims.models import Claim, StatusTimeline
+from core.claims.models import Claim, ClaimDocument, StatusTimeline
 from core.providers.models import Provider
 from core.user.models import Customer
 from rest_framework import serializers
@@ -202,8 +202,12 @@ class ClaimDetailsSerializer(serializers.Serializer):
         required=False,
         help_text='Estimated amount of the claim in the format "1000.00"',
     )
-    supporting_documents = serializers.FileField(
-        required=False, help_text="Upload supporting documents for the claim"
+    supporting_documents = ClaimDocumentSerializer(
+        many=True,
+        required=False,
+        help_text=(
+            'List of supporting documents in the format [{"document_name": "Name of Document", "evidence_type": "Type of Evidence", "blob": "Base64 encoded document"}]'
+        ),
     )
 
 
@@ -218,3 +222,23 @@ class ClaimRequestSerializer(serializers.Serializer):
     policy_number = serializers.CharField(required=False)
     witness_details = WitnessSerializer(many=True, required=False)
     authority_report = AuthorityReportSerializer(required=False)
+
+    def validate(self, attrs):
+        policy_id = attrs.get("policy_id")
+        policy_number = attrs.get("policy_number")
+
+        namespace = {}
+        if policy_id:
+            namespace["policy_id"] = policy_id
+        if policy_number:
+            namespace["policy_number"] = policy_number
+
+        if not namespace:
+            raise serializers.ValidationError(
+                "You must provide either a policy ID or a policy number"
+            )
+        if policy_id and policy_number:
+            raise serializers.ValidationError(
+                "You cannot provide both a policy ID and a policy number"
+            )
+        return attrs
