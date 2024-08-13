@@ -113,15 +113,33 @@ class ClaimsViewSet(viewsets.ViewSet):
         """
         Retrieve a single claim by its unique ID or claim reference number
         """
+
+        # validate claim id is always present
+        if not pk:
+            return Response(
+                {"error": "Claim ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # We don't want malicious uuid sent in here
+        try:
+            uuid.UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid UUID format."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         service = self.get_service()
         try:
             claim = service.get_claim(claim_number=claim_number, claim_id=pk)
             serializer = ClaimSerializer(claim)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Claim.DoesNotExist:
-            raise NotFound("Claim not found")
-        except Exception as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Claim not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = ClaimSerializer(claim)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         operation_id="submit_claim",
