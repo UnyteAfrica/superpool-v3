@@ -102,14 +102,16 @@ class ClaimResponseSerializer(serializers.ModelSerializer):
 
     claim_id = serializers.UUIDField(source="id")
     claim_status = serializers.CharField(source="status")
-    policy_number = serializers.CharField(source="policy.policy_id")
+    policy_id = serializers.CharField(source="policy.policy_id")
     insurer = serializers.CharField(source="policy.provider.name")
 
     class Meta:
         model = Claim
         fields = [
             "claim_id",
+            "policy_id",
             "claim_status",
+            "insurer",
         ]
 
 
