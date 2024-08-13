@@ -1,8 +1,10 @@
+import uuid
 from django.http import Http404
 from core.claims.models import Claim
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
+    OpenApiExample,
     OpenApiParameter,
     OpenApiRequest,
     OpenApiResponse,
@@ -24,6 +26,7 @@ from .openapi import (
     full_claim_request_payload_example,
     minimal_request_payload_example,
     claim_request_payload_example,
+    single_claim_response_example,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,13 +106,21 @@ class ClaimsViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="Retrieve a claim by its ID or Reference Number",
-        parameters=[
-            OpenApiParameter("claim_number"),
-            OpenApiParameter("claim_id"),
-        ],
-        responses={200: ClaimSerializer},
+        responses={
+            200: OpenApiResponse(
+                response=ClaimSerializer,
+                examples=[single_claim_response_example],
+            ),
+            400: OpenApiResponse(
+                response={"error": "ERR_MESSAGE"},
+                description="Bad Request",
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+            ),
+        },
     )
-    def retrieve(self, request, claim_number=None, pk=None):
+    def retrieve(self, request, pk=None):
         """
         Retrieve a single claim by its unique ID or claim reference number
         """
@@ -131,9 +142,7 @@ class ClaimsViewSet(viewsets.ViewSet):
 
         service = self.get_service()
         try:
-            claim = service.get_claim(claim_number=claim_number, claim_id=pk)
-            serializer = ClaimSerializer(claim)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            claim = service.get_claim(claim_id=pk)
         except Claim.DoesNotExist:
             return Response(
                 {"error": "Claim not found"}, status=status.HTTP_404_NOT_FOUND
