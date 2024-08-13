@@ -158,7 +158,7 @@ class WitnessSerializer(serializers.Serializer):
 class ClaimDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClaimDocument
-        fields = ["document_name", "evidence_type", "blob", "uploaded_at"]
+        fields = ["document_name", "evidence_type", "document_url", "uploaded_at"]
 
 
 class ClaimDetailsSerializer(serializers.Serializer):
