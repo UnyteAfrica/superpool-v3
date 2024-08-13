@@ -1,14 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Union
 
+from rest_framework.serializers import ValidationError
+
+from core.catalog.models import Policy
 from core.claims.models import Claim
 from django.db import transaction
 from django.db.models import F, Q, QuerySet
 
+from core.user.models import Customer
+from core.claims.models import StatusTimeline, ClaimDocument, Claim
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class IClaim(ABC):
+    @staticmethod
     @abstractmethod
-    def submit_claim(self, data):
+    def submit_claim(validated_data):
         raise NotImplementedError()
 
     @abstractmethod
@@ -80,13 +90,107 @@ class ClaimService(IClaim):
         id = claim_id if claim_id is not None else None
         return Claim.objects.get(Q(claim_number) | Q(id))
 
+    @staticmethod
+    def submit_claim(validated_data):
+        """
+        Ensures that a claim is created with the given data while ensuring data integrity
+        """
+        try:
+            ClaimService._create_claim(validated_data)
+        except Exception as exc:
+            raise ValidationError(
+                f"An error occurred while processing the claim.\n {str(exc)}"
+            ) from exc
+
+    @staticmethod
     @transaction.atomic
-    def submit_claim(self, data: dict[str, Any]):
+    def _create_claim(validated_data):
         """
         Create a new claim with the given data
         """
-        claim = Claim.objects.create(**data)
+        claimant_metadata = validated_data.pop("claimant_metadata")
+        claim_details = validated_data.pop("claim_details")
+        witness_information = validated_data.pop("witness_details", [])
+        authority_report = validated_data.pop("authority_report", None)
+
+        # retrieve relatrd objects needed for claim processng
+        # e.g. policy, product, provider, customer
+        policy_id = validated_data.get("policy_id")
+
+        policy = Policy.objects.get(id=policy_id)
+        customer = Customer.objects.get(id=claimant_metadata.get("customer_id"))
+
+        product = policy.product
+        provider = product.provider
+
+        logger.debug(
+            f"Creating claim for customer {customer} with policy {policy} and product {product}"
+        )
+
+        claim = Claim.objects.create(
+            incident_date=claim_details["incident_date"],
+            amount=claim_details.get("claim_amount", 0.0),
+            estimated_loss=claim_details.get("claim_amount", 0.0),
+            policy=policy,
+            customer=customer,
+            provider=provider,
+            product=product,
+            status="pending",
+        )
+        claim = Claim.objects.create(
+            incident_date=claim_details["incident_date"],
+        )
+
+        ClaimService._create_claim_documents(
+            claim, claim_details.get("supporting_documents", [])
+        )
+
+        if witness_information:
+            ClaimService._create_witnesses(claim, witness_information)
+
+        if authority_report:
+            ClaimService._create_authority_report(claim, authority_report)
+
+        StatusTimeline.objects.create(claim=claim, status="pending")
+
         return claim
+
+    @staticmethod
+    def _create_claim_documents(claim, documents):
+        """
+        Associate claim documents with the claim
+        """
+        try:
+            ClaimDocument.objects.bulk_create(
+                [
+                    ClaimDocument(
+                        claim=claim,
+                        evidence_type=doc.get("evidence_type"),
+                        document_name=doc.get("document_name"),
+                        document_url=doc.get("document_url"),
+                        uploaded_at=doc.get("uploaded_at"),
+                    )
+                    for doc in documents
+                ]
+            )
+        except Exception as exc:
+            raise ValidationError(
+                "An error occurred while creating the claim documents"
+            ) from exc
+
+    @staticmethod
+    def _create_witnesses(claim, witnesses=None):
+        """
+        Create witnesses for the claim
+        """
+        pass
+
+    @staticmethod
+    def _create_authority_report(claim, report):
+        """
+        Create an authority report for the claim
+        """
+        pass
 
     @transaction.atomic
     def update_claim(self, claim_number: str | int, data: dict[str, Any]):
