@@ -108,6 +108,7 @@ class ClaimWriteSerializer(serializers.ModelSerializer):
     claim_reference_number = serializers.CharField(source="claim_number")
     customer = ClaimOwnerSerializer()
     claim_id = serializers.UUIDField(source="id")
+    claim_status = serializers.CharField(source="status")
 
     class Meta:
         model = Claim
