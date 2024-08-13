@@ -1,4 +1,5 @@
 import logging
+import pdb
 from abc import ABC, abstractmethod
 from typing import Any, List, Union
 
@@ -99,6 +100,7 @@ class ClaimService(IClaim):
         """
         try:
             ClaimService._create_claim(validated_data)
+
         except Exception as exc:
             raise ValidationError(
                 f"An error occurred while processing the claim."
@@ -123,14 +125,15 @@ class ClaimService(IClaim):
         # policy = Policy.objects.get(id=policy_id)
         # customer = Customer.objects.get(id=claimant_metadata.get("customer_id"))
         policy = get_object_or_404(Policy, policy_id=policy_id)
-        customer = get_object_or_404(Customer, id=claimant_metadata.get("customer_id"))
+        customer, _ = Customer.objects.get_or_create(
+            first_name=claimant_metadata.get("first_name"),
+            last_name=claimant_metadata.get("last_name"),
+            email=claimant_metadata.get("email"),
+            dob=claimant_metadata.get("birth_date"),
+        )
 
         product = policy.product
         provider = product.provider
-
-        logger.debug(
-            f"Creating claim for customer {customer} with policy {policy} and product {product}"
-        )
 
         claim = Claim.objects.create(
             incident_date=claim_details["incident_date"],
@@ -152,6 +155,7 @@ class ClaimService(IClaim):
 
         StatusTimeline.objects.create(claim=claim, status="pending")
 
+        PolicyNotificationService.notify_merchant(action="claim_policy", policy=policy)
         return claim
 
     @staticmethod
