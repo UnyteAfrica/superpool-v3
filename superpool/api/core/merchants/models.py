@@ -1,4 +1,6 @@
+from datetime import timedelta
 from uuid import uuid4
+from django.utils import timezone
 
 from core.mixins import TimestampMixin, TrashableModelMixin
 from django.db import models
@@ -79,6 +81,17 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         default=False,
         help_text="Designates if the business has been verified by the platform",
         blank=True,
+    )
+    token = models.CharField(
+        _("Verification Token"),
+        max_length=6,
+        help_text="Unique token generated for email verification",
+        null=True,
+        blank=True,
+    )
+    token_expires_at = models.DateTimeField(
+        help_text="The date and time the verification token expires",
+        null=True,
     )
 
     class Meta(TypedModelMeta):

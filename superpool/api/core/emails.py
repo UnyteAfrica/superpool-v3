@@ -134,16 +134,18 @@ class OnboardingEmail(BaseEmailMessage):
     Email message class for welcoming a newly verified merchant on he platform.
     """
 
-    template = "superpool/emails/welcome.html"
+    template = "superpool/emails/onboarding_v2.html"
 
     def __init__(
         self,
         to: str | list[str],
+        tenant_id: str,
+        merchant_short_code: str,
         from_: str | None = None,
         **kwargs: dict,
     ) -> None:
-        context = {}
-        super().__init__(to, from_email=from_, context=context, **kwargs)
+        context = {"tenant_id": tenant_id, "merchant_short_code": merchant_short_code}
+        super().__init__(to, from_email=from_, context=context)
 
     def get_subject(self) -> str:
         return _("Unyte - Welcome to the best insure-tech infrastructure!")
