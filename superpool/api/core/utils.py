@@ -1,33 +1,37 @@
 import random
 import string
 import uuid
+from .emails import PendingVerificationEmail
+from django.conf import settings
 
 from core.merchants.models import Merchant
+
+DEFAULT_FROM_EMAIL = settings.DEFAULT_FROM_EMAIL
+BASE_URL = settings.BASE_URL
+
+print(f"BASE_URL: {BASE_URL}")
+print(f"EMAIL: {DEFAULT_FROM_EMAIL}")
 
 
 def generate_verification_token() -> str:
     """
     Generates a verification token for email verification
     """
-    return random.choice(
-        [
-            "".join(random.choices(string.ascii_letters + string.digits, k=1))
-            for _ in range(6)
-        ]
-    )
+    return "".join(random.choices(string.ascii_letters + string.digits, k=6))
 
 
 def send_verification_email(email: str, token: str) -> None:
     """
     Sends an email to the merchant to verify their email address
     """
-    from core.emails import PendingVerificationEmail
-    from django.conf import settings
 
-    CONFIRMATION_URL = f"{settings.BACKEND_URL}/verify-email?token={token}"
+    CONFIRMATION_URL = f"{BASE_URL}/verify-email?token={token}"
 
     verification_email = PendingVerificationEmail(
-        confirm_url=CONFIRMATION_URL, to=email, from_=settings.FROM_EMAIL
+        confirm_url=CONFIRMATION_URL,
+        to=email,
+        from_=DEFAULT_FROM_EMAIL,
+        token=token,
     )
     verification_email.send()
 
