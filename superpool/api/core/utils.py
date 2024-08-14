@@ -3,14 +3,12 @@ import string
 import uuid
 from .emails import PendingVerificationEmail
 from django.conf import settings
+import hashlib
 
 from core.merchants.models import Merchant
 
 DEFAULT_FROM_EMAIL = settings.DEFAULT_FROM_EMAIL
 BASE_URL = settings.BASE_URL
-
-print(f"BASE_URL: {BASE_URL}")
-print(f"EMAIL: {DEFAULT_FROM_EMAIL}")
 
 
 def generate_verification_token() -> str:
@@ -20,12 +18,12 @@ def generate_verification_token() -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=6))
 
 
-def send_verification_email(email: str, token: str) -> None:
+def send_verification_email(email: str, token: str, merchant_id: str) -> None:
     """
     Sends an email to the merchant to verify their email address
     """
 
-    CONFIRMATION_URL = f"{BASE_URL}/verify-email?token={token}"
+    CONFIRMATION_URL = f"{BASE_URL}/merchants/{merchant_id}/verify/?token={token}"
 
     verification_email = PendingVerificationEmail(
         confirm_url=CONFIRMATION_URL,
@@ -56,3 +54,15 @@ def generate_id(klass):
     uuid_suffix = uuid.uuid4().hex[:8]
     unique_id = f"{prefix}_{random_str}_{uuid_suffix}"
     return unique_id
+
+
+def generate_tenant_id():
+    """
+    Generates a tenant ID for a merchant
+
+    The tenant ID is a unique identifier for a merchant that is used to
+    identify the merchant in the system during request calls.
+    """
+    prefix = "SUPERPOOL"
+    hsahlib = hashlib.sha256().hexdigest().upper()
+    return f"{prefix}_{hsahlib}"

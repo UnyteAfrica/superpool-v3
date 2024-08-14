@@ -71,13 +71,17 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         # generate and send a verification email to the merchant
         merchant = serializer.instance
+
         verification_token = generate_verification_token()
+        merchant.verification_token = verification_token
 
         # import pdb
         #
         # pdb.set_trace()
         try:
-            send_verification_email(merchant.business_email, verification_token)
+            send_verification_email(
+                merchant.business_email, verification_token, merchant.short_code
+            )
         except Exception as email_exc:
             logger.error(
                 f"Error sending verification email to this merchant email: {email_exc}"

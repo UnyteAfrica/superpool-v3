@@ -1,4 +1,6 @@
+from datetime import timedelta
 from uuid import uuid4
+from django.utils import timezone
 
 from core.mixins import TimestampMixin, TrashableModelMixin
 from django.db import models
@@ -43,6 +45,9 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     is_active = models.BooleanField(
         default=False, help_text="Designates if the merchant is active"
     )
+    verified = models.BooleanField(
+        default=False, help_text="Designates if the merchant is verified", null=True
+    )
     tax_identification_number = models.CharField(
         _("TIN"),
         unique=True,
@@ -76,6 +81,24 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         default=False,
         help_text="Designates if the business has been verified by the platform",
         blank=True,
+    )
+    token = models.CharField(
+        _("Verification Token"),
+        max_length=6,
+        help_text="Unique token generated for email verification",
+        null=True,
+        blank=True,
+    )
+    token_expires_at = models.DateTimeField(
+        help_text="The date and time the verification token expires",
+        null=True,
+    )
+    tenant_id = models.UUIDField(
+        _("Tenant ID"),
+        help_text="Unique identifier for the merchant in the system",
+        default=uuid4,
+        editable=False,
+        null=True,
     )
 
     class Meta(TypedModelMeta):
@@ -116,3 +139,34 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
             Short code: GTB-2X3F
         """
         return f"{self.name[:3].upper()}-{uuid4().hex[:4].upper()}"
+
+    @property
+    def is_verified(self) -> bool | None:
+        """
+        Check if the merchant is verified
+        """
+        return self.verified
+
+    @property
+    def verification_token(self) -> str | None:
+        """
+        Get the verification token for the merchant
+        """
+        return self.token
+
+    @verification_token.setter
+    def verification_token(self, token: str) -> None:
+        """
+        Set the verification token for the merchant
+        """
+        self.token = token
+        self.token_expires_at = timezone.now() + timedelta(hours=24)
+        self.save()
+
+    def clear_token(self):
+        """
+        Automatically cleanup the token and expiration date
+        """
+        self.token = None
+        self.token_expires_at = None
+        self.save()
