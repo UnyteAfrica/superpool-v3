@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .applications.views import ApplicationView, create_application_view
 from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
+from .views import VerificationAPIView
 
 router = DefaultRouter()
 # router.register(r"merchants", MerchantViewSet, basename="merchant")
@@ -17,6 +18,11 @@ urlpatterns = [
         "merchants",
         MerchantViewList.as_view({"get": "list"}),
         name="list_merchants",
+    ),
+    path(
+        "merchants/<uuid:tenant_id>/verify/",
+        VerificationAPIView.as_view(),
+        name="verify_merchant",
     ),
     # path("", include("api.merchants.urls"), name="merchants"),
     # path("merchants", MerchantViewSet.as_view({"get": "list"}), name="merchants"),  # noqa

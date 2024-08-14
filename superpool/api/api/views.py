@@ -54,14 +54,26 @@ class VerificationAPIView(APIView):
         merchant.save()
 
         # send onboarding email
-        onboarding_email = OnboardingEmail(
-            to=merchant.business_email,
-            tenant_id="",
-            merchant_short_code=merchant.short_code,
-        )
-        onboarding_email.send()
+        try:
+            onboarding_email = OnboardingEmail(
+                to=merchant.business_email,
+                tenant_id=str(merchant.tenant_id),
+                merchant_short_code=merchant.short_code,
+            )
+            onboarding_email.send()
+        except Exception as e:
+            logger.error(
+                f"Failed to send onboarding email to {merchant.business_email}: {str(e)}"
+            )
+            pass
 
         return Response(
-            {"message": _("Email verified successfully")},
+            {
+                "message": _(
+                    "Email verified successfully. Please check your email for onboarding instructions. "
+                    "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
+                    "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
+                )
+            },
             status=status.HTTP_200_OK,
         )

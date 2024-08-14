@@ -71,7 +71,9 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         # generate and send a verification email to the merchant
         merchant = serializer.instance
+
         verification_token = generate_verification_token()
+        merchant.verification_token = verification_token
 
         # import pdb
         #
