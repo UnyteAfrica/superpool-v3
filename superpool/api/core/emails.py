@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
+from django.utils.html import strip_tags
 
 _EmailType = Union[str, list[str]]
 
@@ -55,7 +56,14 @@ class BaseEmailMessage(EmailMultiAlternatives):
 
         context = extra_kwargs.pop("context", {})
         html_content = self.render_template(context)
+
         self.attach_alternative(html_content, "text/html")
+        self.body = strip_tags(html_content)
+
+        # Set any other additional attributes
+        if extra_kwargs:
+            for key, val in extra_kwargs.items():
+                setattr(self, key, val)
 
     def _ensure_list(self, emails: _EmailType) -> list[str]:
         if isinstance(emails, str):
@@ -85,10 +93,7 @@ class BaseEmailMessage(EmailMultiAlternatives):
         """
         Send email message to the user
         """
-        from django.db import transaction
-
-        Super = super()
-        transaction.on_commit(lambda: Super.send(fail_silently=silent))
+        super().send(fail_silently=False)
 
 
 class PendingVerificationEmail(BaseEmailMessage):
@@ -96,11 +101,12 @@ class PendingVerificationEmail(BaseEmailMessage):
     Email message class for sending an email to a merchant who has not yet verified their email address.
     """
 
-    template = "superpool/emails/verification.html"
+    template = "superpool/emails/verification_emailV2.html"
 
     def __init__(
         self,
         confirm_url: str,
+        token: str,
         to: str,
         from_: str | None = None,
         **kwargs: dict,
@@ -115,7 +121,8 @@ class PendingVerificationEmail(BaseEmailMessage):
 
         """
         self.confirm_url = confirm_url
-        context = {"confirm_url": self.confirm_url}
+        self.token = token
+        context = {"confirm_url": self.confirm_url, "token": self.token}
         super().__init__(to, from_email=from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
