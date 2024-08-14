@@ -93,6 +93,13 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         help_text="The date and time the verification token expires",
         null=True,
     )
+    tenant_id = models.UUIDField(
+        _("Tenant ID"),
+        help_text="Unique identifier for the merchant in the system",
+        default=uuid4,
+        editable=False,
+        null=True,
+    )
 
     class Meta(TypedModelMeta):
         verbose_name = _("Merchant")
