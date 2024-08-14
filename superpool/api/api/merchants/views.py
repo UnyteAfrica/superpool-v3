@@ -3,14 +3,18 @@ from typing import Any
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
-from api.merchants.serializers import (CreateMerchantSerializer,
-                                       MerchantSerializer,
-                                       MerchantSerializerV2,
-                                       MerchantWriteSerializerV2)
+from api.merchants.serializers import (
+    CreateMerchantSerializer,
+    MerchantSerializer,
+    MerchantSerializerV2,
+    MerchantWriteSerializerV2,
+)
 from api.merchants.services import MerchantService
-from core.merchants.errors import (MerchantAlreadyExists,
-                                   MerchantObjectDoesNotExist,
-                                   MerchantUpdateError)
+from core.merchants.errors import (
+    MerchantAlreadyExists,
+    MerchantObjectDoesNotExist,
+    MerchantUpdateError,
+)
 from core.merchants.models import Merchant
 from django.http.response import Http404
 from drf_spectacular.utils import extend_schema
@@ -50,8 +54,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         """
         This action allows you to register a new merchant
         """
-        from core.utils import (generate_verification_token,
-                                send_verification_email)
+        from core.utils import generate_verification_token, send_verification_email
 
         serializer = self.get_serializer(data=request.data)
         try:
@@ -69,6 +72,10 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         # generate and send a verification email to the merchant
         merchant = serializer.instance
         verification_token = generate_verification_token()
+
+        # import pdb
+        #
+        # pdb.set_trace()
         try:
             send_verification_email(merchant.business_email, verification_token)
         except Exception as email_exc:
@@ -76,7 +83,10 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 f"Error sending verification email to this merchant email: {email_exc}"
             )
             return Response(
-                {"error": "Merchant created, but sending email verification failed."},
+                {
+                    "error": "Merchant created, but sending email verification failed.",
+                    "data": serializer.data,
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
