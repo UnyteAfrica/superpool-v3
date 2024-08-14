@@ -2,11 +2,12 @@ import abc
 from collections.abc import Callable, Mapping, MutableMapping
 from typing import Optional
 
-from api.merchants.serializers import (CreateMerchantSerializer,
-                                       MerchantSerializer)
-from core.merchants.errors import (MerchantAlreadyExists,
-                                   MerchantObjectDoesNotExist,
-                                   MerchantUpdateError)
+from api.merchants.serializers import CreateMerchantSerializer, MerchantSerializer
+from core.merchants.errors import (
+    MerchantAlreadyExists,
+    MerchantObjectDoesNotExist,
+    MerchantUpdateError,
+)
 from core.merchants.models import Merchant
 from rest_framework.serializers import Serializer, ValidationError
 
@@ -50,8 +51,7 @@ class MerchantService(IMerchantRegistry):
         """
         Registers a new merchant on the platform
         """
-        from core.utils import (generate_verification_token,
-                                send_verification_email)
+        from core.utils import generate_verification_token, send_verification_email
 
         serializer_class = kwargs.pop("serializer_class", CreateMerchantSerializer)
         serializer = serializer_class(data=data)
@@ -61,7 +61,9 @@ class MerchantService(IMerchantRegistry):
 
             merchant = serializer.save()
             verification_token = generate_verification_token()
-            send_verification_email(merchant.business_email, verification_token)
+            send_verification_email(
+                merchant.business_email, verification_token, merchant.short_code
+            )
 
             return merchant
         raise ValidationError(serializer.errors)
