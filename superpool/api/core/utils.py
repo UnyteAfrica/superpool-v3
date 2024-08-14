@@ -9,9 +9,6 @@ from core.merchants.models import Merchant
 DEFAULT_FROM_EMAIL = settings.DEFAULT_FROM_EMAIL
 BASE_URL = settings.BASE_URL
 
-print(f"BASE_URL: {BASE_URL}")
-print(f"EMAIL: {DEFAULT_FROM_EMAIL}")
-
 
 def generate_verification_token() -> str:
     """
