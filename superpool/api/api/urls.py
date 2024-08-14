@@ -20,7 +20,7 @@ urlpatterns = [
         name="list_merchants",
     ),
     path(
-        "merchants/<uuid:tenant_id>/verify/",
+        "merchants/<str:short_code>/verify/",
         VerificationAPIView.as_view(),
         name="verify_merchant",
     ),
