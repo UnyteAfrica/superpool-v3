@@ -126,3 +126,27 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         Check if the merchant is verified
         """
         return self.verified
+
+    @property
+    def verification_token(self) -> str | None:
+        """
+        Get the verification token for the merchant
+        """
+        return self.token
+
+    @verification_token.setter
+    def verification_token(self, token: str) -> None:
+        """
+        Set the verification token for the merchant
+        """
+        self.token = token
+        self.token_expires_at = timezone.now() + timedelta(hours=24)
+        self.save()
+
+    def clear_token(self):
+        """
+        Automatically cleanup the token and expiration date
+        """
+        self.token = None
+        self.token_expires_at = None
+        self.save()
