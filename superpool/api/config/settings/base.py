@@ -256,7 +256,7 @@ LOGGING = {
 
 BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
 
-BASE_URL = env("BASE_URL", default="http://localhost:8000")
+BASE_URL = env("BASE_URL", default="http://localhost:8000/api/v1")
 
 ADMINS = []
 ADMINS += env.list("SUPERPOOL_ADMINS", default=[])
