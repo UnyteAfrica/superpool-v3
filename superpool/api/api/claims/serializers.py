@@ -43,17 +43,18 @@ class ClaimProviderSerializer(serializers.ModelSerializer):
 
 
 class StatusTimelineSerializer(serializers.ModelSerializer):
+    time_stamp = serializers.DateTimeField(
+        source="timestamp", format="%Y-%m-%d %H:%M:%S"
+    )
+
     class Meta:
         model = StatusTimeline
-        fields = ["status", "timestamp"]
+        fields = ["status", "time_stamp"]
 
     def to_representation(self, instance):
         repr = super().to_representation(instance)
         repr["name"] = repr.pop("status")
-        repr["time_stamp"] = repr.pop("timestamp").strftime(
-            # This allows us to be able to convert the timestamp to: Month Day, Year Hour:Minute AM/PM
-            "%b %d, %Y %I:%M %p"
-        )
+        # repr["time_stamp"] = repr.pop("timestamp")
         return repr
 
 
@@ -68,7 +69,8 @@ class ClaimSerializer(serializers.ModelSerializer):
 
     product = ClaimProductSerializer()
     customer = ClaimOwnerSerializer()
-    insurer = ClaimProviderSerializer()
+    # insurer = ClaimProviderSerializer()
+    insurer = serializers.CharField(source="provider.name")
     claim_amount = serializers.DecimalField(
         source="amount", max_digits=10, decimal_places=2
     )
@@ -248,3 +250,86 @@ class ClaimRequestSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         ClaimService.submit_claim(validated_data)
+
+
+class ClaimUpdateSerializer(serializers.Serializer):
+    """
+    Handles updating of a claim instance
+
+    Excludes read-only fields, like claim ID and claim reference number from being updated
+    """
+
+    claimant_metadata = ClaimantMetadataSerializer(required=False)
+    claim_details = ClaimDetailsSerializer(required=False)
+    witness_details = WitnessSerializer(many=True, required=False)
+    authority_report = AuthorityReportSerializer(required=False)
+
+    def validate(self, attrs):
+        authority_report = attrs.get("authority_report")
+        claimant_metadata = attrs.get("claimant_metadata")
+        claim_information = attrs.get("claim_details")
+        witness_information = attrs.get("witness_details")
+
+        if not any(
+            [
+                claimant_metadata,
+                claim_information,
+                witness_information,
+                authority_report,
+            ]
+        ):
+            raise serializers.ValidationError(
+                "You must provide at least one field to update. "
+                "Updates include: claimant_metadata, claim_details, witness_details, authority_report"
+            )
+
+        if authority_report:
+            raise serializers.ValidationError(
+                "Updating the authority report is not supported yet. \n"
+                "Please contact the support team for assistance. \n"
+                "Error Code: AUTHORITY_REPORT_UPDATE_NOT_SUPPORTED"
+            )
+
+        if witness_information:
+            raise serializers.ValidationError(
+                "Updating witness information is not supported yet. \n"
+                "Please contact the support team for assistance. \n"
+                "Error code: WITNESS_INFO_NOT_SUPPORTED."
+            )
+        if claimant_metadata:
+            raise serializers.ValidationError(
+                "At the moment, updating the claim's information is not support yet. "
+                "We are aware of this, and are working to ensure this is possible for your customer "
+                "Please reach out to support team with error code: CLAIMANT_UPDATE_NOT_SUPPORTED"
+            )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        # Update claimant information if provided
+        claimant_metadata = validated_data.get("claimant_metadata")
+        if claimant_metadata:
+            for attr, value in claimant_metadata.items():
+                setattr(instance.claimant, attr, value)
+            instance.claimant.save()
+
+        # Update claim information if provided
+        claim_details = validated_data.get("claim_details")
+        if claim_details:
+            for attr, value in claim_details.items():
+                setattr(instance, attr, value)
+
+        # Handle supporting documents update if needed
+        supporting_documents = claim_details.get("supporting_documents", [])
+        if supporting_documents:
+            instance.documents.all().delete()  # Delete old documents
+            for document_data in supporting_documents:
+                ClaimDocument.objects.create(claim=instance, **document_data)
+
+        # TODO: update witness details if provided
+        # TODO: update authority report if provided
+        #
+        # Handle these later
+
+        instance.save()
+        return instance

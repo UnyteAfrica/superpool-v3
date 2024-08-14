@@ -48,6 +48,7 @@ class Claim(TimestampMixin, models.Model):
     )
     claim_type = models.CharField(max_length=30, null=True)
     incident_date = models.DateField(verbose_name=_("Date of Incident"), null=True)
+    incident_description = models.TextField(null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     estimated_loss = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     payout_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)

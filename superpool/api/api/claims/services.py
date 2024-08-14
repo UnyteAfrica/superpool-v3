@@ -45,11 +45,15 @@ class ClaimService(IClaim):
     creating, updating, and retrieving claim data.
     """
 
-    def get_claims(self, query_params: dict[str, Any]) -> QuerySet:
+    def get_claims(self, query_params: dict[str, Any] = {}) -> QuerySet:
         """
         Retrieve a list of claim based on query parameters
         """
         queryset = Claim.objects.all()
+
+        # If no query parameters are provided, return all claims
+        if not query_params:
+            return queryset
 
         # TODO: REFACTOR OUT INTO A CUSTOM FILTER
         # A CUSTOM REST FRAMEWORK OR DJANGO FILTER SUBCLASS
@@ -85,13 +89,18 @@ class ClaimService(IClaim):
         return queryset
 
     def get_claim(
-        self, claim_number: Union[str, int], claim_id: Union[str, int, None] = None
+        self,
+        claim_number: Union[str, int, None] = None,
+        claim_id: Union[str, int, None] = None,
     ):
         """
         Retrieve a single claim instance by its unique ID or Claim Reference Number
         """
         id = claim_id if claim_id is not None else None
-        return Claim.objects.get(Q(claim_number) | Q(id))
+        if claim_id:
+            return Claim.objects.get(id=id)
+        if claim_number:
+            return Claim.objects.get(claim_number=claim_number)
 
     @staticmethod
     def submit_claim(validated_data):
