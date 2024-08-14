@@ -6,7 +6,7 @@ from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
 
 router = DefaultRouter()
-router.register(r"merchants", MerchantViewSet, basename="merchant")
+# router.register(r"merchants", MerchantViewSet, basename="merchant")
 
 urlpatterns = [
     # path("", user_route),
@@ -19,6 +19,7 @@ urlpatterns = [
         name="list_merchants",
     ),
     # path("", include("api.merchants.urls"), name="merchants"),
+    # path("merchants", MerchantViewSet.as_view({"get": "list"}), name="merchants"),  # noqa
     path("", include("api.catalog.urls"), name="catalog"),
     path("", include("api.claims.urls"), name="claims"),
 ]
