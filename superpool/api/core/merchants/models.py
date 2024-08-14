@@ -43,6 +43,9 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
     is_active = models.BooleanField(
         default=False, help_text="Designates if the merchant is active"
     )
+    verified = models.BooleanField(
+        default=False, help_text="Designates if the merchant is verified", null=True
+    )
     tax_identification_number = models.CharField(
         _("TIN"),
         unique=True,
@@ -116,3 +119,10 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
             Short code: GTB-2X3F
         """
         return f"{self.name[:3].upper()}-{uuid4().hex[:4].upper()}"
+
+    @property
+    def is_verified(self) -> bool | None:
+        """
+        Check if the merchant is verified
+        """
+        return self.verified
