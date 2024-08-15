@@ -110,12 +110,10 @@ class APIKey(models.Model):
         return hashlib.sha256(value.encode()).hexdigest()
 
     def generate_key(self) -> str:
-        prefix = "SUPERPOOL_"
-        suffix = str(uuid.uuid4()).replace("-", "")
-        return f"{prefix}{suffix}"
+        return str(uuid.uuid4()).replace("-", "")
 
     def save(self, *args, **kwargs):
-        if hasattr(self, "hashed_key") or not self.hashed_key:
+        if not self.hashed_key:
             # Generate the key and hash it for storage
             key = self.generate_key()
             self.hashed_key = self.hash_(key)
