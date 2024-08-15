@@ -1,32 +1,48 @@
+from core.merchants.models import Merchant
 from core.models import Application
-from rest_framework.authentication import BaseAuthentication
+from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_api_key.models import APIKey
+from core.models import APIKey as APIKeyModel
+from rest_framework_api_key.permissions import BaseHasAPIKey
+from django.conf import settings
+
+User = settings.AUTH_USER_MODEL
 
 
 class APIKeyAuthentication(BaseAuthentication):
     """
-    Custom authentication class to authenticate requests based on X-APP-ID header
-    and return the merchant object
+    Custom authentication class that uses API Key from request headers.
     """
 
     def authenticate(self, request):
-        # Get both the X-APP-ID and API-KEY headers
-        x_app_id = request.headers.get("X-APP-ID")
+        KEYWORD = "SUPERPOOL "
+        auth_header = get_authorization_header(request).decode("utf-8")
+        print(auth_header)
 
-        # If X-APP-ID header is not present, return None
-        if not x_app_id:
+        if not auth_header:
             return None
 
+        # header has to start with the keyword!
+        if not auth_header.startswith(KEYWORD):
+            return None
+
+        api_key = auth_header[len(KEYWORD) :].strip()
+
+        if not api_key:
+            raise AuthenticationFailed(
+                "Invalid API key header. No credentials provided."
+            )
+
+        return self.authenticate_credentials(api_key)
+
+    def authenticate_credentials(self, key):
         try:
-            app = Application.objects.get(application_id=x_app_id)
+            key_obj = APIKeyModel.objects.get(hashedkey=key)
+        except APIKey.DoesNotExist:
+            raise AuthenticationFailed("Invalid API key")
 
-        except Application.DoesNotExist:
-            raise AuthenticationFailed("Invalid X-APP-ID")
-
-        request.application = app
-        request.merchant = app.merchant
-
-        return (app.merchant, None)
+        return key_obj.merchant, key_obj
 
     def authenticate_header(self, request) -> str | None:
-        return "X-APP-ID"
+        return "SUPERPOOL"
