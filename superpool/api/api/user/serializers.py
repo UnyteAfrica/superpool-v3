@@ -3,6 +3,7 @@ from django.db.models import fields
 from django.db.models.functions import FirstValue
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
+from core.user.models import CustomerSupport, Admin
 
 User = get_user_model()
 
@@ -16,14 +17,32 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        exclude = ("password",)
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "password",
+            "role",
+        )
         extra_kwargs = {
-            "id": {"read_only": True},
             "password": {"write_only": True},
-            "is_staff": {"read_only": True},
-            "is_active": {"read_only": True},
-            "has_completed_verification": {"read_only": True},
         }
+
+    def create(self, validated_data):
+        role = validated_data.get("role")
+        user = User(
+            email=validated_data["email"],
+            first_name=validated_data["first_name"],
+            last_name=validated_data["last_name"],
+            role=role,
+        )
+        user.set_password(validated_data["password"])
+        user.save()
+
+        if role == User.USER_TYPES.SUPPORT:
+            return CustomerSupport.objects.create(user=user)
+        elif role == User.USER_TYPES.ADMIN:
+            return Admin.objects.create(user=user)
 
 
 class ScopedUserSerializer(serializers.ModelSerializer):
