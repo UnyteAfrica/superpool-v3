@@ -1,11 +1,10 @@
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate, get_user_model, login
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import (TokenObtainPairView,
-                                            TokenRefreshView)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .serializers import ScopedUserSerializer, UserAuthSerializer
 
@@ -45,24 +44,25 @@ class SignInView(APIView):
         description="Sign in to the application with the provided data. If the credentials are valid, a new access token will be generated.",
         responses={200: ScopedUserSerializer},
     )
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
+    def post(self, request, *args, **kwargs):
+        serializer = UserAuthSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            password = serializer.validated_data["password"]
 
-        user = authenticate(email=email, password=password)
+            user = authenticate(request, email=email, password=password)
 
-        if user:
-            refresh = RefreshToken.for_user(user=user)
+            if user:
+                login(request, user)
+
+                return Response(
+                    {
+                        "message": "Logged in successfully",
+                        "data": ScopedUserSerializer(user).data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
             return Response(
-                {
-                    "message": "User authenticated successfully",
-                    "user": str(ScopedUserSerializer(user).data),
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                },
-                status=status.HTTP_200_OK,
+                {"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
             )
-        return Response(
-            {"error": "Invalid authentication credentials"},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
