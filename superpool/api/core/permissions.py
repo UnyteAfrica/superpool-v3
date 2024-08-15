@@ -6,22 +6,58 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
+VERIFIED_ROLES = [
+    User.USER_TYPES.ADMIN,
+    User.USER_TYPES.MERCHANT,
+    User.USER_TYPES.SUPPORT,
+]
+
+
 class IsCustomerSupport(BasePermission):
     def has_permission(self, request, view):
+        user = request.user
         return (
-            request.user and request.user.groups.filter(name="CustomerSupport").exists()
+            user.is_authenticated
+            and user.groups.filter(name="CustomerSupport").exists()
+            and user.role == User.USER_TYPES.SUPPORT
+            and user.role in VERIFIED_ROLES
         )
 
 
 class IsMerchant(BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.groups.filter(name="Merchant").exists()
+        user = request.user
+        return (
+            user.is_authenticated
+            and user.groups.filter(name="Merchant").exists()
+            and user.role == User.USER_TYPES.MERCHANT
+            and user.role in VERIFIED_ROLES
+        )
 
 
 # Admin user can have multiple groups
 class IsAdminUser(BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.groups.filter(name="Admin").exists()
+        user = request.user
+        return (
+            user.is_authenticated
+            and user.groups.filter(name="Admin").exists()
+            and user.role == User.USER_TYPES.ADMIN
+            and user.role in VERIFIED_ROLES
+        )
+
+
+class IsMerchantOrSupport(BasePermission):
+    """
+    Allows access to users who are either Merchant or Customer Support.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+        return user.is_authenticated and user.role in [
+            User.USER_TYPES.MERCHANT,
+            User.USER_TYPES.SUPPORT,
+        ]
 
 
 # define permissions types, permission groups, and assign permissions to groups
