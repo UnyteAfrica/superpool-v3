@@ -45,7 +45,7 @@ class User(AbstractUser, TimestampMixin):
         _("Role"),
         max_length=20,
         choices=USER_TYPES.choices,
-        default=USER_TYPES.ADMIN,
+        default=USER_TYPES.SUPPORT,
         help_text="Designates the role of a given user on the platform",
     )
     email = models.EmailField(unique=True)
