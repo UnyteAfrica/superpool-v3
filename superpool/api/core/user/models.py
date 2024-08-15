@@ -1,3 +1,4 @@
+from types import NoneType
 import uuid
 
 from core.mixins import TimestampMixin
@@ -16,9 +17,8 @@ class User(AbstractUser, TimestampMixin):
     """
 
     class USER_TYPES(models.TextChoices):
-        # TODO: Remove the customer model in the next release
-        # CUSTOMER = "customer", _("Customer")
         ADMIN = "admin", _("Admin")
+        MERCHANT = "merchant", _("Merchant")
         SUPPORT = "support", _("Customer Support")
 
     id = models.UUIDField(
@@ -30,30 +30,28 @@ class User(AbstractUser, TimestampMixin):
     first_name = models.CharField(
         _("First Name"),
         help_text="Given name as it appears on ID",
-        max_length=40,
+        max_length=150,
+        null=True,
+        blank=True,
     )
     last_name = models.CharField(
         _("Last Name"),
         help_text="Family name as it appears on ID",
-        max_length=40,
-    )
-    username = models.CharField(
-        unique=True,
-        blank=True,
+        max_length=150,
         null=True,
-        help_text="Designates the username of a given user",
+        blank=True,
     )
     role = models.CharField(
         _("Role"),
         max_length=20,
         choices=USER_TYPES.choices,
-        default=USER_TYPES.ADMIN,
+        default=USER_TYPES.SUPPORT,
         help_text="Designates the role of a given user on the platform",
     )
-
     email = models.EmailField(unique=True)
 
-    REQUIRED_FIELDS = ["first_name", "last_name", "email"]
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     class Meta:
         ordering = ["first_name", "last_name", "last_login", "date_joined"]
@@ -63,26 +61,14 @@ class User(AbstractUser, TimestampMixin):
 
     @property
     def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        # return f"{self.first_name} {self.last_name}"
+        return super().get_full_name()
 
     def __str__(self):
-        return self.full_name
-
-    # TODO: Remove the customer model in the next release
-    @deprecated("This function would be removed in nearest future stable release ")
-    def has_completed_verification(self) -> bool:
-        """
-        Validates if the user has completed KYC verification
-        """
-        return False
-
-    # TODO: Remove the customer model in the next release
-    @deprecated("This function would be removed in nearest future stable release ")
-    def has_read_terms(self) -> bool:
-        """
-        Check if user has read terms and conditions
-        """
-        return False
+        try:
+            return super().get_full_name()
+        except AttributeError:
+            return self.email
 
 
 class Customer(TimestampMixin, models.Model):
@@ -91,6 +77,8 @@ class Customer(TimestampMixin, models.Model):
 
     Model to represent a customer
     """
+
+    from core.merchants.models import Merchant
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(
@@ -141,6 +129,14 @@ class Customer(TimestampMixin, models.Model):
         max_length=20,
         null=True,
     )
+    merchant = models.ForeignKey(
+        Merchant,
+        on_delete=models.CASCADE,
+        related_name="customers",
+        null=True,
+        blank=True,
+        help_text="Merchant that created the customer",
+    )
 
     def has_completed_verification(self) -> bool:
         """
@@ -160,3 +156,42 @@ class Customer(TimestampMixin, models.Model):
         indexes = [
             models.Index(fields=["first_name", "last_name", "email"]),
         ]
+
+
+###############################################################################
+# INTERNAL USERS
+###############################################################################
+
+
+class Admin(models.Model):
+    """
+    Represents an admin user on the platform
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="admin_user"
+    )
+
+    is_admin = models.BooleanField(default=True)
+    is_superuser = models.BooleanField(
+        default=True, help_text="Designates if the user is a superuser"
+    )
+
+    def __str__(self):
+        return self.user.full_name
+
+
+class CustomerSupport(models.Model):
+    """
+    Represents someone from the Customer Support team
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="support_user"
+    )
+    is_staff = models.BooleanField(
+        default=True, help_text="Designates if the user is a staff member"
+    )
+
+    def __str__(self):
+        return self.user.full_name

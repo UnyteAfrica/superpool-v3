@@ -6,6 +6,7 @@ from core.mixins import TimestampMixin, TrashableModelMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
+from django.conf import settings
 
 
 class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
@@ -14,6 +15,8 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
 
     At this moment, we are only providing insurance services to businesses (organizations; banks, schools, online marts, etc)
     """
+
+    User = settings.AUTH_USER_MODEL
 
     name = models.CharField(
         max_length=255,
@@ -99,6 +102,9 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         default=uuid4,
         editable=False,
         null=True,
+    )
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="merchant", null=True
     )
 
     class Meta(TypedModelMeta):
