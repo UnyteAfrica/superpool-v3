@@ -25,33 +25,28 @@ class TenantAuthenticationMiddleware:
         # otherwise invalidate the reqeust
 
         # NOTE: merchant_id is the unique identifier of the merchant
-        merchant_id = request.headers.get("X-Merchant-ID")
-        # APP ID is the identifier of the application, this is used to identify the
-        # application that is making the request
-        # for merchannts, they would have to create an application and use the
-        # application id to make requests to the API
-        x_app_id = request.headers.get("X-APP-ID")
+        merchant_id = request.headers.get("X-Tenant-ID")
 
-        if merchant_id and x_app_id:
+        if merchant_id:
             try:
-                merchant = Merchant.objects.get(id=merchant_id)
-                application = Application.objects.get(id=x_app_id)
+                merchant = Merchant.objects.get(tenant_id=merchant_id)
 
-                if merchant and application:
-                    request.tenant = merchant
+                if merchant:
+                    tenant = merchant.user
+                    request.user = tenant
                 else:
-                    # if the merchant or application is incorrect, fallback to normal
-                    logger.warning("Invalid merchant or application information")
+                    # merchant information not found
+                    logger.warning("Invalid merchant information")
                     request.tenant = None
             except (Merchant.DoesNotExist, Application.DoesNotExist) as err:
                 # if no merchant or application is found in the database, fallback to normal
                 logger.warning(f"Error fetching merchant or application: {err}")
-                request.tenant = None
+                request.user = None
         else:
             # if the merchant_id or application_id is not found in the request headers
             # proceed to authenticate as normal authentication
             logger.warning("Merchant ID or Application ID not found in request headers")
-            request.tenant = None
+            request.user = None
 
         response = self.get_response(request)
 
