@@ -1,4 +1,11 @@
+import warnings
 from django.apps import AppConfig
+
+
+def suppress_warnings():
+    warnings.filterwarnings(
+        "ignore", category=RuntimeWarning, module="django.db.backends.util"
+    )
 
 
 class CoreConfig(AppConfig):
@@ -6,4 +13,9 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self):
-        import core.signals
+        try:
+            import core.signals
+
+            suppress_warnings()
+        except ImportError:
+            pass
