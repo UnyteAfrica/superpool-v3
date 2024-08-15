@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .serializers import ScopedUserSerializer, UserAuthSerializer
+from .serializers import ScopedUserSerializer, UserAuthSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -20,7 +20,7 @@ class SignUpView(APIView):
         responses={201: ScopedUserSerializer},
     )
     def post(self, request):
-        serializer = UserAuthSerializer(data=request.data)
+        serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = User.objects.create(**serializer.validated_data)
             refresh_token = RefreshToken.for_user(user=user)

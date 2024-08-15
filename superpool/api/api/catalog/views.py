@@ -3,6 +3,12 @@ from uuid import uuid4
 import uuid
 from .openapi import products_response_example
 from datetime import datetime, timedelta
+from core.permissions import (
+    IsAdminUser,
+    IsMerchant,
+    IsCustomerSupport,
+    IsMerchantOrSupport,
+)
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -67,6 +73,7 @@ class PolicyListView(generics.ListAPIView):
     """
 
     serializer_class = PolicySerializer
+    authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
         return PolicyService.list_policies()
@@ -98,6 +105,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductSerializer
+    authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
         return ProductService.list_products()
@@ -176,6 +184,7 @@ class ProductRetrieveView(generics.RetrieveAPIView):
 
     serializer_class = ProductSerializer
     queryset = ProductService.list_products()
+    authentication_classes = [APIKeyAuthentication]
 
     @extend_schema(
         summary="Retrieve a product by ID or name",
@@ -239,6 +248,7 @@ class PolicyAPIViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = PolicyService.list_policies()
+    permission_classes = [IsMerchant]
 
     def get_serializer_class(self):
         if self.action == "renew":
@@ -513,14 +523,10 @@ class PolicyAPIViewSet(
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProductAPIViewSet(viewsets.GenericViewSet):
-    # endpoint to search and filter for product based on query parameters
-
-    # endpoint to get a product belonging to a specific insurer
-    pass
-
-
 class QuoteListView(generics.ListAPIView):
+    permission_classes = [IsMerchant, IsCustomerSupport]
+    authentication_classes = [APIKeyAuthentication]
+
     def get_service(self):
         return QuoteService()
 
@@ -540,6 +546,8 @@ class QuoteListView(generics.ListAPIView):
 class QuoteDetailView(views.APIView):
     def get_service(self):
         return QuoteService()
+
+    permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
@@ -676,6 +684,10 @@ class QuoteAPIViewSet(viewsets.ViewSet):
 
 
 class RequestQuoteView(views.APIView):
+    permission_classes = [
+        IsMerchant,
+    ]
+
     def get_service(self):
         return QuoteService()
 
@@ -803,6 +815,7 @@ class PolicyPurchaseView(generics.GenericAPIView):
     """
 
     serializer_class = PolicyPurchaseSerializer
+    permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
         summary="Purchase a policy",
@@ -876,6 +889,9 @@ class PolicyCancellationView(generics.GenericAPIView):
     """
     This view allows you to initiate the termination of insurance policy
     """
+
+    permission_classes = [IsMerchant, IsMerchantOrSupport]
+    authentication_classes = [APIKeyAuthentication]
 
     serializer_class = PolicyCancellationRequestSerializer
 
