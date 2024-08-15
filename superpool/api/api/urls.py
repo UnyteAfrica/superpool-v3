@@ -11,7 +11,8 @@ router = DefaultRouter()
 
 urlpatterns = [
     # path("", user_route),
-    path("", include(user_route), name="user"),
+    # path("", include(user_route), name="user"),
+    path("internal/auth/", include(user_route), name="auth"),
     path("sandbox/", ApplicationView.as_view(), name="sandbox_application"),
     path("sandbox/create/", create_application_view, name="sandbox_create_application"),
     path(
