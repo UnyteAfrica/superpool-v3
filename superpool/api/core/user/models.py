@@ -48,10 +48,16 @@ class User(AbstractUser, TimestampMixin):
         default=USER_TYPES.SUPPORT,
         help_text="Designates the role of a given user on the platform",
     )
-    email = models.EmailField(unique=True)
+    email = models.EmailField(max_length=150, unique=True)
+    username = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        unique=False,  # Set to False to avoid unique constraint
+    )
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS = []
 
     class Meta:
         ordering = ["first_name", "last_name", "last_login", "date_joined"]

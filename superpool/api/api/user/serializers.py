@@ -1,11 +1,15 @@
+import logging
 from django.contrib.auth import get_user_model
 from django.db.models import fields
 from django.db.models.functions import FirstValue
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from core.user.models import CustomerSupport, Admin
+from django.db import IntegrityError, transaction
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,23 +30,69 @@ class UserSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             "password": {"write_only": True},
+            "first_name": {"required": True},
+            "last_name": {"required": True},
+            "email": {"required": True},
+            "role": {"required": True},
         }
+
+    def validate(self, attrs):
+        """
+        This method is used to validate the data sent by the user.
+        """
+        email = attrs.get("email")
+        role = attrs.get("role")
+
+        if role not in User.USER_TYPES.values:
+            raise serializers.ValidationError({"role": "Invalid role"})
+
+        # Check if the email already exists
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError(
+                {"username": "This username is already taken."}
+            )
+
+        return attrs
 
     def create(self, validated_data):
         role = validated_data.get("role")
-        user = User(
-            email=validated_data["email"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            role=role,
-        )
-        user.set_password(validated_data["password"])
-        user.save()
 
-        if role == User.USER_TYPES.SUPPORT:
-            return CustomerSupport.objects.create(user=user)
-        elif role == User.USER_TYPES.ADMIN:
-            return Admin.objects.create(user=user)
+        try:
+            with transaction.atomic():
+                user = User(
+                    email=validated_data["email"],
+                    first_name=validated_data["first_name"],
+                    last_name=validated_data["last_name"],
+                    role=role,
+                )
+                user.set_password(validated_data["password"])
+                user.save()
+
+                # Create related profiles
+                if role == User.USER_TYPES.SUPPORT:
+                    CustomerSupport.objects.create(user=user)
+                elif role == User.USER_TYPES.ADMIN:
+                    Admin.objects.create(user=user)
+        except IntegrityError as err:
+            logger.error(f"IntegrityError: {str(e)}")
+            raise serializers.ValidationError({"detail": "Integrity error occurred."})
+        except Exception as e:
+            logger.error(f"Exception: {str(e)}")
+            raise serializers.ValidationError({"detail": str(e)})
+
+        return user
+
+
+class AdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Admin
+        fields = ("is_admin", "is_superuser")
+
+
+class CustomerSupportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerSupport
+        fields = ("is_staff",)
 
 
 class ScopedUserSerializer(serializers.ModelSerializer):
@@ -51,12 +101,19 @@ class ScopedUserSerializer(serializers.ModelSerializer):
     a user to the public.
     """
 
+    admin_profile = AdminSerializer(source="admin_user", read_only=True)
+    support_profile = CustomerSupportSerializer(source="support_user", read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "email")
-        extra_kwargs = {
-            "id": {"read_only": True},
-        }
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "admin_profile",
+            "support_profile",
+        )
 
 
 class UserSignupSerializer(serializers.Serializer):
