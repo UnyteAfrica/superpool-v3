@@ -53,7 +53,7 @@ class ScopedUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "email")
+        fields = ("id", "first_name", "last_name", "email", "username")
         extra_kwargs = {
             "id": {"read_only": True},
         }

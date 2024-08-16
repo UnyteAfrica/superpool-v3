@@ -1,11 +1,18 @@
 from django.contrib.auth import authenticate, get_user_model, login
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.serializers import ValidationError
+from django.db import IntegrityError
 
 from .serializers import ScopedUserSerializer, UserAuthSerializer, UserSerializer
 
@@ -17,26 +24,50 @@ class SignUpView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=UserAuthSerializer,
+        request=OpenApiRequest(
+            UserSerializer,
+            examples=[
+                OpenApiExample(
+                    "User Registration",
+                    description="The data required to create a new user.",
+                    value={
+                        "email": "rasengan@email.com",
+                        "first_name": "Naruto",
+                        "last_name": "Uzumaki",
+                        "password": "password",
+                        "role": "customer",
+                    },
+                )
+            ],
+        ),
         tags=["User"],
         operation_id="register",
         description="Create a new user with the provided data, and a new profile is created for the user.",
-        responses={201: ScopedUserSerializer},
+        responses={201: OpenApiResponse(response=ScopedUserSerializer)},
     )
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            user = User.objects.create(**serializer.validated_data)
-            refresh_token = RefreshToken.for_user(user=user)
-            return Response(
-                {
-                    "message": "User created successfully",
-                    "user": UserAuthSerializer(user).data,
-                    "refresh": str(refresh_token),
-                    "access": str(refresh_token.access_token),
-                },
-                status=status.HTTP_201_CREATED,
-            )
+            try:
+                user = serializer.save()
+                return Response(
+                    {
+                        "status": "success",
+                        "message": "User created successfully",
+                        "data": ScopedUserSerializer(user).data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except (IntegrityError, ValidationError) as e:
+                return Response(
+                    {"message": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except Exception as e:
+                return Response(
+                    {"message": "An error occurred", "error": str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
