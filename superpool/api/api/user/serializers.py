@@ -1,12 +1,15 @@
+import logging
 from django.contrib.auth import get_user_model
 from django.db.models import fields
 from django.db.models.functions import FirstValue
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from core.user.models import CustomerSupport, Admin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -54,21 +57,28 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         role = validated_data.get("role")
 
-        with transaction.atomic():
-            user = User(
-                email=validated_data["email"],
-                first_name=validated_data["first_name"],
-                last_name=validated_data["last_name"],
-                role=role,
-            )
-            user.set_password(validated_data["password"])
-            user.save()
+        try:
+            with transaction.atomic():
+                user = User(
+                    email=validated_data["email"],
+                    first_name=validated_data["first_name"],
+                    last_name=validated_data["last_name"],
+                    role=role,
+                )
+                user.set_password(validated_data["password"])
+                user.save()
 
-            # Create related profiles
-            if role == User.USER_TYPES.SUPPORT:
-                CustomerSupport.objects.create(user=user)
-            elif role == User.USER_TYPES.ADMIN:
-                Admin.objects.create(user=user)
+                # Create related profiles
+                if role == User.USER_TYPES.SUPPORT:
+                    CustomerSupport.objects.create(user=user)
+                elif role == User.USER_TYPES.ADMIN:
+                    Admin.objects.create(user=user)
+        except IntegrityError as err:
+            logger.error(f"IntegrityError: {str(e)}")
+            raise serializers.ValidationError({"detail": "Integrity error occurred."})
+        except Exception as e:
+            logger.error(f"Exception: {str(e)}")
+            raise serializers.ValidationError({"detail": str(e)})
 
         return user
 
