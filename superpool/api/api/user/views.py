@@ -30,7 +30,7 @@ class SignUpView(APIView):
 
     @extend_schema(
         request=OpenApiRequest(
-            UserSerializer,
+            request=UserSerializer,
             examples=[
                 OpenApiExample(
                     "User Registration",
@@ -48,7 +48,55 @@ class SignUpView(APIView):
         tags=["User"],
         operation_id="register",
         description="Create a new user with the provided data, and a new profile is created for the user.",
-        responses={201: OpenApiResponse(response=ScopedUserSerializer)},
+        responses={
+            201: OpenApiResponse(
+                response=ScopedUserSerializer,
+                description="User created successfully",
+                examples=[
+                    OpenApiExample(
+                        "User Registration",
+                        description="The user profile for the newly created user.",
+                        value={
+                            "status": "success",
+                            "message": "User created successfully",
+                            "data": {
+                                "first_name": "Naruto",
+                                "last_name": "Uzumaki",
+                                "email": "naruto@hokage.com",
+                                "role": "support",
+                                "admin_profile": "null",
+                                "support_profile": {
+                                    "is_staff": True,
+                                },
+                            },
+                        },
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                description="Validation error",
+                examples=[
+                    OpenApiExample(
+                        "Validation Error",
+                        description="The error message for the validation error.",
+                        value={"message": "Validation error: <error message>"},
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="An error occurred",
+                examples=[
+                    OpenApiExample(
+                        "Error",
+                        description="The error message for the internal server error.",
+                        value={
+                            "message": "An error occurred",
+                            "error": "<error message>",
+                        },
+                    )
+                ],
+            ),
+        },
     )
     def post(self, request, *args, **kwargs):
         serializer = UserSerializer(data=request.data)
@@ -89,7 +137,9 @@ class SignInView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        request=UserAuthSerializer,
+        request=OpenApiRequest(
+            request=UserAuthSerializer,
+        ),
         tags=["User"],
         operation_id="login",
         description="Sign in to the application with the provided data. If the credentials are valid, a new access token will be generated.",
