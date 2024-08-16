@@ -129,6 +129,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         try:
             merchant = get_object_or_404(Merchant, short_code=short_code)
         except Http404:
+            logger.error(f"Merchant:{short_code} not found.")
             return Response(
                 {"error": "Merchant with the provided short code not found."},
                 status=status.HTTP_404_NOT_FOUND,
