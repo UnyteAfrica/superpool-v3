@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class ClaimsViewSet(viewsets.ViewSet):
     # authentication_classes = [APIKeyAuthentication]
-    permission_classes = [IsMerchantOrSupport, IsMerchant, IsAuthenticated]
+    # permission_classes = [IsMerchantOrSupport, IsMerchant, IsAuthenticated]
 
     def get_service(self):
         """
