@@ -28,6 +28,22 @@ class UserSerializer(serializers.ModelSerializer):
             "password": {"write_only": True},
         }
 
+    def validate(self, attrs):
+        """
+        This method is used to validate the data sent by the user.
+        """
+        username = attrs.get("email")
+        if attrs.get("role") not in User.USER_TYPES.values():
+            raise serializers.ValidationError("Invalid role")
+
+        # Check if the username already exists
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError(
+                {"username": "This username is already taken."}
+            )
+
+        return attrs
+
     def create(self, validated_data):
         role = validated_data.get("role")
         user = User(
