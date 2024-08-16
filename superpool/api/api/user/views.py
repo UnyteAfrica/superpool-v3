@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, get_user_model, login
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,6 +13,9 @@ User = get_user_model()
 
 
 class SignUpView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @extend_schema(
         request=UserAuthSerializer,
         tags=["User"],
@@ -37,6 +41,9 @@ class SignUpView(APIView):
 
 
 class SignInView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @extend_schema(
         request=UserAuthSerializer,
         tags=["User"],

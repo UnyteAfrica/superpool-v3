@@ -29,11 +29,16 @@ from .openapi import (
     claim_request_payload_example,
     single_claim_response_example,
 )
+from core.permissions import IsMerchant, IsMerchantOrSupport
+from api.app_auth.authentication import APIKeyAuthentication
 
 logger = logging.getLogger(__name__)
 
 
 class ClaimsViewSet(viewsets.ViewSet):
+    authentication_classes = [APIKeyAuthentication]
+    permission_classes = [IsMerchantOrSupport, IsMerchant]
+
     def get_service(self):
         """
         Returns the instance of our Claims Service

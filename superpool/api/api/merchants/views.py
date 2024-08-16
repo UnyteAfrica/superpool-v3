@@ -163,6 +163,7 @@ class MerchantViewSet(ViewSet):
     Viewset for Merchant model
     """
 
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     service_class = MerchantService()
 
