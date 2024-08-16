@@ -1,3 +1,4 @@
+import logging
 from django.contrib.auth import authenticate, get_user_model, login
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -13,10 +14,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.serializers import ValidationError
 from django.db import IntegrityError
+from core.user.models import CustomerSupport, Admin
+from api.user.serializers import CustomerSupportSerializer, AdminSerializer
 
 from .serializers import ScopedUserSerializer, UserAuthSerializer, UserSerializer
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class SignUpView(APIView):
@@ -35,7 +40,7 @@ class SignUpView(APIView):
                         "first_name": "Naruto",
                         "last_name": "Uzumaki",
                         "password": "password",
-                        "role": "customer",
+                        "role": "support",
                     },
                 )
             ],
@@ -45,25 +50,33 @@ class SignUpView(APIView):
         description="Create a new user with the provided data, and a new profile is created for the user.",
         responses={201: OpenApiResponse(response=ScopedUserSerializer)},
     )
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+            print(f"Validated data: {serializer.validated_data}")
             try:
                 user = serializer.save()
+                user_profile_serializer = ScopedUserSerializer(user)
                 return Response(
                     {
                         "status": "success",
                         "message": "User created successfully",
-                        "data": ScopedUserSerializer(user).data,
+                        "data": user_profile_serializer.data,
                     },
                     status=status.HTTP_201_CREATED,
                 )
-            except (IntegrityError, ValidationError) as e:
+            except IntegrityError as e:
                 return Response(
-                    {"message": str(e)},
+                    {"message": "Integrity error: " + str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValidationError as e:
+                return Response(
+                    {"message": "Validation error: " + str(e)},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             except Exception as e:
+                logger.error(f"Error creating user: {str(e)}")
                 return Response(
                     {"message": "An error occurred", "error": str(e)},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
