@@ -75,7 +75,7 @@ class PolicyListView(generics.ListAPIView):
 
     serializer_class = PolicySerializer
     # authentication_classes = [APIKeyAuthentication]
-    permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
+    # permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
 
     def get_queryset(self):
         return PolicyService.list_policies()
@@ -250,7 +250,7 @@ class PolicyAPIViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = PolicyService.list_policies()
-    permission_classes = [IsMerchant, IsAuthenticated, IsCustomerSupport]
+    # permission_classes = [IsMerchant, IsAuthenticated, IsCustomerSupport]
 
     def get_serializer_class(self):
         if self.action == "renew":
@@ -526,7 +526,7 @@ class PolicyAPIViewSet(
 
 
 class QuoteListView(generics.ListAPIView):
-    permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
+    # permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
     # authentication_classes = [APIKeyAuthentication]
 
     def get_service(self):
@@ -549,7 +549,7 @@ class QuoteDetailView(views.APIView):
     def get_service(self):
         return QuoteService()
 
-    permission_classes = [IsMerchant, IsMerchantOrSupport]
+    # permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
@@ -686,10 +686,10 @@ class QuoteAPIViewSet(viewsets.ViewSet):
 
 
 class RequestQuoteView(views.APIView):
-    permission_classes = [
-        IsMerchant,
-    ]
-
+    # permission_classes = [
+    #     IsMerchant,
+    # ]
+    #
     def get_service(self):
         return QuoteService()
 
@@ -817,7 +817,7 @@ class PolicyPurchaseView(generics.GenericAPIView):
     """
 
     serializer_class = PolicyPurchaseSerializer
-    permission_classes = [IsMerchant, IsMerchantOrSupport]
+    # permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
         summary="Purchase a policy",
@@ -892,7 +892,7 @@ class PolicyCancellationView(generics.GenericAPIView):
     This view allows you to initiate the termination of insurance policy
     """
 
-    permission_classes = [IsMerchant, IsMerchantOrSupport]
+    # permission_classes = [IsMerchant, IsMerchantOrSupport]
     # authentication_classes = [APIKeyAuthentication]
 
     serializer_class = PolicyCancellationRequestSerializer
