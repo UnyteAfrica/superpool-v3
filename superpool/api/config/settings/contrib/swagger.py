@@ -29,14 +29,14 @@ SPECTACULAR_SETTINGS = {
         {"APIKey": []},
         {"Bearer": []},
     ],
-    "SERVE_URLS": [
-        {"url": "https://ng.unyte.africa/api/v1/", "name": "Production"},
-        {
-            "url": "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app/api/docs/swagger/",
-            "name": "Staging",
-        },
-        {"url": "http://localhost:8000/api/docs/swagger/", "name": "Development"},
-    ],
+    # "SERVE_URLS": [
+    #     {"url": "https://ng.unyte.africa/api/v1/", "name": "Production"},
+    #     {
+    #         "url": "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app/api/docs/swagger/",
+    #         "name": "Staging",
+    #     },
+    #     {"url": "http://localhost:8000/api/docs/swagger/", "name": "Development"},
+    # ],
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
@@ -50,18 +50,18 @@ SPECTACULAR_SETTINGS = {
         "showCommonExtensions": True,
         "supportedSubmitMethods": ["get", "post", "put", "delete", "patch"],
     },
-    "SERVERS": [
-        {
-            "url": "https://ng.unyte.africa/api/v1/",
-            "description": "Production",
-        },
-        {
-            "url": "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app/api/docs/swagger/",
-            "description": "Staging",
-        },
-        {
-            "url": "http://localhost:8000/api/docs/swagger/",
-            "description": "Development",
-        },
-    ],
+    # "SERVERS": [
+    #     {
+    #         "url": "https://ng.unyte.africa/api/v1/",
+    #         "description": "Production",
+    #     },
+    #     {
+    #         "url": "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app/",
+    #         "description": "Staging",
+    #     },
+    #     {
+    #         "url": "http://localhost:8000/",
+    #         "description": "Development",
+    #     },
+    # ],
 }
