@@ -9,6 +9,7 @@ from core.permissions import (
     IsCustomerSupport,
     IsMerchantOrSupport,
 )
+from rest_framework.permissions import IsAuthenticated
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -73,7 +74,8 @@ class PolicyListView(generics.ListAPIView):
     """
 
     serializer_class = PolicySerializer
-    authentication_classes = [APIKeyAuthentication]
+    # authentication_classes = [APIKeyAuthentication]
+    permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
 
     def get_queryset(self):
         return PolicyService.list_policies()
@@ -105,7 +107,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductSerializer
-    authentication_classes = [APIKeyAuthentication]
+    # authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
         return ProductService.list_products()
@@ -184,7 +186,7 @@ class ProductRetrieveView(generics.RetrieveAPIView):
 
     serializer_class = ProductSerializer
     queryset = ProductService.list_products()
-    authentication_classes = [APIKeyAuthentication]
+    # authentication_classes = [APIKeyAuthentication]
 
     @extend_schema(
         summary="Retrieve a product by ID or name",
@@ -248,7 +250,7 @@ class PolicyAPIViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = PolicyService.list_policies()
-    permission_classes = [IsMerchant]
+    permission_classes = [IsMerchant, IsAuthenticated, IsCustomerSupport]
 
     def get_serializer_class(self):
         if self.action == "renew":
@@ -524,8 +526,8 @@ class PolicyAPIViewSet(
 
 
 class QuoteListView(generics.ListAPIView):
-    permission_classes = [IsMerchant, IsCustomerSupport]
-    authentication_classes = [APIKeyAuthentication]
+    permission_classes = [IsMerchant, IsCustomerSupport, IsAuthenticated]
+    # authentication_classes = [APIKeyAuthentication]
 
     def get_service(self):
         return QuoteService()
@@ -891,7 +893,7 @@ class PolicyCancellationView(generics.GenericAPIView):
     """
 
     permission_classes = [IsMerchant, IsMerchantOrSupport]
-    authentication_classes = [APIKeyAuthentication]
+    # authentication_classes = [APIKeyAuthentication]
 
     serializer_class = PolicyCancellationRequestSerializer
 

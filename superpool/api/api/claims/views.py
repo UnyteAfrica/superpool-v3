@@ -1,5 +1,6 @@
 import uuid
 from django.http import Http404
+from rest_framework.permissions import IsAuthenticated
 from core.claims.models import Claim
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
@@ -36,8 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 class ClaimsViewSet(viewsets.ViewSet):
-    authentication_classes = [APIKeyAuthentication]
-    permission_classes = [IsMerchantOrSupport, IsMerchant]
+    # authentication_classes = [APIKeyAuthentication]
+    permission_classes = [IsMerchantOrSupport, IsMerchant, IsAuthenticated]
 
     def get_service(self):
         """
