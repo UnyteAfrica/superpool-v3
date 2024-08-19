@@ -773,29 +773,61 @@ class RequestQuoteView(views.APIView):
         # validate incoming data conforms to some predefined values
         req_serializer = QuoteRequestSerializer(data=request.data)
 
-        # logger.info(f"Incoming request data: {request.data}")
         if req_serializer.is_valid(raise_exception=True):
             request_data = req_serializer.validated_data
-            # logger.info(f"Validated request data: {request_data}")
             insurance_details = request.data.pop("insurance_details", {})
 
             # retrieve the quote based on the parameters provided
             quote_service = self.get_service()
+            quote_code = request_data.get("quote_code")
+            product_type = request_data.get("product_type")
+            insurance_name = request_data.get("insurance_name")
             try:
-                quote_data = quote_service.get_quote(
-                    product=request_data.get(
-                        "product_type"
-                    ),  # an insurance type have to be provided e.g Auto, Travel, Health
-                    product_name=request_data.get(
-                        "insurance_name"
-                    ),  # as an addition, a policy name (Smart Health Insurance) can be provided
-                    quote_code=request_data.get("quote_code"),
-                    insurance_details=insurance_details,
-                )
-                # this should fix the error that am passing serializer instance rather than .data or .errors
-                if isinstance(quote_data, QuoteSerializer):
-                    quote_data = quote_data.data
-                return Response(quote_data, status=status.HTTP_200_OK)
+                if quote_code:
+                    # Retrieve existing quote by code
+                    quote_data = quote_service.get_quote(quote_code=quote_code)
+                else:
+                    # Create a new quote
+                    coverage_type = insurance_details.get("coverage_type")
+                    quote_data = quote_service._create_quote(
+                        product_type=product_type,
+                        product_name=insurance_name,
+                        insurance_details=insurance_details,
+                    )
+                # quote_data = quote_service.get_quote(
+                #     product=request_data.get(
+                #         "product_type"
+                #     ),  # an insurance type have to be provided e.g Auto, Travel, Health
+                #     product_name=request_data.get(
+                #         "insurance_name"
+                #     ),  # as an addition, a policy name (Smart Health Insurance) can be provided
+                #     quote_code=request_data.get("quote_code"),
+                #     insurance_details=insurance_details,
+                # )
+
+                print(f"Quote data: {quote_data}")
+                # # this should fix the error that am passing serializer instance rather than .data or .errors
+                # if isinstance(quote_data, QuoteSerializer):
+                #     quote_data = quote_data.data
+                #     return Response(quote_data, status=status.HTTP_200_OK)
+                # else:
+                #     quote_serializer = QuoteSerializer(quote_data)
+                #     return Response(quote_serializer.data, status=status.HTTP_200_OK)
+
+                import pdb
+
+                # pdb.set_trace()
+                # If the result is a Quote object, serialize it
+                if isinstance(quote_data, Quote):
+                    quote_serializer = QuoteSerializer(quote_data)
+                    return Response(quote_serializer.data, status=status.HTTP_200_OK)
+
+                # If the result is already serialized data, return it directly
+                if isinstance(quote_data, dict):
+                    return Response(quote_data, status=status.HTTP_200_OK)
+
+                # Handle unexpected types
+                raise ValueError("Unexpected type returned from quote service.")
             except (ProductNotFoundError, QuoteNotFoundError) as api_err:
                 logger.error(
                     f'An error occurred while fetching quotes: "{str(api_err)}"'

@@ -117,6 +117,7 @@ def quotes(data_fixture, provider_fixture):
     return quote_health, quote_auto, quote_travel
 
 
+@pytest.mark.django_db
 def test_request_quotes_successful(api_client, quotes):
     data = {
         "product": quotes[0].product.id,
