@@ -5,11 +5,12 @@ from decimal import Decimal
 from typing import Any, Dict, NewType, Union
 from api.notifications.base import NotificationService
 from core.providers.models import Provider as InsurancePartner
+from django.db import transaction
 
 from rest_framework.generics import get_object_or_404
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
-from core.catalog.models import Policy, Product, Quote
+from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.user.models import Customer
 from django.core.mail import send_mail
@@ -463,8 +464,80 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
+    FLAT_FEES = {
+        # Product Type -> (Coverage Type -> Flat Fee)
+        "Auto": {
+            "Basic": Decimal("2000.00"),
+            "Standard": Decimal("3500.00"),
+            "Premium": Decimal("5500.00"),
+        },
+        "Health": {
+            "Standard": Decimal("3000.00"),
+            "Premium": Decimal("5000.00"),
+        },
+        "Travel": {
+            "Bronze": Decimal("2000.00"),
+            "Silver": Decimal("3000.00"),
+            "Gold": Decimal("1500.00"),
+        },
+        "Gadget": {
+            "Basic": Decimal("2000.00"),
+            "Advanced": Decimal("3500.00"),
+        },
+        "Smart Generations Protection": {
+            "Bronze": Decimal("2500.00"),
+            "Silver": Decimal("3500.00"),
+            "Gold": Decimal("5000.00"),
+        },
+        "Life": {
+            "Basic": Decimal("5000.00"),
+            "Comprehensive": Decimal("10000.00"),
+        },
+        "Home": {
+            "Bronze": Decimal("1500.00"),
+            "Silver": Decimal("2500.00"),
+            "Gold": Decimal("3500.00"),
+            "Platinum": Decimal("5000.00"),
+        },
+        "Personal Accident": {
+            "Basic": Decimal("1250.00"),
+            "Silver": Decimal("2450.00"),
+        },
+        "Student Protection": {
+            "Annually": Decimal("12000.00"),
+            "Monthly": Decimal("1000.00"),
+        },
+        "Auto Insurance": {
+            "Autobase": Decimal("30000.00"),
+            "Third-Party": Decimal("15000.00"),
+        },
+    }
+
+    def _get_coverage_types_for_product_type(self, product_type):
+        """
+        Retrieves available coverage types for a given product type.
+
+        Arguments:
+            product_type: The type of insurance product.
+
+        Returns:
+            A list of coverage types available for the given product type.
+        """
+        # product_type = product_type
+
+        if product_type not in self.FLAT_FEES:
+            raise ValueError(
+                f"Invalid product type. Expected one of {list(self.FLAT_FEES.keys())}."
+            )
+
+        return list(self.FLAT_FEES[product_type].keys())
+
     def _get_all_quotes_for_product(
-        self, product_type, product_name=None, insurance_details: Dict[str, Any] = None
+        self,
+        product_id=None,
+        product_type=None,
+        product_name=None,
+        insurance_details: Dict[str, Any] = None,
     ):
         """
         Retrieves all quotes for a given product type and optional product name.
@@ -481,12 +554,22 @@ class QuoteService(IQuote):
         from api.catalog.serializers import QuoteSerializer
 
         try:
-            if product_name:
+            if product_id:
+                try:
+                    product = Product.objects.get(id=product_id)
+                    product_type = product.product_type
+                    product_name = product.name
+                except Product.DoesNotExist:
+                    logger.error(f"Product with ID {product_id} does not exist.")
+                    raise ProductNotFoundError("Product not found.")
+            elif product_type and product_name:
                 products = Product.objects.filter(
                     Q(product_type=product_type) & Q(name=product_name)
                 )
-            else:
+            elif product_type:
                 products = Product.objects.filter(product_type=product_type)
+            else:
+                raise ValueError("Either product ID or product type must be provided.")
 
             if not products.exists():
                 logger.error(
@@ -517,6 +600,81 @@ class QuoteService(IQuote):
         except Quote.DoesNotExist:
             raise QuoteNotFoundError("Quote not found.")
 
+    def _create_quote(
+        self,
+        product_id=None,
+        product_type: str | None = None,
+        product_name: str | None = None,
+        insurance_details: dict = {},
+        **kwargs,
+    ):
+        """
+        Creates a new insurance quote for a given product type and optional product name.
+
+        """
+        PRODUCT_TYPES = list(self.FLAT_FEES.keys())
+
+        if product_id:
+            try:
+                product = Product.objects.get(id=product_id)
+                product_type = product.product_type
+                product_name = product.name
+            except Product.DoesNotExist:
+                raise ValueError(f"Product with ID '{product_id}' not found.")
+        else:
+            if product_type not in PRODUCT_TYPES:
+                raise ValueError(
+                    f"Invalid product type. Expected one of {PRODUCT_TYPES}."
+                )
+
+            # retrieve te coverage types for the product type
+            COVERAGE_TYPES = self._get_coverage_types_for_product_type(product_type)
+            coverage_type = insurance_details.get("coverage_type") or kwargs.get(
+                "coverage_type"
+            )
+            if coverage_type not in COVERAGE_TYPES:
+                raise ValueError(
+                    f"Invalid coverage type. Expected one of {COVERAGE_TYPES}."
+                )
+
+            product_name = product_name or kwargs.get("insurance_name")
+            try:
+                if product_name:
+                    product = Product.objects.get(
+                        product_type=product_type, name__iexact=product_name
+                    )
+                else:
+                    product = Product.objects.get(product_type=product_type)
+            except Product.DoesNotExist:
+                raise ValueError(
+                    f"Product with type '{product_type}' and name '{product_name}' not found."
+                )
+
+        # determine the base price based on product_type and coverage_type
+        try:
+            base_price = self.FLAT_FEES[product_type][coverage_type]
+        except KeyError:
+            raise ValueError(
+                f"Flat fee for product type '{product_type}' and coverage type '{coverage_type}' not found."
+            )
+
+        premium_amount = Decimal(kwargs.get("premium_amount", "0.0"))
+        premium_description = kwargs.get("insurance_name", product_name)
+        premium = Price.objects.create(
+            amount=premium_amount,
+            description=premium_description,
+        )
+
+        with transaction.atomic():
+            quote = Quote.objects.create(
+                product=product,
+                base_price=base_price,
+                premium=premium,
+                additional_metadata=insurance_details,
+            )
+
+        return quote
+
     def get_quote(
         self,
         product: Union[str, None] = None,
@@ -542,10 +700,11 @@ class QuoteService(IQuote):
             A quote or list of quotes.
         """
         insurance_details = insurance_details or {}
+        PRODUCT_TYPES = ["Health", "Gadget", "Travel", "Life", "Home"]
 
         if quote_code:
             return self._get_quote_by_code(quote_code=quote_code)
-        elif product:
+        elif product in PRODUCT_TYPES:
             return self._get_all_quotes_for_product(
                 product_type=product,
                 product_name=product_name,
