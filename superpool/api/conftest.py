@@ -4,40 +4,30 @@ from copy import deepcopy
 
 import pytest
 from django.conf import settings
-from django.test.utils import override_settings
+from django.test.utils import (
+    setup_test_environment,
+    teardown_test_environment,
+    override_settings,
+)
+from django.db import connections
+from django.core.management import call_command
 
 
-@pytest.fixture(scope="session", autouse=True)
-def configure_test_db():
-    settings.DATABASES["default"] = {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
+@pytest.fixture(autouse=True)
+def setup_django_db():
+    # setup
+    setup_test_environment()
+    call_command("migrate", interactive=False, verbosity=3)
+
+    yield
+
+    # teardown
+    teardown_test_environment()
+    connections.close_all()
 
 
-# @pytest.fixture(scope="session", autouse=True)
-# def configure_tests_db():
-#     """
-#     Sets up the database for testing.
-#
-#     """
-#     # We've got to make a copy of the actual settings,
-#     # because directly modifying settings.DATABASES will
-#     # affect the actual database settings, creating conflicts
-#     test_settings = deepcopy(settings._wrapped.__dict__)
-#     test_settings["DATABASES"]["default"] = {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": ":memory:",
-#     }
-#     test_settings["DEBUG"] = True
-#     test_settings["TEST_RUNNER"] = "django.test.runner.DiscoverRunner"
-#     test_settings["DATABASE_ROUTERS"] = []
+@pytest.fixture
+def api_client():
+    from rest_framework.test import APIClient
 
-# with override_settings(**test_settings):
-#     settings.configure(**test_settings)
-#
-#     # We need to reload the models to avoid the "AppRegistryNotReady: Apps aren't loaded yet." error
-#     import django
-#
-#     django.setup()
-#     yield
+    return APIClient()
