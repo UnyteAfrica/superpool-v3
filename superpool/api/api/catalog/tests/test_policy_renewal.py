@@ -1,5 +1,5 @@
 from rest_framework.test import APIClient
-from rest_framework.status import status
+from rest_framework import status
 import uuid
 from core.catalog.models import Policy
 from core.catalog.models import Product

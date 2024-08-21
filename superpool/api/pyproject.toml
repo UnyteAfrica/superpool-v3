@@ -21,6 +21,7 @@ psycopg = "^3.1.19"
 django = "^5.0.6"
 django-redis = "^5.4.0"
 django-filter = "^24.2"
+pytest-django = "^4.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
@@ -42,9 +43,10 @@ pytest-xdist = "^3.6.1"
 requests-mock = "^1.12.1"
 
 [tool.pytest.ini_options]
-addopts = "-p no:warnings"
-DJANGO_SETTINGS_MODULE = 'config.settings'
-testpaths = ["superpool/api/tests", "tests"]
+# addopts = "-p no:warnings"
+# DJANGO_SETTINGS_MODULE = 'config.settings'
+DJANGO_SETTINGS_MODULE = 'config.settings.environments.test'
+# testpaths = ["superpool/api/tests", "tests"]
 norecursedirs = ["migrations", "__pycache__"]
 python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
 
