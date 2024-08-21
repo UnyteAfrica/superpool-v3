@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from api.merchants.tests.factories import MerchantFactory
 from rest_framework import status
 from django.urls import reverse
+from django.db import connections
 
 # WE WOULD BE TESTING OUR MIDDLEWARE SINCE ITS MEANT TO INTERACT WITH
 # THE REQUEST AND RESPONSE OBJECTS
@@ -22,6 +23,7 @@ def auth_data():
 MERCHANTS_URL = reverse("merchants-list")
 
 
+@pytest.mark.django_db
 def test_request_authenticated_with_middleware_and_correct_credentials(auth_data):
     client = APIClient()
     headers = {
@@ -38,6 +40,7 @@ def test_request_authenticated_with_middleware_and_correct_credentials(auth_data
     assert response.status_code == status.HTTP_200_OK
 
 
+@pytest.mark.django_db
 def test_request_unauthenticated_with_middleware_and_incorrect_credentials():
     client = APIClient()
     headers = {
@@ -53,9 +56,16 @@ def test_request_unauthenticated_with_middleware_and_incorrect_credentials():
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.django_db
 def test_request_unauthenticated_with_middleware_and_no_credentials():
     client = APIClient()
 
     response = client.get(MERCHANTS_URL)
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_db_connection(self):
+    connection = connections["default"]
+    connection.ensure_connection()
+    assert connection.is_usable()

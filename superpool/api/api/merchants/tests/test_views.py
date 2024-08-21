@@ -10,6 +10,8 @@ from faker import Faker
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from django.test import TestCase, override_settings
+
 fake = Faker()
 client = APIClient()
 
@@ -163,3 +165,45 @@ def test_retrieve_merchant_by_valid_short_code():
 
     assert response.status_code == status.HTTP_200_OK
     # Do some checking of the short code here
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
+@pytest.mark.django_db
+@patch("core.utils.send_verification_email")
+def test_merchant_short_code_in_email(mock_send_email):
+    REGISTRATION_ENDPOINT = reverse("merchant-v2-list")
+
+    payload = MerchantFactory.build(
+        name="Test Merchant",
+        short_code="TES-LE09",
+        business_email="testemail@bytonf.com",
+        support_email="testemail@bytonf.com",
+    )
+    response = client.post(REGISTRATION_ENDPOINT, payload, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["message"] == "Merchant created successfully."
+
+    # Retrieve the merchant from the data
+    response_data = response.json()
+
+    response_short_code = response_data["data"]["short_code"]
+
+    # Check that the send_verification_email function was called with the correct arguments
+    assert mock_send_email.call_count == 1
+    args, kwargs = mock_send_email.call_args
+
+    print(f"args: {args}")
+    print(f"kwargs: {kwargs}")
+
+    try:
+        verification_token, email_short_code = args[1:3]
+    except IndexError:
+        pytest.fail(
+            "send_verification_email was not called with the expected arguments"
+        )
+
+    # check that the short code is the same as the one sent
+    assert (
+        response_short_code == email_short_code
+    ), f"Expected short code {response_short_code} but got {email_short_code}"
