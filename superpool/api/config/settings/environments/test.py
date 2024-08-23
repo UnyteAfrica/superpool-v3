@@ -15,6 +15,3 @@ DATABASES = {
         "SUPERPOOL_TEST_PROD_DB_URL",
     )
 }
-
-print("Test database configuration:")
-print(DATABASES)

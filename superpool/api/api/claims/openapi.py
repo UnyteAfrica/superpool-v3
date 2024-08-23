@@ -90,6 +90,7 @@ full_claim_request_payload_example = OpenApiExample(
 single_claim_response_example = OpenApiExample(
     "Claim informaton",
     value={
+        "claim_id": "d2d0c0b4-bf72-4a61-a02e-3ab896dd8bf7",
         "claim_reference_number": "CLAIM-20240813-5678",
         "claim_status": "approved",
         "claim_date": "2024-08-13",
