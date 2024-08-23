@@ -2,6 +2,7 @@ from typing import Any, ClassVar, NewType  # noqa
 
 from django.db.models import Model
 from rest_framework import serializers
+from core.providers.models import Provider
 
 
 class LimitedScopeSerializer(serializers.ModelSerializer):
@@ -35,3 +36,17 @@ class LimitedScopeSerializer(serializers.ModelSerializer):
             "read_only_fields": cls.fields,
         }
         return super().__new__(cls, *args, **kwargs)
+
+
+class ProviderSerializer(serializers.ModelSerializer):
+    provider_id = serializers.UUIDField(source="id")
+    provider_name = serializers.CharField(source="name")
+
+    class Meta:
+        model = Provider
+        fields = [
+            "provider_id",
+            "provider_name",
+            "support_email",
+        ]
+        read_only_fields = fields
