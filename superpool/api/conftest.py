@@ -12,18 +12,18 @@ from django.test.utils import (
 from django.db import connections
 from django.core.management import call_command
 
-
-@pytest.fixture(autouse=True)
-def setup_django_db():
-    # setup
-    setup_test_environment()
-    call_command("migrate", interactive=False, verbosity=3)
-
-    yield
-
-    # teardown
-    teardown_test_environment()
-    connections.close_all()
+#
+# @pytest.fixture(autouse=True)
+# def setup_django_db():
+#     # setup
+#     # setup_test_environment()
+#     # call_command("migrate", interactive=False, verbosity=3)
+#
+#     yield
+#
+#     # teardown
+#     teardown_test_environment()
+#     connections.close_all()
 
 
 @pytest.fixture
