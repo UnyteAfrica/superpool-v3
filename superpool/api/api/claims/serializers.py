@@ -74,6 +74,7 @@ class ClaimSerializer(serializers.ModelSerializer):
     claim_amount = serializers.DecimalField(
         source="amount", max_digits=10, decimal_places=2
     )
+    claim_id = serializers.UUIDField(source="id", read_only=True)
     claim_reference_number = serializers.CharField(source="claim_number")
     claim_status = serializers.CharField(source="status")
     claim_status_timeline = StatusTimelineSerializer(many=True, read_only=True)
@@ -81,6 +82,7 @@ class ClaimSerializer(serializers.ModelSerializer):
     class Meta:
         model = Claim
         fields = [
+            "claim_id",
             "claim_reference_number",
             "claim_status",
             "claim_date",
