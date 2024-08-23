@@ -8,6 +8,13 @@ from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsAdminUser
+from core.providers.models import Provider
+from api.serializers import ProviderSerializer
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse
+from rest_framework import generics
 
 from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
@@ -73,3 +80,89 @@ class VerificationAPIView(APIView):
                 {"error": _("Invalid verification token")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class InsurerAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get_queryset(self):
+        return Provider.objects.all()
+
+    @extend_schema(
+        summary="List all insurance providers",
+        responses={
+            200: OpenApiResponse(ProviderSerializer, "List of insurance providers"),
+            404: OpenApiResponse(description="No insurance providers found"),
+            500: OpenApiResponse(
+                description="An error occurred while fetching the insurance providers"
+            ),
+        },
+    )
+    def get(self, request, *args, **kwargs):
+        """
+        List all insurance providers registered on the platform
+        """
+        providers_qs = self.get_queryset()
+        serializer = ProviderSerializer(providers_qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    summary="View details about a specific insurance provider",
+    description="Returns a detailed object containing information about the specified insurance provider.",
+    responses={
+        200: OpenApiResponse(ProviderSerializer, "Details of the insurance provider"),
+        404: OpenApiResponse(
+            description="The specified insurance provider does not exist"
+        ),
+        500: OpenApiResponse(
+            description="An error occurred while fetching the insurance provider"
+        ),
+    },
+)
+class InsuranceProviderDetailView(generics.RetrieveAPIView):
+    """
+    Retrieve a specific insurance provider
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    queryset = Provider.objects.all()
+    serializer_class = ProviderSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "provider_id"
+
+    def get(self, request, *args, **kwargs):
+        """
+        Retrieve the details of a specific insurance provider
+        """
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.queryset
+
+
+@extend_schema(
+    summary="Search for insurance providers",
+    description="Search for insurance providers by name.",
+    responses={
+        200: OpenApiResponse(ProviderSerializer, "List of insurance providers"),
+        404: OpenApiResponse(description="No insurance providers found"),
+        500: OpenApiResponse(
+            description="An error occurred while fetching the insurance providers"
+        ),
+    },
+)
+class InsuranceProviderSearchView(generics.ListAPIView):
+    """
+    Search for insurance providers
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    queryset = Provider.objects.all()
+    serializer_class = ProviderSerializer
+
+    def get_queryset(self):
+        query = self.request.query_params.get("query")
+        if query:
+            return Provider.objects.filter(name__icontains=query)
+        return self.queryset

@@ -4,7 +4,12 @@ from rest_framework.routers import DefaultRouter
 from .applications.views import ApplicationView, create_application_view
 from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
-from .views import VerificationAPIView
+from .views import (
+    VerificationAPIView,
+    InsurerAPIView,
+    InsuranceProviderDetailView,
+    InsuranceProviderSearchView,
+)
 
 router = DefaultRouter()
 # router.register(r"merchants", MerchantViewSet, basename="merchant")
@@ -29,6 +34,16 @@ urlpatterns = [
     # path("merchants", MerchantViewSet.as_view({"get": "list"}), name="merchants"),  # noqa
     path("", include("api.catalog.urls"), name="catalog"),
     path("", include("api.claims.urls"), name="claims"),
+    path("insurers/", InsurerAPIView.as_view(), name="insurers"),
+    path(
+        "insurers/<str:name>/",
+        InsuranceProviderDetailView.as_view(),
+        name="insurer_detail",
+    ),
+    path(
+        "insurers/search/", InsuranceProviderSearchView.as_view(), name="insurer_search"
+    ),
+    # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
 
 urlpatterns += router.urls
