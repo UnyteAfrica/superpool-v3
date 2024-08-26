@@ -91,6 +91,11 @@ class InsurerAPIView(APIView):
 
     @extend_schema(
         summary="List all insurance providers",
+        request=OpenApiRequest(
+            examples=[
+                insurance_provider_list_example,
+            ],
+        ),
         responses={
             200: OpenApiResponse(ProviderSerializer, "List of insurance providers"),
             404: OpenApiResponse(description="No insurance providers found"),
