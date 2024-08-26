@@ -174,7 +174,11 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
         )
     ],
     responses={
-        200: OpenApiResponse(ProviderSerializer, "List of insurance providers"),
+        200: OpenApiResponse(
+            ProviderSerializer,
+            "List of insurance providers",
+            examples=[insurance_provider_search_example],
+        ),
         400: OpenApiResponse(description="Invalid input"),
         404: OpenApiResponse(description="No insurance providers found"),
         500: OpenApiResponse(
