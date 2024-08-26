@@ -805,7 +805,6 @@ class RequestQuoteView(views.APIView):
                 #     insurance_details=insurance_details,
                 # )
 
-                print(f"Quote data: {quote_data}")
                 # # this should fix the error that am passing serializer instance rather than .data or .errors
                 # if isinstance(quote_data, QuoteSerializer):
                 #     quote_data = quote_data.data
@@ -814,9 +813,6 @@ class RequestQuoteView(views.APIView):
                 #     quote_serializer = QuoteSerializer(quote_data)
                 #     return Response(quote_serializer.data, status=status.HTTP_200_OK)
 
-                import pdb
-
-                # pdb.set_trace()
                 # If the result is a Quote object, serialize it
                 if isinstance(quote_data, Quote):
                     quote_serializer = QuoteSerializer(quote_data)
