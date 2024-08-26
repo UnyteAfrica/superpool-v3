@@ -20,6 +20,7 @@ from rest_framework import generics
 from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
 from django.utils import timezone
+from .openapi import insurance_provider_search_example, insurance_provider_list_example
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +92,6 @@ class InsurerAPIView(APIView):
 
     @extend_schema(
         summary="List all insurance providers",
-        request=OpenApiRequest(
-            examples=[
-                insurance_provider_list_example,
-            ],
-        ),
         responses={
             200: OpenApiResponse(
                 ProviderSerializer,
