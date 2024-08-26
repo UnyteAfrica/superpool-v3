@@ -102,9 +102,29 @@ class InsurerAPIView(APIView):
         """
         List all insurance providers registered on the platform
         """
-        providers_qs = self.get_queryset()
-        serializer = ProviderSerializer(providers_qs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        try:
+            providers_qs = self.get_queryset()
+
+            # if there are no insurance providers
+            if not providers_qs.exists():
+                return Response(
+                    {"error": _("No insurance providers found")},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            serializer = ProviderSerializer(providers_qs, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Failed to fetch insurance providers: {str(e)}")
+            return Response(
+                {
+                    "error": _(
+                        "An error occurred while fetching the insurance providers"
+                    )
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 @extend_schema(
