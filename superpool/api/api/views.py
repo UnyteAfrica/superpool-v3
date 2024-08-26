@@ -162,7 +162,7 @@ class InsuranceProviderSearchView(generics.ListAPIView):
     serializer_class = ProviderSerializer
 
     def get_queryset(self):
-        query = self.request.query_params.get("query")
-        if query:
-            return Provider.objects.filter(name__icontains=query)
+        provider_name = self.request.query_params.get("name")
+        if provider_name:
+            return Provider.objects.filter(name__icontains=provider_name)
         return self.queryset
