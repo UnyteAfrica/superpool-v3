@@ -38,10 +38,12 @@ urlpatterns = [
     path(
         "insurers/<str:name>/",
         InsuranceProviderDetailView.as_view(),
-        name="insurer_detail",
+        name="insurer-detail",
     ),
     path(
-        "insurers/search/", InsuranceProviderSearchView.as_view(), name="insurer_search"
+        "insurers/search/",
+        InsuranceProviderSearchView.as_view(),
+        name="insurers-search",
     ),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
