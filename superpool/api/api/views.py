@@ -97,7 +97,13 @@ class InsurerAPIView(APIView):
             ],
         ),
         responses={
-            200: OpenApiResponse(ProviderSerializer, "List of insurance providers"),
+            200: OpenApiResponse(
+                ProviderSerializer,
+                "List of insurance providers",
+                examples=[
+                    insurance_provider_list_example,
+                ],
+            ),
             404: OpenApiResponse(description="No insurance providers found"),
             500: OpenApiResponse(
                 description="An error occurred while fetching the insurance providers"
