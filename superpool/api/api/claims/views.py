@@ -84,9 +84,8 @@ class ClaimsViewSet(viewsets.ViewSet):
                 type=OpenApiTypes.STR,
             ),
             OpenApiParameter(
-                name="claim_owner",
-                description="",
-                required=False,
+                name="insurer",
+                description="Filter claims by insurer",
                 type=OpenApiTypes.STR,
             ),
         ],

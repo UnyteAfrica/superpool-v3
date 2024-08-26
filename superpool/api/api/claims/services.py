@@ -82,6 +82,12 @@ class ClaimService(IClaim):
         if "offer_amount" in query_params:
             queryset = queryset.filter(claim_amount=query_params["offer_amount"])
 
+        if "insurer" in query_params:
+            queryset = queryset.filter(
+                Q(provider__name__icontains=query_params["insurer"])
+                | Q(product__provider__name__icontains=query_params["insurer"])
+            )
+
         return queryset
 
     def get_claim(
