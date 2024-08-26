@@ -79,7 +79,7 @@ class ClaimsViewSet(viewsets.ViewSet):
             ),
             OpenApiParameter(
                 name="claim_type",
-                description="",
+                description="Filter claims by product category",
                 required=False,
                 type=OpenApiTypes.STR,
             ),

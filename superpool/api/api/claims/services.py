@@ -78,7 +78,9 @@ class ClaimService(IClaim):
                 customer__phone_number=query_params["phone_number"]
             )
         if "claim_type" in query_params:
-            queryset = queryset.filter(claim_type=query_params["claim_type"])
+            queryset = queryset.filter(
+                Q(product__product_type__icontains=query_params["claim_type"])
+            )
         if "offer_amount" in query_params:
             queryset = queryset.filter(claim_amount=query_params["offer_amount"])
 
