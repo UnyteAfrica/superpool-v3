@@ -33,7 +33,7 @@ class SignUpView(APIView):
             request=UserSerializer,
             examples=[
                 OpenApiExample(
-                    "User Registration",
+                    "Customer Support Registration",
                     description="The data required to create a new user.",
                     value={
                         "email": "rasengan@email.com",
@@ -42,7 +42,18 @@ class SignUpView(APIView):
                         "password": "password",
                         "role": "support",
                     },
-                )
+                ),
+                OpenApiExample(
+                    "Admin Registration",
+                    description="The data required to create a new user.",
+                    value={
+                        "email": "tsunadesama@email.com",
+                        "first_name": "Tsunade",
+                        "last_name": "Senju",
+                        "password": "password",
+                        "role": "admin",
+                    },
+                ),
             ],
         ),
         tags=["User"],
