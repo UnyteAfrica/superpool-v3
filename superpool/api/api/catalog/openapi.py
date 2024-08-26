@@ -3,9 +3,8 @@ from drf_spectacular.utils import OpenApiExample
 travel_insurance_example = OpenApiExample(
     name="Travel Insurance",
     value={
-        "product_type": "travel",
+        "product_type": "Travel",
         "insurance_name": "World Travel Protection",
-        "quote_code": "TRAVEL123",
         "insurance_details": {
             "destination": "France",
             "departure_date": "2023-09-01",
@@ -30,9 +29,8 @@ travel_insurance_example = OpenApiExample(
 health_insurance_example = OpenApiExample(
     name="Health Insurance",
     value={
-        "product_type": "health",
+        "product_type": "Health",
         "insurance_name": "Smart Health Insurance",
-        "quote_code": "HEALTH123",
         "insurance_details": {
             "health_condition": "good",
             "age": 30,
@@ -54,9 +52,8 @@ health_insurance_example = OpenApiExample(
 home_insurance_example = OpenApiExample(
     name="Home Insurance",
     value={
-        "product_type": "home",
+        "product_type": "Home",
         "insurance_name": "Home Protection",
-        "quote_code": "HOME123",
         "insurance_details": {
             "home_type": "apartment",
             "home_location": "New York",
@@ -78,9 +75,8 @@ home_insurance_example = OpenApiExample(
 gadget_insurance_example = OpenApiExample(
     name="Gadget Insurance",
     value={
-        "product_type": "gadget",
+        "product_type": "Gadget",
         "insurance_name": "Gadget Protection",
-        "quote_code": "GADGET123",
         "insurance_details": {
             "gadget_type": "smartphone",
             "gadget_brand": "Apple",
@@ -100,12 +96,33 @@ gadget_insurance_example = OpenApiExample(
     response_only=False,
 )
 
+gadget_insurance_with_product_id_example = OpenApiExample(
+    name="Request Gadget Insurance using the Product ID",
+    value={
+        "product_id": "72512701-906f-4aa7-9d19-2c2315f7df37",
+        "insurance_name": "Gadget Protection",
+        "insurance_details": {
+            "coverage_type": "",
+            "gadget_type": "smartphone",
+            "gadget_brand": "Apple",
+            "gadget_model": "iPhone 13",
+            "gadget_value": 1000,
+            "gadget_age": 1,
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.fanlnk.to",
+            "customer_address": "Planet Pluto",
+        },
+    },
+)
+
 auto_insurance_example = OpenApiExample(
     name="Auto Insurance",
     value={
-        "product_type": "auto",
+        "product_type": "Auto",
         "insurance_name": "Comprehensive Auto Protection",
-        "quote_code": "AUTO123",
         "insurance_details": {
             "vehicle_type": "car",
             "vehicle_make": "Tesla",
@@ -123,6 +140,29 @@ auto_insurance_example = OpenApiExample(
     },
     request_only=True,
     response_only=False,
+)
+
+auto_insurance_with_product_id_example = OpenApiExample(
+    name="Request Auto Insurance using the Product ID",
+    value={
+        "product_id": "05268117-a576-4318-8e3c-e0df7c399fa5",
+        "insurance_name": "Comprehensive Auto Protection",
+        "insurance_details": {
+            "coverage_type": "comprehensive",
+            "vehicle_type": "car",
+            "vehicle_make": "Tesla",
+            "vehicle_model": "GLE",
+            "vehicle_year": 2022,
+            "vehicle_value": 30000,
+            "vehicle_age": 1,
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "plutopresido@management.fanlnk.to",
+            "customer_address": "Planet Pluto",
+        },
+    },
 )
 
 
