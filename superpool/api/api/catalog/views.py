@@ -82,7 +82,7 @@ class PolicyListView(generics.ListAPIView):
 
     @extend_schema(
         summary="List all policies",
-        operation_id="list_policies",
+        operation_id="list-policies",
         description="List all policies available in the system",
         tags=["Policies"],
         responses={
@@ -485,6 +485,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Update an existing policy data",
+        operation_id="update-policy",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="policy_id",
@@ -494,8 +496,11 @@ class PolicyAPIViewSet(
                 description="policy reference number assigned by the insurer",
             ),
         ],
-        request=PolicySerializer,
-        responses={200: PolicySerializer, 400: {"error": "string", "detail": "string"}},
+        request=OpenApiRequest(request=PolicySerializer),
+        responses={
+            200: OpenApiResponse(PolicySerializer, "Policy updated successfully"),
+            400: {"error": "string", "detail": "string"},
+        },
     )
     @action(detail=False, methods=["patch"], url_path="update")
     def update_policy(self, request):
@@ -551,6 +556,18 @@ class QuoteListView(generics.ListAPIView):
     def get_service(self):
         return QuoteService()
 
+    @extend_schema(
+        summary="Retrieve list of quotes for an insurance policy",
+        operation_id="list-quotes",
+        tags=["Quotes"],
+        responses={
+            200: OpenApiResponse(
+                description="Quotes",
+                response=QuoteSerializer,
+                examples=[],
+            )
+        },
+    )
     def get(self, request, product_name):
         """
         Retrieve list of quotes for an insurance policy
@@ -572,6 +589,8 @@ class QuoteDetailView(views.APIView):
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
+        operation_id="retrieve-quote",
+        tags=["Quotes"],
         responses={
             200: OpenApiResponse(
                 description="Quote details",
@@ -625,7 +644,7 @@ class QuoteDetailView(views.APIView):
                     )
                 ],
             ),
-        },  # noqa},
+        },  # noqa,
     )
     def get(self, request, quote_code):
         """
@@ -658,7 +677,7 @@ class QuoteAPIViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="Request a policy quote",
         responses={
-            200: QuoteSerializer,
+            201: OpenApiResponse(QuoteSerializer, "Quote information"),
         },
     )
     @action(detail=False, methods=["post"])
@@ -714,6 +733,8 @@ class RequestQuoteView(views.APIView):
 
     @extend_schema(
         summary="Request a policy quote",
+        operation_id="request-quote",
+        tags=["Quotes"],
         request=OpenApiRequest(
             QuoteRequestSerializer,
             examples=[
@@ -868,6 +889,8 @@ class PolicyPurchaseView(generics.GenericAPIView):
 
     @extend_schema(
         summary="Purchase a policy",
+        opration_id="purchase-policy",
+        tags=["Policies"],
         description="Purchase a new policy for your customer",
         request=OpenApiRequest(
             request=PolicyPurchaseSerializer,
@@ -949,6 +972,8 @@ class PolicyCancellationView(generics.GenericAPIView):
 
     @extend_schema(
         summary="Cancel an active policy subscription",
+        operation_id="cancel-policy",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="policy_id",
