@@ -30,6 +30,27 @@ class VerificationAPIView(APIView):
     API view for email verification
     """
 
+    @extend_schema(
+        summary="Verify merchant email",
+        operation_id="verify-merchant-email",
+        tags=["Merchants"],
+        parameters=[
+            OpenApiParameter(
+                name="token",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="The verification token sent to the merchant's email",
+            )
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Email verified successfully. Please check your email for onboarding instructions. "
+                "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
+                "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
+            ),
+            400: OpenApiResponse(description="Invalid verification token"),
+        },
+    )
     def get(self, request, short_code, *args, **kwargs):
         """
         Verify the email address of the merchant
