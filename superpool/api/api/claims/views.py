@@ -56,6 +56,8 @@ class ClaimsViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="View all claims made by your customers",
+        operation_id="list_claims",
+        tags=["Claims"],
         parameters=[
             OpenApiParameter(
                 name="customer_email",
@@ -114,6 +116,8 @@ class ClaimsViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="Retrieve a claim by its ID or Reference Number",
+        operation_id="retrieve_claim",
+        tags=["Claims"],
         responses={
             200: OpenApiResponse(
                 response=ClaimSerializer,
@@ -161,6 +165,7 @@ class ClaimsViewSet(viewsets.ViewSet):
     @extend_schema(
         operation_id="submit_claim",
         summary="Submit a claim",
+        tags=["Claims"],
         description="Submits a new claim entry on behalf of a customer",
         request=OpenApiRequest(
             request=ClaimRequestSerializer,
@@ -209,6 +214,8 @@ class ClaimsViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="Update the details of a previously filed claim by a cutstomer",
+        operation_id="update_claim",
+        tags=["Claims"],
         parameters=[
             OpenApiParameter(
                 name="claim_number",

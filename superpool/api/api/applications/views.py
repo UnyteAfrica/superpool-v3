@@ -35,6 +35,7 @@ class ApplicationView(APIView):
 
     @extend_schema(
         operation_id="get_application",
+        tags=["Application"],
         description="Retrieve the application instance for the authenticated merchant",
         responses={200: ApplicationSerializer},
     )
@@ -54,6 +55,7 @@ class ApplicationView(APIView):
 
     @extend_schema(
         operation_id="create_application",
+        tags=["Application"],
         description="Create a new application instance for the authenticated merchant",
         request=CreateApplicationSerializer,
         responses={201: CreateApplicationSerializer, 400: ApplicationCreationError},

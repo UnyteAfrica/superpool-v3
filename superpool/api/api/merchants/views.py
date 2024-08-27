@@ -17,7 +17,7 @@ from core.merchants.errors import (
 )
 from core.merchants.models import Merchant
 from django.http.response import Http404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -46,6 +46,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         operation_id="create-new-merchant",
         summary="Register a new merchant on Unyte",
         description="Register a new merchant on the platform",
+        tags=["Merchant"],
         responses={
             200: MerchantSerializer,
         },
@@ -106,6 +107,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     @extend_schema(
         operation_id="retrieve-a-single-merchant",
+        tags=["Merchant"],
         summary="Retrieve a merchant instance by its unique short code",
         description="Retrieve a single merchant using its short code",
         responses={
@@ -150,6 +152,18 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="List all merchants",
+    description="Retrieve a list of all merchants on the platform",
+    tags=["Merchant"],
+    responses={
+        status.HTTP_200_OK: OpenApiResponse(MerchantSerializer, "List of merchants"),
+        status.HTTP_404_NOT_FOUND: {"error": "No merchants found."},
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "error": "An unexpected error occured. Please contact support"
+        },
+    },
+)
 class MerchantViewList(ReadOnlyModelViewSet):
     """
     Retrieve list of all merchants on the platform

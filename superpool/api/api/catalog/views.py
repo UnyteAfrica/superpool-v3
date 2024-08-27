@@ -68,6 +68,19 @@ from .services import PolicyService, ProductService, QuoteService
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    summary="List all policies",
+    operation_id="list-policies",
+    description="List all policies available in the system",
+    tags=["Policies"],
+    responses={
+        200: OpenApiResponse(
+            PolicySerializer(many=True),
+            "Policies",
+        ),
+        404: {"error": "There are no policies available at the moment"},
+    },
+)
 class PolicyListView(generics.ListAPIView):
     """
     List all policies
@@ -80,15 +93,6 @@ class PolicyListView(generics.ListAPIView):
     def get_queryset(self):
         return PolicyService.list_policies()
 
-    @extend_schema(
-        summary="List all policies",
-        operation_id="list_policies",
-        description="List all policies available in the system",
-        responses={
-            200: PolicySerializer(many=True),
-            404: {"error": "There are no policies available at the moment"},
-        },
-    )
     def list(self, request: Request, *args: dict, **kwargs: dict) -> Response:
         queryset = self.get_queryset()
 
@@ -101,6 +105,28 @@ class PolicyListView(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="List all products",
+    operation_id="list-products",
+    tags=["Products"],
+    description="List all products available in the system",
+    responses={
+        200: OpenApiResponse(
+            response=ProductSerializer(many=True),
+            examples=[products_response_example],
+        ),
+        404: OpenApiResponse(
+            response={"error": "No products found"},
+            description="No products found",
+            examples=[
+                OpenApiExample(
+                    "No Products Found Example",
+                    value={"error": "No products found"},
+                )
+            ],
+        ),
+    },
+)
 class ProductListView(generics.ListAPIView):
     """
     List all products
@@ -112,27 +138,6 @@ class ProductListView(generics.ListAPIView):
     def get_queryset(self):
         return ProductService.list_products()
 
-    @extend_schema(
-        summary="List all products",
-        operation_id="list_products",
-        description="List all products available in the system",
-        responses={
-            200: OpenApiResponse(
-                response=ProductSerializer(many=True),
-                examples=[products_response_example],
-            ),
-            404: OpenApiResponse(
-                response={"error": "No products found"},
-                description="No products found",
-                examples=[
-                    OpenApiExample(
-                        "No Products Found Example",
-                        value={"error": "No products found"},
-                    )
-                ],
-            ),
-        },
-    )
     def list(self, request: Request, *args: dict, **kwargs: dict) -> Response:
         queryset = self.get_queryset()
 
@@ -154,6 +159,8 @@ class PolicyByProductTypeView(generics.ListAPIView):
 
     @extend_schema(
         summary="List policies by product type",
+        operation_id="list-policies-by-product-type",
+        tags=["Policies"],
         description="List all policies available for a specific product type",
         responses={
             200: PolicySerializer(many=True),
@@ -172,6 +179,51 @@ class PolicyByProductTypeView(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="Retrieve a product by ID or name",
+    operation_id="retrieve_product",
+    tags=["Products"],
+    description="Retrieve a specific product by its ID or name",
+    request=OpenApiRequest(
+        request=ProductSerializer,
+        examples=[
+            OpenApiExample(
+                name="Product ID Example",
+                value={
+                    "product_id": "b097d1b7-70f8-42a7-a411-6f22727b5c7d",
+                },
+            ),
+            OpenApiExample(
+                name="Product Name Example",
+                value={
+                    "product_name": "Health Insurance",
+                },
+            ),
+        ],
+    ),
+    responses={
+        200: OpenApiResponse(
+            description="Product details",
+            response=ProductSerializer,
+            examples=[
+                OpenApiExample(
+                    "Product Response Example",
+                    value={
+                        "id": 1,
+                        "name": "Health Insurance",
+                        "product_type": "Health",
+                        "insurer": "Reliance Health",
+                        "description": "This is a health insurance policy",
+                        "price": 1000.0,
+                        "currency": "USD",
+                        "created_at": "2021-11-01T00:00:00Z",
+                        "updated_at": "2021-11-01T00:00:00Z",
+                    },
+                )
+            ],
+        )
+    },
+)
 class ProductRetrieveView(generics.RetrieveAPIView):
     """
     This endpoint lets you find a product by its ID or name
@@ -188,49 +240,6 @@ class ProductRetrieveView(generics.RetrieveAPIView):
     queryset = ProductService.list_products()
     # authentication_classes = [APIKeyAuthentication]
 
-    @extend_schema(
-        summary="Retrieve a product by ID or name",
-        description="Retrieve a specific product by its ID or name",
-        request=OpenApiRequest(
-            request=ProductSerializer,
-            examples=[
-                OpenApiExample(
-                    name="Product ID Example",
-                    value={
-                        "product_id": "b097d1b7-70f8-42a7-a411-6f22727b5c7d",
-                    },
-                ),
-                OpenApiExample(
-                    name="Product Name Example",
-                    value={
-                        "product_name": "Health Insurance",
-                    },
-                ),
-            ],
-        ),
-        responses={
-            200: OpenApiResponse(
-                description="Product details",
-                response=ProductSerializer,
-                examples=[
-                    OpenApiExample(
-                        "Product Response Example",
-                        value={
-                            "id": 1,
-                            "name": "Health Insurance",
-                            "product_type": "Health",
-                            "insurer": "Reliance Health",
-                            "description": "This is a health insurance policy",
-                            "price": 1000.0,
-                            "currency": "USD",
-                            "created_at": "2021-11-01T00:00:00Z",
-                            "updated_at": "2021-11-01T00:00:00Z",
-                        },
-                    )
-                ],
-            )
-        },
-    )
     def get_object(self):
         # Priority is given to the product_id
         # if the product_id is provided, we will use it to retrieve the product
@@ -266,6 +275,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Renew a policy",
+        operation_id="renew-policy",
+        tags=["Policies"],
         request=OpenApiRequest(
             request=PolicyRenewalRequestSerializer,
             examples=[
@@ -402,7 +413,13 @@ class PolicyAPIViewSet(
     @extend_schema(
         operation_id="retrieve-policy-by-id",
         description="Retrieve a specific policy by its ID",
-        responses={200: PolicySerializer},
+        tags=["Policies"],
+        responses={
+            200: OpenApiResponse(
+                description="Policy details", response=PolicySerializer
+            ),
+            404: OpenApiResponse(description="Policy not found"),
+        },
     )
     def retrieve(self, request, pk=None):
         """
@@ -418,6 +435,9 @@ class PolicyAPIViewSet(
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
+        operation_id="search-policies",
+        description="Search for policies based on certain parameters",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="product_type",
@@ -466,6 +486,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Update an existing policy data",
+        operation_id="update-policy",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="policy_id",
@@ -475,8 +497,11 @@ class PolicyAPIViewSet(
                 description="policy reference number assigned by the insurer",
             ),
         ],
-        request=PolicySerializer,
-        responses={200: PolicySerializer, 400: {"error": "string", "detail": "string"}},
+        request=OpenApiRequest(request=PolicySerializer),
+        responses={
+            200: OpenApiResponse(PolicySerializer, "Policy updated successfully"),
+            400: {"error": "string", "detail": "string"},
+        },
     )
     @action(detail=False, methods=["patch"], url_path="update")
     def update_policy(self, request):
@@ -532,6 +557,18 @@ class QuoteListView(generics.ListAPIView):
     def get_service(self):
         return QuoteService()
 
+    @extend_schema(
+        summary="Retrieve list of quotes for an insurance policy",
+        operation_id="list-quotes",
+        tags=["Quotes"],
+        responses={
+            200: OpenApiResponse(
+                description="Quotes",
+                response=QuoteSerializer,
+                examples=[],
+            )
+        },
+    )
     def get(self, request, product_name):
         """
         Retrieve list of quotes for an insurance policy
@@ -553,6 +590,8 @@ class QuoteDetailView(views.APIView):
 
     @extend_schema(
         summary="Retrieve a specific quote by its ID",
+        operation_id="retrieve-quote",
+        tags=["Quotes"],
         responses={
             200: OpenApiResponse(
                 description="Quote details",
@@ -606,7 +645,7 @@ class QuoteDetailView(views.APIView):
                     )
                 ],
             ),
-        },  # noqa},
+        },  # noqa,
     )
     def get(self, request, quote_code):
         """
@@ -639,7 +678,7 @@ class QuoteAPIViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="Request a policy quote",
         responses={
-            200: QuoteSerializer,
+            201: OpenApiResponse(QuoteSerializer, "Quote information"),
         },
     )
     @action(detail=False, methods=["post"])
@@ -695,6 +734,8 @@ class RequestQuoteView(views.APIView):
 
     @extend_schema(
         summary="Request a policy quote",
+        operation_id="request-quote",
+        tags=["Quotes"],
         request=OpenApiRequest(
             QuoteRequestSerializer,
             examples=[
@@ -849,6 +890,8 @@ class PolicyPurchaseView(generics.GenericAPIView):
 
     @extend_schema(
         summary="Purchase a policy",
+        operation_id="purchase-policy",
+        tags=["Policies"],
         description="Purchase a new policy for your customer",
         request=OpenApiRequest(
             request=PolicyPurchaseSerializer,
@@ -930,6 +973,8 @@ class PolicyCancellationView(generics.GenericAPIView):
 
     @extend_schema(
         summary="Cancel an active policy subscription",
+        operation_id="cancel-policy",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="policy_id",

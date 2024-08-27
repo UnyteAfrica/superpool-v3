@@ -29,6 +29,7 @@ class SignUpView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=["Auth"],
         request=OpenApiRequest(
             request=UserSerializer,
             examples=[
@@ -56,7 +57,6 @@ class SignUpView(APIView):
                 ),
             ],
         ),
-        tags=["User"],
         operation_id="register",
         description="Create a new user with the provided data, and a new profile is created for the user.",
         responses={
@@ -151,7 +151,7 @@ class SignInView(APIView):
         request=OpenApiRequest(
             request=UserAuthSerializer,
         ),
-        tags=["User"],
+        tags=["Auth"],
         operation_id="login",
         description="Sign in to the application with the provided data. If the credentials are valid, a new access token will be generated.",
         responses={200: ScopedUserSerializer},
