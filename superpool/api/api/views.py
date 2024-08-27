@@ -33,7 +33,7 @@ class VerificationAPIView(APIView):
     @extend_schema(
         summary="Verify merchant email",
         operation_id="verify-merchant-email",
-        tags=["Merchants"],
+        tags=["Merchant"],
         parameters=[
             OpenApiParameter(
                 name="token",
