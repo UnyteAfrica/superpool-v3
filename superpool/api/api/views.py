@@ -44,9 +44,7 @@ class VerificationAPIView(APIView):
         ],
         responses={
             200: OpenApiResponse(
-                description="Email verified successfully. Please check your email for onboarding instructions. "
-                "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
-                "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
+                description="Merchant email successfully verified",
             ),
             400: OpenApiResponse(description="Invalid verification token"),
         },
