@@ -68,7 +68,7 @@ class VerificationAPIView(APIView):
 
             return Response(
                 {
-                    "message": _(
+                    "message": (
                         "Email verified successfully. Please check your email for onboarding instructions. "
                         "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
                         "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
@@ -92,6 +92,8 @@ class InsurerAPIView(APIView):
 
     @extend_schema(
         summary="List all insurance providers",
+        operation_id="list-insurance-providers",
+        tags=["Insurance Providers"],
         responses={
             200: OpenApiResponse(
                 ProviderSerializer,
@@ -137,6 +139,7 @@ class InsurerAPIView(APIView):
 
 @extend_schema(
     summary="View details about a specific insurance provider",
+    operation_id="get-insurance-provider",
     description="Returns a detailed object containing information about the specified insurance provider.",
     responses={
         200: OpenApiResponse(ProviderSerializer, "Details of the insurance provider"),
@@ -147,6 +150,7 @@ class InsurerAPIView(APIView):
             description="An error occurred while fetching the insurance provider"
         ),
     },
+    tags=["Insurance Providers"],
 )
 class InsuranceProviderDetailView(generics.RetrieveAPIView):
     """
@@ -171,6 +175,7 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
 
 @extend_schema(
     summary="Search for insurance providers",
+    operation_id="search-insurance-providers",
     description="Search for insurance providers by name.",
     parameters=[
         OpenApiParameter(
@@ -180,6 +185,7 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
             description="The name of the insurance provider",
         )
     ],
+    tags=["Insurance Providers"],
     responses={
         200: OpenApiResponse(
             ProviderSerializer,

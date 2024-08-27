@@ -84,8 +84,11 @@ class PolicyListView(generics.ListAPIView):
         summary="List all policies",
         operation_id="list_policies",
         description="List all policies available in the system",
+        tags=["Policies"],
         responses={
-            200: PolicySerializer(many=True),
+            200: OpenApiResponse(
+                PolicySerializer(many=True),
+            ),
             404: {"error": "There are no policies available at the moment"},
         },
     )
@@ -114,7 +117,8 @@ class ProductListView(generics.ListAPIView):
 
     @extend_schema(
         summary="List all products",
-        operation_id="list_products",
+        operation_id="list-products",
+        tags=["Products"],
         description="List all products available in the system",
         responses={
             200: OpenApiResponse(
@@ -154,6 +158,8 @@ class PolicyByProductTypeView(generics.ListAPIView):
 
     @extend_schema(
         summary="List policies by product type",
+        operation_id="list-policies-by-product-type",
+        tags=["Policies"],
         description="List all policies available for a specific product type",
         responses={
             200: PolicySerializer(many=True),
@@ -172,6 +178,51 @@ class PolicyByProductTypeView(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="Retrieve a product by ID or name",
+    operation_id="retrieve_product",
+    tags=["Products"],
+    description="Retrieve a specific product by its ID or name",
+    request=OpenApiRequest(
+        request=ProductSerializer,
+        examples=[
+            OpenApiExample(
+                name="Product ID Example",
+                value={
+                    "product_id": "b097d1b7-70f8-42a7-a411-6f22727b5c7d",
+                },
+            ),
+            OpenApiExample(
+                name="Product Name Example",
+                value={
+                    "product_name": "Health Insurance",
+                },
+            ),
+        ],
+    ),
+    responses={
+        200: OpenApiResponse(
+            description="Product details",
+            response=ProductSerializer,
+            examples=[
+                OpenApiExample(
+                    "Product Response Example",
+                    value={
+                        "id": 1,
+                        "name": "Health Insurance",
+                        "product_type": "Health",
+                        "insurer": "Reliance Health",
+                        "description": "This is a health insurance policy",
+                        "price": 1000.0,
+                        "currency": "USD",
+                        "created_at": "2021-11-01T00:00:00Z",
+                        "updated_at": "2021-11-01T00:00:00Z",
+                    },
+                )
+            ],
+        )
+    },
+)
 class ProductRetrieveView(generics.RetrieveAPIView):
     """
     This endpoint lets you find a product by its ID or name
@@ -188,49 +239,6 @@ class ProductRetrieveView(generics.RetrieveAPIView):
     queryset = ProductService.list_products()
     # authentication_classes = [APIKeyAuthentication]
 
-    @extend_schema(
-        summary="Retrieve a product by ID or name",
-        description="Retrieve a specific product by its ID or name",
-        request=OpenApiRequest(
-            request=ProductSerializer,
-            examples=[
-                OpenApiExample(
-                    name="Product ID Example",
-                    value={
-                        "product_id": "b097d1b7-70f8-42a7-a411-6f22727b5c7d",
-                    },
-                ),
-                OpenApiExample(
-                    name="Product Name Example",
-                    value={
-                        "product_name": "Health Insurance",
-                    },
-                ),
-            ],
-        ),
-        responses={
-            200: OpenApiResponse(
-                description="Product details",
-                response=ProductSerializer,
-                examples=[
-                    OpenApiExample(
-                        "Product Response Example",
-                        value={
-                            "id": 1,
-                            "name": "Health Insurance",
-                            "product_type": "Health",
-                            "insurer": "Reliance Health",
-                            "description": "This is a health insurance policy",
-                            "price": 1000.0,
-                            "currency": "USD",
-                            "created_at": "2021-11-01T00:00:00Z",
-                            "updated_at": "2021-11-01T00:00:00Z",
-                        },
-                    )
-                ],
-            )
-        },
-    )
     def get_object(self):
         # Priority is given to the product_id
         # if the product_id is provided, we will use it to retrieve the product
@@ -266,6 +274,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         summary="Renew a policy",
+        operation_id="renew-policy",
+        tags=["Policies"],
         request=OpenApiRequest(
             request=PolicyRenewalRequestSerializer,
             examples=[
@@ -402,7 +412,13 @@ class PolicyAPIViewSet(
     @extend_schema(
         operation_id="retrieve-policy-by-id",
         description="Retrieve a specific policy by its ID",
-        responses={200: PolicySerializer},
+        tags=["Policies"],
+        responses={
+            200: OpenApiResponse(
+                description="Policy details", response=PolicySerializer
+            ),
+            404: OpenApiResponse(description="Policy not found"),
+        },
     )
     def retrieve(self, request, pk=None):
         """
@@ -418,6 +434,9 @@ class PolicyAPIViewSet(
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
+        operation_id="search-policies",
+        description="Search for policies based on certain parameters",
+        tags=["Policies"],
         parameters=[
             OpenApiParameter(
                 name="product_type",
