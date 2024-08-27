@@ -68,6 +68,19 @@ from .services import PolicyService, ProductService, QuoteService
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    summary="List all policies",
+    operation_id="list-policies",
+    description="List all policies available in the system",
+    tags=["Policies"],
+    responses={
+        200: OpenApiResponse(
+            PolicySerializer(many=True),
+            "Policies",
+        ),
+        404: {"error": "There are no policies available at the moment"},
+    },
+)
 class PolicyListView(generics.ListAPIView):
     """
     List all policies
@@ -80,18 +93,6 @@ class PolicyListView(generics.ListAPIView):
     def get_queryset(self):
         return PolicyService.list_policies()
 
-    @extend_schema(
-        summary="List all policies",
-        operation_id="list-policies",
-        description="List all policies available in the system",
-        tags=["Policies"],
-        responses={
-            200: OpenApiResponse(
-                PolicySerializer(many=True),
-            ),
-            404: {"error": "There are no policies available at the moment"},
-        },
-    )
     def list(self, request: Request, *args: dict, **kwargs: dict) -> Response:
         queryset = self.get_queryset()
 
@@ -104,6 +105,28 @@ class PolicyListView(generics.ListAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    summary="List all products",
+    operation_id="list-products",
+    tags=["Products"],
+    description="List all products available in the system",
+    responses={
+        200: OpenApiResponse(
+            response=ProductSerializer(many=True),
+            examples=[products_response_example],
+        ),
+        404: OpenApiResponse(
+            response={"error": "No products found"},
+            description="No products found",
+            examples=[
+                OpenApiExample(
+                    "No Products Found Example",
+                    value={"error": "No products found"},
+                )
+            ],
+        ),
+    },
+)
 class ProductListView(generics.ListAPIView):
     """
     List all products
@@ -115,28 +138,6 @@ class ProductListView(generics.ListAPIView):
     def get_queryset(self):
         return ProductService.list_products()
 
-    @extend_schema(
-        summary="List all products",
-        operation_id="list-products",
-        tags=["Products"],
-        description="List all products available in the system",
-        responses={
-            200: OpenApiResponse(
-                response=ProductSerializer(many=True),
-                examples=[products_response_example],
-            ),
-            404: OpenApiResponse(
-                response={"error": "No products found"},
-                description="No products found",
-                examples=[
-                    OpenApiExample(
-                        "No Products Found Example",
-                        value={"error": "No products found"},
-                    )
-                ],
-            ),
-        },
-    )
     def list(self, request: Request, *args: dict, **kwargs: dict) -> Response:
         queryset = self.get_queryset()
 
