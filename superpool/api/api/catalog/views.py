@@ -889,7 +889,7 @@ class PolicyPurchaseView(generics.GenericAPIView):
 
     @extend_schema(
         summary="Purchase a policy",
-        opration_id="purchase-policy",
+        operation_id="purchase-policy",
         tags=["Policies"],
         description="Purchase a new policy for your customer",
         request=OpenApiRequest(
