@@ -127,8 +127,13 @@ class APIKey(models.Model):
         return str(uuid.uuid4()).replace("-", "")
 
     def save(self, *args, **kwargs):
-        if not self.key:
+        # only generate the key and the hash key if it is a new object
+        if not self.pk:
             self.key = self.generate_key()
+            self.__hash__(self.key)
+
+        # if the key is present but the hash key is not, hash the key
+        elif self.key and not self.key_hash:
             self.__hash__(self.key)
         super().save(*args, **kwargs)
 
