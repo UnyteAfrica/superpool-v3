@@ -161,3 +161,12 @@ class UserAuthSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
     password = serializers.CharField()
+
+
+class MerchantAuthSerializer(serializers.Serializer):
+    """
+    Authentication serializer for merchants
+    """
+
+    tenant_id = serializers.UUIDField()
+    password = serializers.CharField(write_only=True)
