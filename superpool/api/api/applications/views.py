@@ -2,14 +2,18 @@ from api.exceptions import ApplicationCreationError
 from api.services import ApplicationService
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from core.models import Application
+from rest_framework.exceptions import ValidationError
 
 from .serializers import ApplicationSerializer, CreateApplicationSerializer
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse
 
 
 def create_application_view(request: Request, *args: dict, **kwargs: dict) -> Response:
@@ -26,9 +30,9 @@ def create_application_view(request: Request, *args: dict, **kwargs: dict) -> Re
 
 
 class ApplicationView(APIView):
-    authentication_classes = [
-        TokenAuthentication,
-    ]
+    # authentication_classes = [
+    #     TokenAuthentication,
+    # ]
     permission_classes = [
         IsAuthenticated,
     ]
@@ -65,3 +69,95 @@ class ApplicationView(APIView):
         Creates a new application instance for the authenticated merchant
         """
         return create_application_view(request, *args, **kwargs)
+
+
+class ApplicationViewSetV2(viewsets.ModelViewSet):
+    """
+    V2 of the application viewset
+
+    Allows merchant to create a new application instance once they logon to their dashboards
+    of which they can then manage their api keys and other configurations
+    """
+
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "post"]
+
+    def get_queryset(self):
+        return Application.objects.filter(merchant=self.request.user.merchant)
+
+    @extend_schema(
+        summary="Retrieve all applications for the authenticated merchant",
+        description="This endpoint retrieves all sandbox or production applications for the merchant, including the hashed API keys.",
+        responses={
+            200: OpenApiResponse(ApplicationSerializer(many=True)),
+        },
+        examples=[
+            OpenApiExample(
+                "Success Response Example",
+                value=[
+                    {
+                        "application_id": "f0a2e4b6-33e5-451e-b90d-ea3a3d2a8e3e",
+                        "name": "Test Application",
+                        "test_mode": True,
+                        "api_key_hash": "d9a8f82b123fe6e...",
+                    },
+                    {
+                        "application_id": "a0d3e3a2-42b5-451e-b80d-ea3b3d1c9d3e",
+                        "name": "Production Application",
+                        "test_mode": False,
+                        "api_key_hash": "c8a7f83a8912ce7...",
+                    },
+                ],
+                response_only=True,
+                status_codes=["200"],
+            )
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        """
+        Retrieves all applications for the authenticated merchant
+        """
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create a new application",
+        description="This endpoint allows the merchant to create a sandbox or production application. The response includes the application ID, name, mode, and hashed API key.",
+        request=ApplicationSerializer,
+        responses={
+            201: OpenApiResponse(ApplicationSerializer),
+            400: OpenApiResponse(description="Validation errors"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+        examples=[
+            OpenApiExample(
+                "Create Request Example",
+                value={
+                    "application_id": "f0a2e4b6-33e5-451e-b90d-ea3a3d2a8e3e",
+                    "name": "Sandbox Environment",
+                    "api_key_hash": "d9a8f82b123fe6e...",
+                    "test_mode": "true",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Success Response Example",
+                value={
+                    "application_id": "f0a2e4b6-33e5-451e-b90d-ea3a3d2a8e3e",
+                    "name": "Production Environent",
+                    "api_key_hash": "d9a8f82b123fe6e...",
+                    "test_mode": "false",
+                },
+                response_only=True,
+                status_codes=["201"],
+            ),
+        ],
+    )
+    def create(self, request: Request) -> Response:
+        """
+        Create a new application instance for the authenticated merchant
+        """
+        if Application.objects.filter(merchant=self.request.user.merchant).count() >= 2:
+            raise ValidationError("A merchant can only have a maximum of 2 API keys.")
+
+        return super().create(request)
