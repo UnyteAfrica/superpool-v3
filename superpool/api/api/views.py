@@ -188,8 +188,37 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
         """
         return super().get(request, *args, **kwargs)
 
-    def get_queryset(self):
-        return self.queryset
+        provider_name = kwargs.get(self.lookup_url_kwarg)
+
+        if not provider_name:
+            return Response(
+                {"error": _("No insurance name specified in the request.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            provider = self.queryset.filter(name__iexact=provider_name).first()
+
+            if not provider:
+                return Response(
+                    {"error": _("The specified insurance provider does not exist.")},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            serializer = self.get_serializer(provider)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Failed to fetch insurance provider: {str(e)}")
+            ERR_CODE = "INSURANCE_PROVIDER_FETCH_ERROR"
+            return Response(
+                {
+                    "error": _(
+                        f"An error occurred while fetching the insurance provider. "
+                        f"Please contact support. Error code: {ERR_CODE}"
+                    )
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 @extend_schema(
