@@ -15,9 +15,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.serializers import ValidationError
 from django.db import IntegrityError
 from core.user.models import CustomerSupport, Admin
+from core.merchants.models import Merchant
 from api.user.serializers import CustomerSupportSerializer, AdminSerializer
 
-from .serializers import ScopedUserSerializer, UserAuthSerializer, UserSerializer
+from .serializers import (
+    MerchantAuthSerializer,
+    ScopedUserSerializer,
+    UserAuthSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -178,3 +184,115 @@ class SignInView(APIView):
                 {"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MerchantLoginView(APIView):
+    """
+    Handles Merchant login via Tenant ID and Password
+    """
+
+    @extend_schema(
+        tags=["Auth"],
+        request=OpenApiRequest(
+            request=MerchantAuthSerializer,
+        ),
+        operation_id="merchant_login",
+        description="Authenticate a merchant using their tenant ID and password.",
+        responses={
+            200: OpenApiResponse(
+                description="Merchant authenticated successfully",
+                examples=[
+                    OpenApiExample(
+                        "Merchant Login",
+                        description="The data for the authenticated merchant.",
+                        value={
+                            "merchant_id": 1,
+                            "merchant_name": "Merchant Name",
+                            "refresh": "<refresh-token>",
+                            "access": "<access-token>",
+                        },
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                description="Validation error",
+                examples=[
+                    OpenApiExample(
+                        "Validation Error",
+                        description="The error message for the validation error.",
+                        value={"message": "Validation error: <error message>"},
+                    )
+                ],
+            ),
+            401: OpenApiResponse(
+                description="Invalid credentials",
+                examples=[
+                    OpenApiExample(
+                        "Invalid Credentials",
+                        description="The error message for invalid credentials.",
+                        value={"message": "Invalid credentials"},
+                    )
+                ],
+            ),
+            404: OpenApiResponse(
+                description="Merchant not found",
+                examples=[
+                    OpenApiExample(
+                        "Merchant not found",
+                        description="The error message for merchant not found.",
+                        value={"message": "Merchant not found"},
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="An error occurred",
+                examples=[
+                    OpenApiExample(
+                        "Error",
+                        description="The error message for the internal server error.",
+                        value={
+                            "message": "An error occurred",
+                            "error": "<error message>",
+                        },
+                    )
+                ],
+            ),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = MerchantAuthSerializer(data=request.data)
+
+        if serializer.is_valid():
+            tenant_id = serializer.validated_data["tenant_id"]
+            password = serializer.validated_data["password"]
+
+            try:
+                merchant = Merchant.objects.get(tenant_id=tenant_id)
+            except Merchant.DoesNotExist:
+                return Response(
+                    {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Authenticate using the merchant's associated user account
+            user = authenticate(
+                request, username=merchant.user.username, password=password
+            )
+
+            if user is not None:
+                refresh = RefreshToken.for_user(user)
+                return Response(
+                    {
+                        "merchant_id": merchant.id,
+                        "merchant_name": merchant.name,
+                        "refresh": str(refresh),
+                        "access": str(refresh.access_token),
+                    }
+                )
+            else:
+                return Response(
+                    {"error": "Invalid credentials."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        # serializer is invalid
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

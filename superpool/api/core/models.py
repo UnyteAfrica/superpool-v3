@@ -13,6 +13,7 @@ from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
+from django.core.exceptions import ValidationError
 
 
 class Operation:
@@ -100,61 +101,92 @@ class APIKey(models.Model):
         on_delete=models.CASCADE,
         related_name="api_keys",
     )
-    hashed_key = models.CharField(max_length=64, null=True, blank=True)
+    key = models.CharField(
+        max_length=150,
+        unique=True,
+        help_text=(
+            "Unique key generated on the platform for use in subsequent request"
+        ),
+        blank=True,
+    )
+    key_hash = models.CharField(
+        max_length=150,
+        unique=True,
+        help_text="Hashed value of the key shared with the merchant. Always use this and never use the actual `key` in requests.",
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"API Key for {self.merchant.name}"
+        return f"#{self.display_key} for {self.merchant.name}"
 
-    def hash_(self, value):
+    def __hash__(self, value):
         return hashlib.sha256(value.encode()).hexdigest()
 
     def generate_key(self) -> str:
+        """
+        Generate a random key
+        """
         return str(uuid.uuid4()).replace("-", "")
 
     def save(self, *args, **kwargs):
-        if not self.hashed_key:
-            # Generate the key and hash it for storage
-            key = self.generate_key()
-            self.hashed_key = self.hash_(key)
-            self.pub_key = key
+        # only generate the key and the hash key if it is a new object
+        if not self.pk:
+            self.key = self.generate_key()
+            self.__hash__(self.key)
+
+        # if the key is present but the hash key is not, hash the key
+        elif self.key and not self.key_hash:
+            self.__hash__(self.key)
         super().save(*args, **kwargs)
 
-    @property
-    def pub_key(self):
-        return getattr(self, "_pub_key", None)
+    def display_key(self) -> str:
+        return self.key[:5] + "..." + self.key[-5:]
 
-    @pub_key.setter
-    def pub_key(self, value):
-        self._pub_key = value
+    def display_key_hash(self) -> str:
+        return str(self.key_hash)
 
 
 class Application(models.Model):
     """
     An application is a sandbox environment needed for interacting with Unyte's APIs
-
-    Merchants can only have ONE application instance
     """
 
     merchant = models.ForeignKey(
         Merchant,
         on_delete=models.CASCADE,
     )
-    # We are storing the application_id as a string because it is a UUID
-    #
-    # By storing it as string here, we move an expensive operation such as generating UUIDs
-    # from the database to the application layer, which is more efficient
-    application_id = models.CharField(max_length=100, primary_key=True, unique=True)
+    application_id = models.CharField(
+        max_length=100,
+        primary_key=True,
+        unique=True,
+    )
     api_key = models.OneToOneField(
-        APIKey, on_delete=models.CASCADE, null=True, blank=True
+        APIKey,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="applications",
     )
     name = models.CharField(max_length=255, null=True, blank=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
 
     def __str__(self) -> str:
-        return f"{self.name} - {self.application_id}"
+        return f"Environment: {self.name} by {self.merchant.name}"
 
     def save(self, *args, **kwargs):
-        if not self.api_key:
-            self.api_key = APIKey.objects.create(merchant=self.merchant)
+        # Validate API keys
+        if not self.pk:  # Only check for new instances
+            existing_keys = APIKey.objects.filter(merchant=self.merchant).count()
+            if existing_keys >= 2:
+                raise ValidationError(
+                    "A merchant can only have a maximum of 2 API keys."
+                )
+            # no api key, no probs -  generate new one
+            if not self.api_key:
+                self.api_key = APIKey.objects.create(merchant=self.merchant)
         super().save(*args, **kwargs)
+
+    @property
+    def api_key_hash(self):
+        return self.api_key.key_hash if self.api_key else None

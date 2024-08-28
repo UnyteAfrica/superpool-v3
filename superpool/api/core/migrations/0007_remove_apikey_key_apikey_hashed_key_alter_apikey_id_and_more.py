@@ -16,11 +16,11 @@ class Migration(migrations.Migration):
             model_name="apikey",
             name="key",
         ),
-        migrations.AddField(
-            model_name="apikey",
-            name="hashed_key",
-            field=models.CharField(blank=True, max_length=64, null=True),
-        ),
+        # migrations.AddField(
+        #     model_name="apikey",
+        #     name="hashed_key",
+        #     field=models.CharField(blank=True, max_length=64, null=True),
+        # ),
         migrations.AlterField(
             model_name="apikey",
             name="id",

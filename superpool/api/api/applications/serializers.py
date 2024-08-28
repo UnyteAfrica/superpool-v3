@@ -4,20 +4,18 @@ from rest_framework import serializers
 
 class ApplicationSerializer(serializers.ModelSerializer):
     """
-    Serializer for Application model
-
-    e.g:
-
-        {
-            "merchant_id": 1,
-            "name": "My Application",
-            "test_mode": false,
-        }
+    Serializes the information of an application environment
     """
+
+    hashed_key = serializers.ReadOnlyField(source="api_key_hash")
+    environment_name = serializers.CharField(source="name")
 
     class Meta:
         model = Application
-        fields = "__all__"
+        fields = ["application_id", "environment_name", "hashed_key", "test_mode"]
+        read_only_fields = [
+            "application_id",
+        ]
 
 
 class CreateApplicationSerializer(serializers.Serializer):

@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "phonenumber_field",
     "corsheaders",
-    "rest_framework_api_key",
+    # "rest_framework_api_key",
     "django_extensions",
     # Local apps
     "core",

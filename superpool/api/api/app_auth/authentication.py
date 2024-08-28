@@ -2,9 +2,9 @@ from core.merchants.models import Merchant
 from core.models import Application
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_api_key.models import APIKey
+
+# from rest_framework_api_key.models import APIKey
 from core.models import APIKey as APIKeyModel
-from rest_framework_api_key.permissions import BaseHasAPIKey
 from django.conf import settings
 
 User = settings.AUTH_USER_MODEL
@@ -40,7 +40,7 @@ class APIKeyAuthentication(BaseAuthentication):
         try:
             hashed = APIKeyModel().hash_(key)
             key_obj = APIKeyModel.objects.get(hashedkey=hashed)
-        except APIKey.DoesNotExist:
+        except APIKeyModel.DoesNotExist:
             raise AuthenticationFailed("Invalid API key")
 
         return key_obj.merchant, key_obj
