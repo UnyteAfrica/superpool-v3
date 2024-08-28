@@ -16,6 +16,9 @@ from api.serializers import ProviderSerializer
 from drf_spectacular.utils import OpenApiParameter, OpenApiRequest, extend_schema
 from drf_spectacular.utils import OpenApiResponse
 from rest_framework import generics
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.exceptions import NotFound
+from django.db.models import Q
 
 from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
@@ -220,33 +223,7 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
             )
 
 
-@extend_schema(
-    summary="Search for insurance providers",
-    operation_id="search-insurance-providers",
-    description="Search for insurance providers by name.",
-    parameters=[
-        OpenApiParameter(
-            name="name",
-            type=str,
-            location=OpenApiParameter.QUERY,
-            description="The name of the insurance provider",
-        )
-    ],
-    tags=["Insurance Providers"],
-    responses={
-        200: OpenApiResponse(
-            ProviderSerializer,
-            "List of insurance providers",
-            examples=[insurance_provider_search_example],
-        ),
-        400: OpenApiResponse(description="Invalid input"),
-        404: OpenApiResponse(description="No insurance providers found"),
-        500: OpenApiResponse(
-            description="An error occurred while fetching the insurance providers"
-        ),
-    },
-)
-class InsuranceProviderSearchView(generics.ListAPIView):
+class InsuranceProviderSearchView(APIView):
     """
     Search for insurance providers
     """
@@ -254,22 +231,93 @@ class InsuranceProviderSearchView(generics.ListAPIView):
     # permission_classes = [IsAuthenticated, IsAdminUser]
     queryset = Provider.objects.all()
     serializer_class = ProviderSerializer
+    pagination_class = LimitOffsetPagination
 
-    def get_queryset(self):
+    def get_queryset(self) -> Provider:
+        """
+        Filter the queryset based on the search query
+
+        Filters providers by name using an exact or partial match.
+        Returns all providers if no search term is provided.
+        """
+
         provider_name = self.request.query_params.get("name", "").strip()
+        if provider_name:
+            return self.queryset.filter(
+                Q(name__icontains=provider_name) | Q(name__iexact=provider_name)
+            )
+        return self.queryset
 
-        # if no provider name is provided, return all providers
-        if not provider_name:
-            return self.queryset
-
-        # we want to handle input sensitization to prevent SQL injection
-        # and other issues
-        if not self.validate_search_query(provider_name):
-            return ValidationError("Invalid search query")
-        return Provider.objects.filter(name__icontains=provider_name)
-
-    def validate_search_query(self, query: str) -> bool:
+    @extend_schema(
+        summary="Search for insurance providers",
+        operation_id="search-insurance-providers",
+        description="Search for insurance providers by name.",
+        parameters=[
+            OpenApiParameter(
+                name="name",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="The name of the insurance provider",
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="The number of results to return per page",
+            ),
+            OpenApiParameter(
+                name="offset",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="The starting position of results to return",
+            ),
+        ],
+        tags=["Insurance Providers"],
+        responses={
+            200: OpenApiResponse(
+                ProviderSerializer,
+                "List of insurance providers",
+                examples=[insurance_provider_search_example],
+            ),
+            400: OpenApiResponse(description="Invalid input"),
+            404: OpenApiResponse(
+                description="No insurance providers matching the search term"
+            ),
+            500: OpenApiResponse(
+                description="An error occurred while fetching the insurance providers"
+            ),
+        },
+    )
+    def get(self, request, *args, **kwargs):
         """
-        Validate the search query for invalid characters and invalid types
+        List insurance providers based on the search query
+
+        Exact match returns a single result, otherwise paginated partial matches are returned.
         """
-        return all(char.isalnum() or char.isspace() for char in query)
+
+        provider_name = request.query_params.get("name", "").strip()
+
+        if provider_name == "":
+            return Response(
+                {"error": _("Search query cannot be empty.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        providers_qs = self.get_queryset()
+
+        if not providers_qs.exists():
+            return Response(
+                {"error": _("No insurance providers matching the search term.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(providers_qs, request)
+
+        if page is not None:
+            serializer = ProviderSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        # fallback to returning all providers if pagination fails
+        serializer = ProviderSerializer(providers_qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
