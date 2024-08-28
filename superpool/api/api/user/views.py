@@ -191,6 +191,74 @@ class MerchantLoginView(APIView):
     Handles Merchant login via Tenant ID and Password
     """
 
+    @extend_schema(
+        tags=["Auth"],
+        request=OpenApiRequest(
+            request=MerchantAuthSerializer,
+        ),
+        operation_id="merchant_login",
+        description="Authenticate a merchant using their tenant ID and password.",
+        responses={
+            200: OpenApiResponse(
+                description="Merchant authenticated successfully",
+                examples=[
+                    OpenApiExample(
+                        "Merchant Login",
+                        description="The data for the authenticated merchant.",
+                        value={
+                            "merchant_id": 1,
+                            "merchant_name": "Merchant Name",
+                            "refresh": "<refresh-token>",
+                            "access": "<access-token>",
+                        },
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                description="Validation error",
+                examples=[
+                    OpenApiExample(
+                        "Validation Error",
+                        description="The error message for the validation error.",
+                        value={"message": "Validation error: <error message>"},
+                    )
+                ],
+            ),
+            401: OpenApiResponse(
+                description="Invalid credentials",
+                examples=[
+                    OpenApiExample(
+                        "Invalid Credentials",
+                        description="The error message for invalid credentials.",
+                        value={"message": "Invalid credentials"},
+                    )
+                ],
+            ),
+            404: OpenApiResponse(
+                description="Merchant not found",
+                examples=[
+                    OpenApiExample(
+                        "Merchant not found",
+                        description="The error message for merchant not found.",
+                        value={"message": "Merchant not found"},
+                    )
+                ],
+            ),
+            500: OpenApiResponse(
+                description="An error occurred",
+                examples=[
+                    OpenApiExample(
+                        "Error",
+                        description="The error message for the internal server error.",
+                        value={
+                            "message": "An error occurred",
+                            "error": "<error message>",
+                        },
+                    )
+                ],
+            ),
+        },
+    )
     def post(self, request, *args, **kwargs):
         serializer = MerchantAuthSerializer(data=request.data)
 
