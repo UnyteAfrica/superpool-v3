@@ -41,7 +41,7 @@ urlpatterns = [
         name="insurer-detail",
     ),
     path(
-        "insurers/search/",
+        "providers/search/",
         InsuranceProviderSearchView.as_view(),
         name="insurance-providers-search",
     ),
