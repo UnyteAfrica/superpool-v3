@@ -106,11 +106,13 @@ class APIKey(models.Model):
         help_text=(
             "Unique key generated on the platform for use in subsequent request"
         ),
+        blank=True,
     )
     key_hash = models.CharField(
         max_length=150,
         unique=True,
         help_text="Hashed value of the key shared with the merchant. Always use this and never use the actual `key` in requests.",
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -153,11 +155,11 @@ class Application(models.Model):
         Merchant,
         on_delete=models.CASCADE,
     )
-    # We are storing the application_id as a string because it is a UUID
-    #
-    # By storing it as string here, we move an expensive operation such as generating UUIDs
-    # from the database to the application layer, which is more efficient
-    application_id = models.CharField(max_length=100, primary_key=True, unique=True)
+    application_id = models.CharField(
+        max_length=100,
+        primary_key=True,
+        unique=True,
+    )
     api_key = models.OneToOneField(
         APIKey,
         on_delete=models.CASCADE,
@@ -169,9 +171,7 @@ class Application(models.Model):
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
 
     def __str__(self) -> str:
-        return f"{self.name} - {self.application_id}"
+        return f"Environment: {self.name} by {self.merchant.name}"
 
     def save(self, *args, **kwargs):
-        if not self.api_key:
-            self.api_key = APIKey.objects.create(merchant=self.merchant)
         super().save(*args, **kwargs)
