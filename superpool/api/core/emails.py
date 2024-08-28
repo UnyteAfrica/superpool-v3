@@ -101,7 +101,7 @@ class PendingVerificationEmail(BaseEmailMessage):
     Email message class for sending an email to a merchant who has not yet verified their email address.
     """
 
-    template = "superpool/emails/superpool-merchant-registration-verification.html"
+    template = "superpool/emails/verification_emailV2.html"
 
     def __init__(
         self,
@@ -141,7 +141,7 @@ class OnboardingEmail(BaseEmailMessage):
     Email message class for welcoming a newly verified merchant on he platform.
     """
 
-    template = "superpool/emails/superpool-merchant-onboarding.html"
+    template = "superpool/emails/welcome.html"
 
     def __init__(
         self,
