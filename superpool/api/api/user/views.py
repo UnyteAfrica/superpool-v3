@@ -15,9 +15,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.serializers import ValidationError
 from django.db import IntegrityError
 from core.user.models import CustomerSupport, Admin
+from core.merchants.models import Merchant
 from api.user.serializers import CustomerSupportSerializer, AdminSerializer
 
-from .serializers import ScopedUserSerializer, UserAuthSerializer, UserSerializer
+from .serializers import (
+    MerchantAuthSerializer,
+    ScopedUserSerializer,
+    UserAuthSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -178,3 +184,47 @@ class SignInView(APIView):
                 {"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MerchantLoginView(APIView):
+    """
+    Handles Merchant login via Tenant ID and Password
+    """
+
+    def post(self, request, *args, **kwargs):
+        serializer = MerchantAuthSerializer(data=request.data)
+
+        if serializer.is_valid():
+            tenant_id = serializer.validated_data["tenant_id"]
+            password = serializer.validated_data["password"]
+
+            try:
+                merchant = Merchant.objects.get(tenant_id=tenant_id)
+            except Merchant.DoesNotExist:
+                return Response(
+                    {"detail": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Authenticate using the merchant's associated user account
+            user = authenticate(
+                request, username=merchant.user.username, password=password
+            )
+
+            if user is not None:
+                refresh = RefreshToken.for_user(user)
+                return Response(
+                    {
+                        "merchant_id": merchant.id,
+                        "merchant_name": merchant.name,
+                        "refresh": str(refresh),
+                        "access": str(refresh.access_token),
+                    }
+                )
+            else:
+                return Response(
+                    {"detail": "Invalid credentials."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        # serializer is invalid
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
