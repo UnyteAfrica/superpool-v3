@@ -109,7 +109,7 @@ class PendingVerificationEmail(BaseEmailMessage):
         token: str,
         to: str,
         from_: str | None = None,
-        merchant_name: str,
+        merchant_name: str | None = None,
         **kwargs: dict,
     ) -> None:
         """
@@ -124,7 +124,11 @@ class PendingVerificationEmail(BaseEmailMessage):
         self.confirm_url = confirm_url
         self.token = token
 
-        context = {"confirm_url": self.confirm_url, "token": self.token, 'merchant_name': merchant_name}
+        context = {
+            "confirm_url": self.confirm_url,
+            "token": self.token,
+            "merchant_name": merchant_name,
+        }
 
         super().__init__(to, from_email=from_, context=context, **kwargs)
 
@@ -148,8 +152,11 @@ class OnboardingEmail(BaseEmailMessage):
         merchant_name: str | None = None,
         **kwargs: dict,
     ) -> None:
-
-        context = {"tenant_id": tenant_id, "merchant_short_code": merchant_short_code, 'merchant_name': merchant_name}
+        context = {
+            "tenant_id": tenant_id,
+            "merchant_short_code": merchant_short_code,
+            "merchant_name": merchant_name,
+        }
         super().__init__(to, from_email=from_, context=context)
 
     def get_subject(self) -> str:
