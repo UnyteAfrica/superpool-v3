@@ -43,7 +43,7 @@ urlpatterns = [
     path(
         "insurers/search/",
         InsuranceProviderSearchView.as_view(),
-        name="insurers-search",
+        name="insurance-providers-search",
     ),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
