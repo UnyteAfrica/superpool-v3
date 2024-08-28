@@ -13,6 +13,7 @@ from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
+from django.core.exceptions import ValidationError
 
 
 class Operation:
@@ -174,4 +175,18 @@ class Application(models.Model):
         return f"Environment: {self.name} by {self.merchant.name}"
 
     def save(self, *args, **kwargs):
+        # Validate API keys
+        if not self.pk:  # Only check for new instances
+            existing_keys = APIKey.objects.filter(merchant=self.merchant).count()
+            if existing_keys >= 2:
+                raise ValidationError(
+                    "A merchant can only have a maximum of 2 API keys."
+                )
+            # no api key, no probs -  generate new one
+            if not self.api_key:
+                self.api_key = APIKey.objects.create(merchant=self.merchant)
         super().save(*args, **kwargs)
+
+    @property
+    def api_key_hash(self):
+        return self.api_key.key_hash if self.api_key else None
