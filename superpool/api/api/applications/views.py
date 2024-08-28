@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from core.models import Application
 from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotAuthenticated
+
 
 from .serializers import ApplicationSerializer, CreateApplicationSerializer
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse
@@ -33,9 +35,9 @@ class ApplicationView(APIView):
     # authentication_classes = [
     #     TokenAuthentication,
     # ]
-    permission_classes = [
-        IsAuthenticated,
-    ]
+    # permission_classes = [
+    #     IsAuthenticated,
+    # ]
 
     @extend_schema(
         operation_id="get_application",
@@ -80,11 +82,19 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
     """
 
     serializer_class = ApplicationSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     http_method_names = ["get", "post"]
 
     def get_queryset(self):
-        return Application.objects.filter(merchant=self.request.user.merchant)
+        user = self.request.user
+
+        if not user.is_authenticated:
+            raise NotAuthenticated("You must be authenticated to view this resource.")
+
+        try:
+            return Application.objects.filter(merchant=user.merchant)
+        except AttributeError:
+            raise NotAuthenticated("You must be a merchant to view this resource.")
 
     @extend_schema(
         summary="Retrieve all applications for the authenticated merchant",
