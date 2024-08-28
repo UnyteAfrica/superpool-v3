@@ -179,12 +179,14 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
     # permission_classes = [IsAuthenticated, IsAdminUser]
     queryset = Provider.objects.all()
     serializer_class = ProviderSerializer
-    lookup_url_kwarg = "name"
+    lookup_field = "id"
+    lookup_url_kwarg = "provider_id"
 
     def get(self, request, *args, **kwargs):
         """
-        Retrieve the details of a specific insurance provider.
+        Retrieve the details of a specific insurance provider
         """
+        return super().get(request, *args, **kwargs)
 
         provider_name = kwargs.get(self.lookup_url_kwarg)
 
