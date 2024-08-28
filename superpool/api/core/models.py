@@ -117,7 +117,7 @@ class APIKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"API Key for {self.merchant.name}"
+        return f"#{self.display_key} for {self.merchant.name}"
 
     def __hash__(self, value):
         return hashlib.sha256(value.encode()).hexdigest()
