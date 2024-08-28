@@ -16,6 +16,8 @@ from api.serializers import ProviderSerializer
 from drf_spectacular.utils import OpenApiParameter, OpenApiRequest, extend_schema
 from drf_spectacular.utils import OpenApiResponse
 from rest_framework import generics
+from rest_framework.exceptions import NotFound
+from django.db.models import Q
 
 from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
@@ -239,7 +241,9 @@ class InsuranceProviderDetailView(generics.RetrieveAPIView):
             examples=[insurance_provider_search_example],
         ),
         400: OpenApiResponse(description="Invalid input"),
-        404: OpenApiResponse(description="No insurance providers found"),
+        404: OpenApiResponse(
+            description="No insurance providers matching the search term"
+        ),
         500: OpenApiResponse(
             description="An error occurred while fetching the insurance providers"
         ),
@@ -254,21 +258,57 @@ class InsuranceProviderSearchView(generics.ListAPIView):
     queryset = Provider.objects.all()
     serializer_class = ProviderSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> Provider:
+        """
+        Filter the queryset based on the search query
+
+        Filters providers by name using an exact or partial match.
+        Returns all providers if no search term is provided.
+        """
+
         provider_name = self.request.query_params.get("name", "").strip()
+        logger.info(f"Search term: {provider_name}")
 
-        # if no provider name is provided, return all providers
-        if not provider_name:
-            return self.queryset
+        if provider_name:
+            return self.queryset.filter(
+                Q(name__icontains=provider_name) | Q(name__iexact=provider_name)
+            )
+        return self.queryset
 
-        # we want to handle input sensitization to prevent SQL injection
-        # and other issues
-        if not self.validate_search_query(provider_name):
-            return ValidationError("Invalid search query")
-        return Provider.objects.filter(name__icontains=provider_name)
-
-    def validate_search_query(self, query: str) -> bool:
+    def get(self, request, *args, **kwargs):
         """
-        Validate the search query for invalid characters and invalid types
+        List insurance providers based on the search query
+
+        Exact match returns a single result, otherwise paginated partial matches are returned.
         """
-        return all(char.isalnum() or char.isspace() for char in query)
+        search_query = request.query_params.get("name", "").strip()
+        logger.info(f"Query params: {request.query_params}")
+
+        if search_query == "":
+            return Response(
+                {"error": "The search query cannot be empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        providers = self.get_queryset()
+
+        if search_query:
+            exact_match = providers.filter(name__iexact=search_query).first()
+            if exact_match:
+                serializer = self.get_serializer(exact_match)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        page = self.paginate_queryset(providers)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # no match found
+        if not providers.exists():
+            return Response(
+                {"error": "No insurance providers match the specified search term"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # fallback: return all providers without pagination if pagnaition fails
+        serializer = self.get_serializer(providers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
