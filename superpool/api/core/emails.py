@@ -123,7 +123,9 @@ class PendingVerificationEmail(BaseEmailMessage):
         """
         self.confirm_url = confirm_url
         self.token = token
+
         context = {"confirm_url": self.confirm_url, "token": self.token, 'merchant_name': merchant_name}
+
         super().__init__(to, from_email=from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
@@ -146,6 +148,7 @@ class OnboardingEmail(BaseEmailMessage):
         merchant_name: str | None = None,
         **kwargs: dict,
     ) -> None:
+
         context = {"tenant_id": tenant_id, "merchant_short_code": merchant_short_code, 'merchant_name': merchant_name}
         super().__init__(to, from_email=from_, context=context)
 
