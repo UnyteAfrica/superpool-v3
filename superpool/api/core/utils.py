@@ -18,7 +18,10 @@ def generate_verification_token() -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=6))
 
 
-def send_verification_email(email: str, token: str, merchant_id: str) -> None:
+
+def send_verification_email(
+    email: str, token: str, merchant_id: str, merchant_name: str | None = None
+) -> None:
     """
     Sends an email to the merchant to verify their email address
     """
@@ -26,6 +29,8 @@ def send_verification_email(email: str, token: str, merchant_id: str) -> None:
     CONFIRMATION_URL = f"{BASE_URL}/merchants/{merchant_id}/verify/?token={token}"
 
     verification_email = PendingVerificationEmail(
+
+        merchant_name=merchant_name,
         confirm_url=CONFIRMATION_URL,
         to=email,
         from_=DEFAULT_FROM_EMAIL,

@@ -101,7 +101,7 @@ class PendingVerificationEmail(BaseEmailMessage):
     Email message class for sending an email to a merchant who has not yet verified their email address.
     """
 
-    template = "superpool/emails/verification_emailV2.html"
+    template = "superpool/emails/superpool-merchant-registration-verification.html"
 
     def __init__(
         self,
@@ -109,6 +109,7 @@ class PendingVerificationEmail(BaseEmailMessage):
         token: str,
         to: str,
         from_: str | None = None,
+        merchant_name: str,
         **kwargs: dict,
     ) -> None:
         """
@@ -122,7 +123,9 @@ class PendingVerificationEmail(BaseEmailMessage):
         """
         self.confirm_url = confirm_url
         self.token = token
-        context = {"confirm_url": self.confirm_url, "token": self.token}
+
+        context = {"confirm_url": self.confirm_url, "token": self.token, 'merchant_name': merchant_name}
+
         super().__init__(to, from_email=from_, context=context, **kwargs)
 
     def get_subject(self) -> str:
@@ -134,7 +137,7 @@ class OnboardingEmail(BaseEmailMessage):
     Email message class for welcoming a newly verified merchant on he platform.
     """
 
-    template = "superpool/emails/onboarding_v2.html"
+    template = "superpool/emails/superpool-merchant-onboarding.html"
 
     def __init__(
         self,
@@ -142,9 +145,11 @@ class OnboardingEmail(BaseEmailMessage):
         tenant_id: str,
         merchant_short_code: str,
         from_: str | None = None,
+        merchant_name: str | None = None,
         **kwargs: dict,
     ) -> None:
-        context = {"tenant_id": tenant_id, "merchant_short_code": merchant_short_code}
+
+        context = {"tenant_id": tenant_id, "merchant_short_code": merchant_short_code, 'merchant_name': merchant_name}
         super().__init__(to, from_email=from_, context=context)
 
     def get_subject(self) -> str:

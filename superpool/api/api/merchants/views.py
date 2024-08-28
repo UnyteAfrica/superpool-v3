@@ -81,6 +81,11 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
         # pdb.set_trace()
         try:
             send_verification_email(
+
+                merchant.business_email,
+                verification_token,
+                merchant.short_code,
+                merchant_name=merchant.name,
                 merchant.business_email, verification_token, merchant.short_code
             )
         except Exception as email_exc:
