@@ -1,7 +1,11 @@
 from django.urls import URLPattern, URLResolver, include, path
 from rest_framework.routers import DefaultRouter
 
-from .applications.views import ApplicationView, create_application_view
+from .applications.views import (
+    ApplicationView,
+    create_application_view,
+    ApplicationViewSetV2,
+)
 from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
 from .views import (

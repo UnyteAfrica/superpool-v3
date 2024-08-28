@@ -73,12 +73,6 @@ class Merchant(TrashableModelMixin, TimestampMixin, models.Model):
         null=True,
         blank=True,
     )
-    api_key = models.CharField(
-        _("API Key"),
-        max_length=80,
-        help_text="Unique key generated on the platform for use in subsequent request",
-        null=True,
-    )
     kyc_verified = models.BooleanField(
         _("KYC Verified"),
         default=False,
