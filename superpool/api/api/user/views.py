@@ -202,7 +202,7 @@ class MerchantLoginView(APIView):
                 merchant = Merchant.objects.get(tenant_id=tenant_id)
             except Merchant.DoesNotExist:
                 return Response(
-                    {"detail": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
+                    {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
             # Authenticate using the merchant's associated user account
@@ -222,7 +222,7 @@ class MerchantLoginView(APIView):
                 )
             else:
                 return Response(
-                    {"detail": "Invalid credentials."},
+                    {"error": "Invalid credentials."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
         # serializer is invalid
