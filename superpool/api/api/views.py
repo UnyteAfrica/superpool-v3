@@ -80,6 +80,7 @@ class VerificationAPIView(APIView):
                     to=merchant.business_email,
                     tenant_id=str(merchant.tenant_id),
                     merchant_short_code=merchant.short_code,
+                    merchant_name=merchant.name,
                 )
                 onboarding_email.send()
             except Exception as e:
