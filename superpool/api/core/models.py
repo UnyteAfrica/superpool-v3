@@ -163,6 +163,7 @@ class Application(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
+        related_name="applications",
     )
     name = models.CharField(max_length=255, null=True, blank=True)
     test_mode = models.BooleanField(help_text="Whether the application is in test mode")
