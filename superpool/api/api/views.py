@@ -332,6 +332,17 @@ class MerchantSetPasswordView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Set a new password for a merchant account",
+        operation_id="set-merchant-password",
+        tags=["Auth"],
+        request=OpenApiRequest(request=SetPasswordSerializer),
+        responses={
+            200: OpenApiResponse(description="Password set successfully"),
+            400: OpenApiResponse(description="Invalid input"),
+            404: OpenApiResponse(description="Merchant not found"),
+        },
+    )
     def post(self, request, *args, **kwargs):
         serializer = SetPasswordSerializer(data=request.data)
         if serializer.is_valid():
