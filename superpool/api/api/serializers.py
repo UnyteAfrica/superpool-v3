@@ -5,6 +5,8 @@ from rest_framework import serializers
 from core.providers.models import Provider
 from core.merchants.models import Merchant
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -56,32 +58,36 @@ class ProviderSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SetPasswordSerializer(serializers.Serializer):
-    tenant_id = serializers.UUIDField()
-    new_password = serializers.CharField()
+class CompleteRegistrationSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
 
     def validate(self, attrs):
-        tenant_id = attrs.get("tenant_id")
-        new_password = attrs.get("new_password")
+        password = attrs.get("password")
+        password_confirm = attrs.get("password_confirm")
+
+        if password != password_confirm:
+            raise serializers.ValidationError("Passwords do not match.")
 
         try:
-            # retreive the merchant information from the User table
-            merchant = Merchant.objects.get(tenant_id=tenant_id)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            raise serializers.ValidationError("Invalid user.")
-
-        user = merchant.user
-
-        # check if the user is a merchant
-        if user.role != User.USER_TYPES.MERCHANT:
-            raise serializers.ValidationError(
-                "Only merchants can complete registration via this endpoint."
-            )
-
-        # security gurard against password
-        if len(new_password) < 8:
-            raise serializers.ValidationError(
-                "Password must be at least 8 characters long."
-            )
+            validate_password(password)
+        except ValidationError as e:
+            raise serializers.ValidationError({"password": e.messages})
 
         return attrs
+
+    def save(self):
+        tenant_id = self.validated_data["tenant_id"]
+        password = self.validated_data["password"]
+
+        # Find the merchant and set the user password
+        merchant = Merchant.objects.filter(tenant_id=tenant_id).first()
+        user = User.objects.create(
+            email=merchant.business_email, role=User.USER_TYPES.MERCHANT
+        )
+        user.set_password(password)
+        user.save()
+
+        return user

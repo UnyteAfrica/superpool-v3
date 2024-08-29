@@ -27,7 +27,7 @@ urlpatterns = [
     path("internal/auth/", include(user_route), name="auth"),
     path("auth/merchant/login/", MerchantLoginView.as_view(), name="merchant_login"),
     path(
-        "auth/merchant/registration/<uuid:tenant_id>/",
+        "auth/merchant/registration/",
         MerchantSetPasswordView.as_view(),
         name="complete_merchant_registration",
     ),

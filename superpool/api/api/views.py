@@ -24,7 +24,7 @@ from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
 from django.utils import timezone
 from .openapi import insurance_provider_search_example, insurance_provider_list_example
-from .serializers import SetPasswordSerializer, User
+from .serializers import CompleteRegistrationSerializer, SetPasswordSerializer, User
 
 logger = logging.getLogger(__name__)
 
@@ -344,7 +344,7 @@ class MerchantSetPasswordView(APIView):
         },
     )
     def post(self, request, *args, **kwargs):
-        serializer = SetPasswordSerializer(data=request.data)
+        serializer = CompleteRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return Response(
