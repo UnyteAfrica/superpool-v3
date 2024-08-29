@@ -10,6 +10,7 @@ from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
 from .user.views import MerchantLoginView
 from .views import (
+    MerchantSetPasswordView,
     VerificationAPIView,
     InsurerAPIView,
     InsuranceProviderDetailView,
@@ -25,6 +26,11 @@ urlpatterns = [
     # path("", include(user_route), name="user"),
     path("internal/auth/", include(user_route), name="auth"),
     path("auth/merchant/login/", MerchantLoginView.as_view(), name="merchant_login"),
+    path(
+        "auth/merchant/registration/<uuid:tenant_id>/",
+        MerchantSetPasswordView.as_view(),
+        name="complete_merchant_registration",
+    ),
     # path("sandbox/", ApplicationView.as_view(), name="sandbox_application"),
     # path("sandbox/create/", create_application_view, name="sandbox_create_application"),
     path(
