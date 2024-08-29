@@ -56,8 +56,10 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         choices=ProductType.choices,
         help_text="Type of insurance package",
     )
-    coverage_details: models.TextField = models.TextField(
-        help_text="Detailed breakdown of what's covered", null=True, blank=True
+    coverages = models.ManyToManyField(
+        "core.Coverage",
+        blank=True,
+        help_text="Detailed breakdown of what's covered",
     )
     is_live = models.BooleanField(
         default=True, help_text="Indicates if the package is live"

@@ -33,6 +33,19 @@ class Coverage(models.Model):
     Represents a structure to help track complex coverage information
     """
 
+    class CoverageType(models.TextChoices):
+        """
+        Choices for different types of coverage
+        """
+
+        MEDICAL = "Medical", "Medical Coverage"
+        COLLISION = "Collision", "Collision Coverage"
+        LIABILITY = "Liability", "Liability Coverage"
+        PROPERTY = "Property", "Property Coverage"
+        TRAVEL = "Travel", "Travel Coverage"
+        ACCIDENTAL = "Accidental", "Accidental Coverage"
+        OTHER = "Other", "Other Coverage"
+
     # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     coverage_name: models.CharField = models.CharField(
         _("Coverage Name"),
@@ -53,17 +66,43 @@ class Coverage(models.Model):
             "This is the maximum amount that the insurance company will pay for a claim"
         ),
         null=True,
-    )  # TODO: Add currency field here
+        blank=True,
+    )
+    currency = models.CharField(
+        _("Currency"),
+        max_length=10,
+        default="NGN",
+        help_text=_("Currency of the coverage limit, e.g., USD, EUR"),
+    )
     description: models.TextField = models.TextField(
         _("Description"), help_text=_("Description of the coverage")
     )
 
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name="coverages",
-        help_text=_("Product to which the coverage belongs"),
+    coverage_period_end = models.DateField(
+        _("Coverage End Date"),
+        help_text=_("End date of the coverage period"),
+        null=True,
+        blank=True,
     )
+    benefits = models.TextField(
+        _("Benefits"),
+        help_text=_("Specific benefits included in the coverage"),
+        blank=True,
+        null=True,
+    )
+    exclusions = models.TextField(
+        _("Exclusions"),
+        help_text=_("Exclusions or limitations of the coverage"),
+        blank=True,
+        null=True,
+    )
+
+    def __str__(self):
+        return f"{self.coverage_name} - {self.coverage_id}"
+
+    class Meta:
+        verbose_name = _("Coverage")
+        verbose_name_plural = _("Coverages")
 
     def generate_coverage_id(self):
         prefix = "COV_"
