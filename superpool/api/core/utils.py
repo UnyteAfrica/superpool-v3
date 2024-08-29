@@ -18,7 +18,6 @@ def generate_verification_token() -> str:
     return "".join(random.choices(string.ascii_letters + string.digits, k=6))
 
 
-
 def send_verification_email(
     email: str, token: str, merchant_id: str, merchant_name: str | None = None
 ) -> None:
@@ -29,7 +28,6 @@ def send_verification_email(
     CONFIRMATION_URL = f"{BASE_URL}/merchants/{merchant_id}/verify/?token={token}"
 
     verification_email = PendingVerificationEmail(
-
         merchant_name=merchant_name,
         confirm_url=CONFIRMATION_URL,
         to=email,
@@ -50,7 +48,7 @@ def generate_id(klass):
     # The length of the generated ID will be 17 characters (3 + 1 + 5 + 1 + 8)
 
     class_name = klass.__name__
-    prefix = class_name[:3].lower()  # First 3 characters of the class name in lowercase
+    prefix = class_name[:3].title()  # First 3 characters of the class name in lowercase
 
     # random string of 5 characters
     random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
