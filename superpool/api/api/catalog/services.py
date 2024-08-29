@@ -92,8 +92,8 @@ class PolicyService:
         # policy is active and exist, so we return an identifier
         return policy_id or policy_number
 
-    @transaction.atomic
     @staticmethod
+    @transaction.atomic
     def renew_policy(
         policy_id: str | None = None,
         policy_number: str | None = None,
@@ -118,6 +118,13 @@ class PolicyService:
             if policy.status != "active":
                 policy.status = "active"
 
+            # check if the policy is already active and within its valid effective period
+            today = timezone.now().date()
+            if policy.effective_from <= today <= policy.effective_through:
+                raise ValidationError(
+                    "Policy is currently active and within its valid effective period. Renewal is not needed."
+                )
+
             if policy_start_date:
                 policy.effective_from = policy_start_date
             if policy_expiry_date:
@@ -126,10 +133,14 @@ class PolicyService:
 
             if include_additional_coverage:
                 # TODO: Implement this later
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Additional coverage implementation is not yet available."
+                )
             if modify_exisitng_coverage:
                 # TODO: implement this later
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Modification of existing coverage is not yet available."
+                )
 
             update_fields = [
                 "status",
