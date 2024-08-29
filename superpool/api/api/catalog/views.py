@@ -38,10 +38,15 @@ from django.db.models import Q
 from rest_framework import filters
 from .openapi import (
     travel_insurance_example,
+    travel_insurance_with_product_id_example,
     health_insurance_example,
+    health_insurance_with_product_id_example,
     home_insurance_example,
+    home_insurance_with_product_id_example,
     gadget_insurance_example,
+    gadget_insurance_with_product_id_example,
     auto_insurance_example,
+    auto_insurance_with_product_id_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
     limited_policy_renewal_example,
@@ -740,10 +745,15 @@ class RequestQuoteView(views.APIView):
             QuoteRequestSerializer,
             examples=[
                 travel_insurance_example,
+                travel_insurance_with_product_id_example,
                 health_insurance_example,
+                health_insurance_with_product_id_example,
                 home_insurance_example,
+                home_insurance_with_product_id_example,
                 gadget_insurance_example,
+                gadget_insurance_with_product_id_example,
                 auto_insurance_example,
+                auto_insurance_with_product_id_example,
             ],
         ),
         responses={
