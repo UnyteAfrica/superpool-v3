@@ -243,6 +243,7 @@ class Price(models.Model):
     surcharges = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
+    currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
 
 
 class Quote(models.Model):
