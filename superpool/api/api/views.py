@@ -24,7 +24,7 @@ from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
 from django.utils import timezone
 from .openapi import insurance_provider_search_example, insurance_provider_list_example
-from .serializers import SetPasswordSerializer
+from .serializers import SetPasswordSerializer, User
 
 logger = logging.getLogger(__name__)
 
@@ -346,22 +346,12 @@ class MerchantSetPasswordView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = SetPasswordSerializer(data=request.data)
         if serializer.is_valid():
-            tenant_id = serializer.validated_data["tenant_id"]
-            try:
-                merchant = Merchant.objects.get(id=tenant_id)
-            except Merchant.DoesNotExist:
-                return Response(
-                    {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            user = merchant.user
-
-            logger.info(f"Setting new password for merchant {merchant.name}")
-            logger.info(f"User details for merchant: {user}")
-
-            user.set_password(serializer.validated_data["new_password"])
-            user.save()
+            user = serializer.save()
             return Response(
-                {"message": "Password set successfully."}, status=status.HTTP_200_OK
+                {
+                    "status": "success",
+                    "message": "Registration completed successfully.",
+                },
+                status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
