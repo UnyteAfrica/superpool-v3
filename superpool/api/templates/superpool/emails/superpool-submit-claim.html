@@ -15,18 +15,21 @@
       #outlook a {
         padding: 0;
       }
+
       body {
         margin: 0;
         padding: 0;
         -webkit-text-size-adjust: 100%;
         -ms-text-size-adjust: 100%;
       }
+
       table,
       td {
         border-collapse: collapse;
         mso-table-lspace: 0pt;
         mso-table-rspace: 0pt;
       }
+
       img {
         border: 0;
         height: auto;
@@ -35,6 +38,7 @@
         text-decoration: none;
         -ms-interpolation-mode: bicubic;
       }
+
       p {
         display: block;
         margin: 13px 0;
@@ -89,6 +93,7 @@
         table.mj-full-width-mobile {
           width: 100% !important;
         }
+
         td.mj-full-width-mobile {
           width: auto !important;
         }
@@ -96,6 +101,7 @@
     </style>
     <style type="text/css"></style>
   </head>
+
   <body style="word-spacing: normal; background-color: #eeeeee">
     <div style="background-color: #eeeeee">
       <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
@@ -318,7 +324,7 @@
                               color: #000000;
                             "
                           >
-                            Policy Name: {{ policy_name }}
+                            Policy Name: {{ policy.product.name }}
                           </div>
                         </td>
                       </tr>
@@ -342,7 +348,7 @@
                               color: #000000;
                             "
                           >
-                            Policy Number: {{ policy_number }}
+                            Policy ID: {{ policy.policy_id }}
                           </div>
                         </td>
                       </tr>
