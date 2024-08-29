@@ -4,6 +4,7 @@ from decimal import Decimal
 import hashlib
 import uuid
 
+from django.apps import apps
 from core.catalog.models import Product  # noqa: F401
 from core.merchants.models import Merchant  # noqa: F401
 from core.mixins import TimestampMixin, TrashableModelMixin

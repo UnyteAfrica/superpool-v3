@@ -4,6 +4,7 @@ from core.mixins import TimestampMixin
 from django.db import models  # type: ignore
 from django.utils.translation import gettext_lazy as _  # type: ignore
 from django_stubs_ext.db.models import TypedModelMeta
+from django.apps import apps
 
 
 class Provider(models.Model):
@@ -24,13 +25,6 @@ class Provider(models.Model):
         help_text="Name of the Insurance Provider. This could be a short form of the company name",
     )
 
-    # short_code: models.CharField = models.CharField(
-    #     max_length=10,
-    #     unique=True,
-    #     help_text="This is used in the system to identify the provider. It should be unique, example includes: AXA-XXXX, "
-    #     "HEIR-XXXX, UNYT-XXXX, LEAD-XXXX, etc.",
-    # )
-
     support_email: models.EmailField = models.EmailField(
         _("Business email"),
         help_text="Email address is used to track their support team during integrations",
@@ -44,8 +38,22 @@ class Provider(models.Model):
         null=True,
     )
 
+    products = models.ManyToManyField(
+        "catalog.Product",  # noqa: F405
+        related_name="providers",
+        blank=True,
+        help_text="Products offered by the provider",
+    )
+
     def __str__(self) -> str:
         return f"{self.name}"
+
+    def get_products(self):
+        """
+        Method to get related products using apps.get_model.
+        """
+        Product = apps.get_model("catalog", "Product")
+        return self.products.all()
 
     class Meta(TypedModelMeta):
         verbose_name = _("Insurer")
