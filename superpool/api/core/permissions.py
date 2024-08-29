@@ -143,5 +143,5 @@ def assign_permissions_to_groups():
 
 
 # Invoke the functions to create permissions and assign them to groups
-create_permissions()
-assign_permissions_to_groups()
+# create_permissions()
+# assign_permissions_to_groups()

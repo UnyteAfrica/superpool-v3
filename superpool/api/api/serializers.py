@@ -4,6 +4,7 @@ from django.db.models import Model
 from rest_framework import serializers
 from core.providers.models import Provider
 from core.merchants.models import Merchant
+from core.catalog.models import Product
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -44,17 +45,25 @@ class LimitedScopeSerializer(serializers.ModelSerializer):
         return super().__new__(cls, *args, **kwargs)
 
 
+class ProductSerializer(serializers.ModelSerializer):
+    product_id = serializers.UUIDField(source="id")
+    product_name = serializers.CharField(source="name")
+    product_description = serializers.CharField(source="description")
+
+    class Meta:
+        model = Product
+        fields = ["product_id", "product_name", "product_description"]
+        read_only_fields = fields
+
+
 class ProviderSerializer(serializers.ModelSerializer):
     provider_id = serializers.UUIDField(source="id")
     provider_name = serializers.CharField(source="name")
+    products_offered = ProductSerializer(many=True, source="product_set")
 
     class Meta:
         model = Provider
-        fields = [
-            "provider_id",
-            "provider_name",
-            "support_email",
-        ]
+        fields = ["provider_id", "provider_name", "support_email", "products_offered"]
         read_only_fields = fields
 
 

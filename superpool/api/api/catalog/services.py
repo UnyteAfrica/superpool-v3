@@ -666,6 +666,7 @@ class QuoteService(IQuote):
             coverage_type = insurance_details.get("coverage_type") or kwargs.get(
                 "coverage_type"
             )
+            coverage_type = coverage_type.capitalize()
             if coverage_type not in COVERAGE_TYPES:
                 raise ValueError(
                     f"Invalid coverage type. Expected one of {COVERAGE_TYPES}."

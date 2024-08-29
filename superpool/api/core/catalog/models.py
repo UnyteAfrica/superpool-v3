@@ -30,6 +30,8 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
         HOME = "Home", "Home Insurance"
+        STUDENT_PROTECTION = "Student_Protection", "Student Protection"
+        PERSONAL_ACCIDENT = "Personal_Accident", "Personal Accident Insurance"
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True,
@@ -54,8 +56,10 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         choices=ProductType.choices,
         help_text="Type of insurance package",
     )
-    coverage_details: models.TextField = models.TextField(
-        help_text="Detailed breakdown of what's covered", null=True, blank=True
+    coverages = models.ManyToManyField(
+        "core.Coverage",
+        blank=True,
+        help_text="Detailed breakdown of what's covered",
     )
     is_live = models.BooleanField(
         default=True, help_text="Indicates if the package is live"
@@ -239,6 +243,7 @@ class Price(models.Model):
     surcharges = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
+    currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
 
 
 class Quote(models.Model):
