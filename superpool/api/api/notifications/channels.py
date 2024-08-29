@@ -39,6 +39,7 @@ class EmailNotification(NotificationChannel):
         self, action: str, recipient: str, context: dict = None
     ) -> Dict[str, Any]:
         action_data = ACTION_REGISTRY.get(action, {}).get(recipient, {})
+        logger.info(f"Retrieved action_data: {action_data}")
 
         # no action data?
         if not action_data:
@@ -46,18 +47,29 @@ class EmailNotification(NotificationChannel):
             return {}
 
         template_path = action_data.get("template")
+        logger.info(f"Template path: {template_path}")
 
         if context is None:
             context = {}
 
         if template_path:
-            # render the template with the context if the template path is provided
-            subject = action_data.get("subject", "")
-            body = render_to_string(template_path, context)
+            try:
+                # render the template with the context if the template path is provided
+                subject = action_data.get("subject", "")
+                logger.info(f"Retrieved context: {context}")
+                body = render_to_string(template_path, context)
+            except Exception as e:
+                logger.error(f"Template renderng failed: {e}")
+                return {}
+
+            # Log after rendering the template
+            logger.info("Template rendering was successful")
         else:
             # otherwise, use the default subject and message
             subject = action_data.get("subject", "")
-            body = action_data.get("message", "")
+            body = action_data.get("body", "")
+
+            logger.info(f"Using default subject and body: {subject}, {body}")
 
         if not subject or not body:
             logger.error(
@@ -67,7 +79,7 @@ class EmailNotification(NotificationChannel):
 
         return {
             "subject": subject,
-            "message": body,
+            "body": body,
         }
 
     def send(self, recipient: str, subject: str, message: str) -> None:

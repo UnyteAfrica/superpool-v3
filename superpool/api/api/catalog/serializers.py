@@ -730,14 +730,14 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
             raise ValidationError("Policy is not renewable")
 
         # guard against un-nessary renewal in as much policy is active within effective date
-        now = datetime.now().date()
-        if (
-            policy.status == "active"
-            and policy.effective_from <= now <= policy.effective_through
-        ):
-            raise ValidationError(
-                "Policy is currently active and within its valid effective period. Renewal is not needed."
-            )
+        # now = datetime.now().date()
+        # if (
+        #     policy.status == "active"
+        #     and policy.effective_from <= now <= policy.effective_through
+        # ):
+        #     raise ValidationError(
+        #         "Policy is currently active and within its valid effective period. Renewal is not needed."
+        #     )
 
         # merchant can choose to modify coverage based on customer preferance or
         # include additional coverage as part of the renewal
