@@ -27,7 +27,9 @@ class INotification(ABC):
     """
 
     @abstractmethod
-    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
+    def prepare_message(
+        self, action: str, recipient: str, context: dict
+    ) -> Dict[str, Any]:
         raise NotImplementedError
 
     @abstractmethod
@@ -63,13 +65,15 @@ class NotificationService(INotification):
         # Initialize the channel instance to None
         self.channel = None
 
-    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
+    def prepare_message(
+        self, action: str, recipient: str, context: dict
+    ) -> Dict[str, Any]:
         """
         Prepare the message to be sent to the recipient
         """
         if not self.channel:
             raise Exception("Notification channel not set. Cannot prepare message \n")
-        return self.channel.prepare_message(action, recipient)
+        return self.channel.prepare_message(action, recipient, context)
 
     def stream_through(self, channel: str) -> None:
         """

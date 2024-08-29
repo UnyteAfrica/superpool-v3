@@ -168,7 +168,14 @@ class ClaimService(IClaim):
 
         StatusTimeline.objects.create(claim=claim, status="pending")
 
-        PolicyNotificationService.notify_merchant(action="claim_policy", policy=policy)
+        # we want to use this transaction date when notifying the merchant
+        transaction_date = claim.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        PolicyNotificationService.notify_merchant(
+            action="claim_policy",
+            policy=policy,
+            customer=customer,
+            transaction_date=transaction_date,
+        )
         return claim
 
     @staticmethod

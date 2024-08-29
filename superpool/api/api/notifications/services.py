@@ -15,13 +15,23 @@ class PolicyNotificationService(NotificationService):
     """
 
     @staticmethod
-    def notify_merchant(action: str, policy: "Policy") -> None:
+    def notify_merchant(
+        action: str, policy: "Policy", customer: dict, transaction_date: str
+    ) -> None:
         """Send a notification to the merchant about the action that took place on the policy"""
 
         print(f"Sending notification to merchant for action: {action}")
         service = NotificationService()
         service.stream_through(NotificationService.EMAIL)
-        message_data = service.prepare_message(action, "merchant")
+
+        # prepare context for the email template
+        context = {
+            "policy": policy,
+            "customer_name": f'{customer["first_name"]} {customer["last_name"]}',
+            "transaction_date": transaction_date,
+        }
+
+        message_data = service.prepare_message(action, "merchant", context=context)
         service.send(
             recipient=policy.merchant.business_email,
             subject=message_data["subject"],
