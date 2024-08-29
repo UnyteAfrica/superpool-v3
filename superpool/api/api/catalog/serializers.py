@@ -8,10 +8,13 @@ from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
 from core.providers.models import Provider as Partner
+from core.providers.models import Provider
 from django.db.models import Q
 from core.user.models import Customer
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
+from core.catalog.models import Beneficiary
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -24,22 +27,6 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = "__all__"
-
-
-class PolicySerializer(ModelSerializer):
-    """
-    Serializer for the Policy model
-    """
-
-    class Meta:
-        model = Policy
-        depth = 1
-        fields = "__all__"
-        extra_kwargs = {
-            "policy_id": {"read_only": True},
-            "merchant_id": {"read_only": True},
-            "provider_id": {"read_only": True},
-        }
 
 
 class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
@@ -857,3 +844,124 @@ class PolicyRenewalSerializer(serializers.ModelSerializer):
         if request and request.data.get("auto_renew"):
             return instance.effective_through
         return None
+
+
+class CoverageSerializer(serializers.ModelSerializer):
+    coverage_id = serializers.UUIDField(source="id")
+    coverage_name = serializers.CharField(source="name")
+    coverage_description = serializers.CharField(source="description")
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Coverage
+        fields = ["coverage_id", "coverage_name", "coverage_description", "url"]
+        read_only_fields = fields
+
+    def get_url(self, obj):
+        """
+        Generates a URL to access the coverage details.
+        """
+        request = self.context.get(
+            "request"
+        )  # Get the request context to build absolute URLs
+        return reverse("coverage-detail", kwargs={"pk": obj.id}, request=request)
+
+
+class PolicyMerchantSerializer(serializers.ModelSerializer):
+    merchant_id = serializers.UUIDField(source="id")
+    merchant_name = serializers.CharField(source="name")
+    merchant_code = serializers.CharField(source="short_code")
+
+    class Meta:
+        model = Merchant
+        fields = ["merchant_id", "merchant_name", "merchant_code"]
+        read_only_fields = fields
+
+
+class PolicyCustomerSerializer(serializers.ModelSerializer):
+    customer_id = serializers.UUIDField(source="id")
+    customer_name = serializers.SerializerMethodField()
+    customer_email = serializers.EmailField(source="email")
+    customer_phone = serializers.CharField(source="phone_number")
+
+    class Meta:
+        model = Customer
+        fields = [
+            "customer_id",
+            "customer_name",
+            "customer_email",
+            "customer_phone",
+        ]
+        read_only_fields = fields
+
+    def get_customer_name(self, instance):
+        """Returns the full name of the customer"""
+        return f"{instance.first_name} {instance.last_name}"
+
+
+class PolicyProviderSerializer(serializers.ModelSerializer):
+    provider_id = serializers.UUIDField(source="id")
+    provider_name = serializers.CharField(source="name")
+    email = serializers.EmailField(source="support_email")
+
+    class Meta:
+        model = Provider
+        fields = ["provider_id", "provider_name", "email"]
+        read_only_fields = fields
+
+
+class PolicyBeneficiarySerializer(serializers.ModelSerializer):
+    beneficiary_id = serializers.UUIDField(source="id")
+    beneficiary_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Beneficiary
+        fields = ["beneficiary_id", "beneficiary_name"]
+        read_only_fields = fields
+
+    def get_beneficiary_name(self, instance):
+        """Returns the full name of the beneficiary"""
+        return f"{instance.first_name} {instance.last_name}"
+
+
+class PolicySerializer(ModelSerializer):
+    """
+    Serializer for the Policy model
+    """
+
+    policy_holder = PolicyCustomerSerializer()
+    merchant = serializers.CharField(source="merchant.name")
+    provider = PolicyProviderSerializer(source="provider_id")
+    beneficiaries = serializers.ListSerializer(child=PolicyBeneficiarySerializer())
+    policy_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Policy
+        fields = [
+            "policy_id",
+            "policy_number",
+            "effective_from",
+            "effective_through",
+            "premium",
+            "policy_holder",
+            "merchant",
+            "provider",
+            "coverage",
+            "policy_type",
+            "renewable",
+            "renewal_date",
+            "inspection_required",
+            "cerfication_required",
+            "status",
+            "cancellation_initiator",
+            "cancellation_reason",
+            "cancellation_date",
+            "beneficiaries",
+        ]
+        read_only_fields = fields
+
+    def get_policy_type(self, obj):
+        """
+        Returns the type of the policy
+        """
+        return obj.product.product_type if obj.product else None

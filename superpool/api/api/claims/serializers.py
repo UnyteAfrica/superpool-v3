@@ -193,8 +193,14 @@ class ClaimDetailsSerializer(serializers.Serializer):
     ILLNESS = "illness"
     THEFT = "theft"
     OTHER = "other"
+    BASIC = "basic"
+    PREMIUM = "premium"
+    ADVANCED = "advanced"
 
     CLAIM_TYPES = [
+        (BASIC, "Basic"),
+        (PREMIUM, "Premium"),
+        (ADVANCED, "Advanced"),
         (ACCIDENT, "Accident"),
         (DEATH, "Death"),
         (ILLNESS, "Illness"),
