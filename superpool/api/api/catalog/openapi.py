@@ -31,6 +31,7 @@ travel_insurance_with_product_id_example = OpenApiExample(
     name="Request Travel Insurance using the Product ID",
     value={
         "product_id": "d0378ac1-f7e2-45ca-9312-6473d8d3d567",
+        "product_type": "Travel",
         "insurance_name": "World Travel Protection",
         "insurance_details": {
             "coverage_type": "standard",
@@ -77,6 +78,7 @@ health_insurance_with_product_id_example = OpenApiExample(
     name="Request Health Insurance using the Product ID",
     value={
         "product_id": "5fc4f5d2-c1de-4007-b8f7-fe44836473ed",
+        "product_type": "Health",
         "insurance_name": "Smart Health Insurance",
         "insurance_details": {
             "health_condition": "good",
@@ -120,6 +122,7 @@ home_insurance_example = OpenApiExample(
 home_insurance_with_product_id_example = OpenApiExample(
     name="Request Home Insurance using the Product ID",
     value={
+        "product_type": "Home",
         "product_id": "d0378ac1-f7e2-45ca-9312-6473d8d3d567",
         "insurance_name": "Home Protection",
         "insurance_details": {
@@ -167,6 +170,7 @@ gadget_insurance_with_product_id_example = OpenApiExample(
     name="Request Gadget Insurance using the Product ID",
     value={
         "product_id": "72512701-906f-4aa7-9d19-2c2315f7df37",
+        "product_type": "Gadget",
         "insurance_name": "Gadget Protection",
         "insurance_details": {
             "coverage_type": "",
@@ -213,6 +217,7 @@ auto_insurance_with_product_id_example = OpenApiExample(
     name="Request Auto Insurance using the Product ID",
     value={
         "product_id": "05268117-a576-4318-8e3c-e0df7c399fa5",
+        "product_type": "Auto",
         "insurance_name": "Comprehensive Auto Protection",
         "insurance_details": {
             "coverage_type": "comprehensive",

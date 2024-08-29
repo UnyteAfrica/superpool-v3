@@ -39,7 +39,7 @@ class ProductService:
         return Product.objects.all()
 
     @staticmethod
-    def get_product_by_name(product_name: str) -> Product | list[Product]:
+    def get_product_by_name(product_name: str) -> QuerySet:
         """
         Returns a list of products by name.
         If multiple products with the same name exist, they will all be returned.

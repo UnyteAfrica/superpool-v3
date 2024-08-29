@@ -387,6 +387,7 @@ class QuoteRequestSerializer(serializers.Serializer):
             "Personal Accident",
             "Student Protection",
         ],
+        required=False,
     )
     quote_code = serializers.CharField(required=False)
     insurance_name = serializers.CharField(required=False)
@@ -455,13 +456,14 @@ class QuoteRequestSerializer(serializers.Serializer):
         insurance_name = attrs.get("insurance_name")
         insurance_details = attrs.get("insurance_details")
 
-        # Ensure either product_id is provided with product_type or insurance_name with product_type and coverage_type
+        # Ensure either product_id is provided or insurance_name with product_type and coverage_type
         if not (
-            (product_id and product_type)
-            or (insurance_name and insurance_details.get("coverage_type"))
+            product_id or (insurance_name and insurance_details.get("coverage_type"))
         ):
             raise ValidationError(
-                "You must provide either 'product_id' with 'product_type' or 'insurance_name' with 'product_type' and 'coverage_type'."
+                "You must provide either 'product_id' "
+                "or the 'product_id' along with the 'product_type' "
+                "or the 'insurance_name' along with 'coverage_type' from 'insurance_details' is provided."
             )
 
         if product_id:
