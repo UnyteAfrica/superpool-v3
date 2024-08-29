@@ -24,6 +24,7 @@ from core.emails import OnboardingEmail
 from core.merchants.models import Merchant
 from django.utils import timezone
 from .openapi import insurance_provider_search_example, insurance_provider_list_example
+from .serializers import CompleteRegistrationSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -322,3 +323,35 @@ class InsuranceProviderSearchView(APIView):
         # fallback to returning all providers if pagination fails
         serializer = ProviderSerializer(providers_qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MerchantSetPasswordView(APIView):
+    """
+    API view for setting a new password for a merchant account
+    """
+
+    permission_classes = []
+
+    @extend_schema(
+        summary="Set a new password for a merchant account",
+        operation_id="set-merchant-password",
+        tags=["Auth"],
+        request=OpenApiRequest(request=CompleteRegistrationSerializer),
+        responses={
+            200: OpenApiResponse(description="Password set successfully"),
+            400: OpenApiResponse(description="Invalid input"),
+            404: OpenApiResponse(description="Merchant not found"),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = CompleteRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {
+                    "status": "success",
+                    "message": "Registration completed successfully.",
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

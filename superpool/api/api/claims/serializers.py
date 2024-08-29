@@ -1,6 +1,6 @@
 from api.claims.services import ClaimService
 from core.catalog.models import Policy, Product
-from core.claims.models import Claim, ClaimDocument, StatusTimeline
+from core.claims.models import Claim, ClaimDocument, ClaimWitness, StatusTimeline
 from core.providers.models import Provider
 from core.user.models import Customer
 from rest_framework import serializers
@@ -130,7 +130,8 @@ class ClaimantMetadataSerializer(serializers.Serializer):
     email = serializers.EmailField()
     phone_number = serializers.CharField(required=False)
     relationship = serializers.CharField(
-        help_text="The relationship of the claimant to the policyholder"
+        help_text="The relationship of the claimant to the policyholder",
+        required=False,
     )
 
 
@@ -144,7 +145,7 @@ class AuthorityReportSerializer(serializers.Serializer):
     filing_station = serializers.CharField(required=False)
 
 
-class WitnessSerializer(serializers.Serializer):
+class WitnessSerializer(serializers.ModelSerializer):
     """
     Specifies the data structure for capturing witness information of a claim
 
@@ -152,13 +153,28 @@ class WitnessSerializer(serializers.Serializer):
     """
 
     witness_name = serializers.CharField(
-        help_text='Full name of the witness in the format, "First Name Last Name"'
+        source="full_name",
+        help_text='Full name of the witness in the format, "First Name Last Name"',
     )
-    witness_contact_phone = serializers.CharField()
-    witness_contact_email = serializers.EmailField(required=False)
+    witness_contact_phone = serializers.CharField(
+        required=False, source="contact_phone"
+    )
+    witness_contact_email = serializers.EmailField(
+        required=False, source="contact_email"
+    )
     witness_statement = serializers.CharField(
-        help_text="A brief statement from the witness about the incident"
+        help_text="A brief statement from the witness about the incident",
+        source="statement",
     )
+
+    class Meta:
+        model = ClaimWitness
+        fields = [
+            "witness_name",
+            "witness_contact_phone",
+            "witness_contact_email",
+            "witness_statement",
+        ]
 
 
 class ClaimDocumentSerializer(serializers.ModelSerializer):
@@ -258,7 +274,18 @@ class ClaimUpdateSerializer(serializers.Serializer):
     """
     Handles updating of a claim instance
 
-    Excludes read-only fields, like claim ID and claim reference number from being updated
+    We are only allowing updates to the following fields:
+    - Customer information - age, email, phone number
+    - Claim details - incident date, incident description
+    - Witness information - name, contact phone, contact email, statement
+
+    Fields you cannot update:
+    - Claim ID
+    - First Name and Surname of the claimant - you would have to reach out to support team with your verifying documents
+    - Claim number provided by the merchant
+    - Authority report - report number, report date, filing station - For now not supported
+    - Supporting documents for a claim (Claim details) - For now not supported
+    - Claim amount
     """
 
     claimant_metadata = ClaimantMetadataSerializer(required=False)
@@ -269,69 +296,158 @@ class ClaimUpdateSerializer(serializers.Serializer):
     def validate(self, attrs):
         authority_report = attrs.get("authority_report")
         claimant_metadata = attrs.get("claimant_metadata")
-        claim_information = attrs.get("claim_details")
-        witness_information = attrs.get("witness_details")
+        claim_details = attrs.get("claim_details")
+        witness_details = attrs.get("witness_details")
 
-        if not any(
-            [
-                claimant_metadata,
-                claim_information,
-                witness_information,
-                authority_report,
-            ]
+        # Ensure at least one updatable field is provided
+        if not (
+            claimant_metadata or claim_details or witness_details or authority_report
         ):
             raise serializers.ValidationError(
-                "You must provide at least one field to update. "
-                "Updates include: claimant_metadata, claim_details, witness_details, authority_report"
+                {
+                    "detail": "You must provide at least one field to update. "
+                    "Options include claimant_metadata, claim_details, or witness_details."
+                }
             )
 
+        # Restrict authority report updates
         if authority_report:
             raise serializers.ValidationError(
-                "Updating the authority report is not supported yet. \n"
-                "Please contact the support team for assistance. \n"
-                "Error Code: AUTHORITY_REPORT_UPDATE_NOT_SUPPORTED"
+                {
+                    "authority_report": "Updating authority reports is not supported yet. "
+                    "Please contact the support team for assistance. "
+                    "Error Code: AUTHORITY_REPORT_UPDATE_NOT_SUPPORTED"
+                }
             )
 
-        if witness_information:
-            raise serializers.ValidationError(
-                "Updating witness information is not supported yet. \n"
-                "Please contact the support team for assistance. \n"
-                "Error code: WITNESS_INFO_NOT_SUPPORTED."
-            )
+        # Restrict updates to claim number, claim amount, and supporting documents
+        if claim_details:
+            if "claim_number" in claim_details:
+                raise serializers.ValidationError(
+                    {"claim_details": "Claim number cannot be updated."}
+                )
+            if "claim_amount" in claim_details:
+                raise serializers.ValidationError(
+                    {"claim_details": "Claim amount cannot be updated."}
+                )
+            if "supporting_documents" in claim_details:
+                raise serializers.ValidationError(
+                    {"claim_details": "Supporting documents cannot be updated."}
+                )
+
+        # Restrict witness updates
+        if witness_details:
+            if any("witness_name" not in witness for witness in witness_details):
+                raise serializers.ValidationError(
+                    {"witness_details": "Each witness must have a name."}
+                )
+            # raise serializers.ValidationError(
+            #     {
+            #         "witness_details": "Updating witness information is not supported yet. "
+            #         "Please contact the support team for assistance. "
+            #         "Error Code: WITNESS_INFO_NOT_SUPPORTED"
+            #     }
+            # )
+
+        # Validate claimant metadata if provided
         if claimant_metadata:
+            first_name = claimant_metadata.get("first_name")
+            last_name = claimant_metadata.get("last_name")
+            birth_date = claimant_metadata.get("birth_date")
+            email = claimant_metadata.get("email")
+
+            # Check if the claimant exists with provided details
+            claimant = Customer.objects.filter(
+                first_name=first_name, last_name=last_name, dob=birth_date, email=email
+            ).first()
+
+            if not claimant:
+                raise serializers.ValidationError(
+                    {
+                        "claimant_metadata": "Claimant not found. Please verify the claimant details."
+                    }
+                )
+
+            # Validate if the claim belongs to the claimant
+            claim_id = self.context.get("claim_id")
+            if not claim_id:
+                raise serializers.ValidationError(
+                    {"error": "Claim ID is required to validate the claimant's claim."}
+                )
+
+            claim = Claim.objects.filter(id=claim_id, customer=claimant).first()
+            if not claim:
+                raise serializers.ValidationError(
+                    {
+                        "claimant_metadata": "No claim found with the provided ID for the claimant."
+                    }
+                )
+
+            # After verifying that the claimant owns the claim, restrict updates to protected fields
+            if "first_name" in claimant_metadata or "last_name" in claimant_metadata:
+                raise serializers.ValidationError(
+                    {
+                        "claimant_metadata": "First Name and Last Name cannot be updated. "
+                        "Please contact support for assistance."
+                    }
+                )
+
+            if "claim_id" in claimant_metadata:
+                raise serializers.ValidationError(
+                    {"claimant_metadata": "Claim ID cannot be updated."}
+                )
+
+            # If any other claimant information is being updated
             raise serializers.ValidationError(
-                "At the moment, updating the claim's information is not support yet. "
-                "We are aware of this, and are working to ensure this is possible for your customer "
-                "Please reach out to support team with error code: CLAIMANT_UPDATE_NOT_SUPPORTED"
+                {
+                    "claimant_metadata": "Updating claimant information is not fully supported yet. "
+                    "Please reach out to the support team for assistance. "
+                    "Error Code: CLAIMANT_UPDATE_NOT_SUPPORTED"
+                }
             )
 
         return attrs
 
     def update(self, instance, validated_data):
-        # Update claimant information if provided
+        """
+        Update the claim instance with the provided validated data
+        """
+
         claimant_metadata = validated_data.get("claimant_metadata")
         if claimant_metadata:
-            for attr, value in claimant_metadata.items():
-                setattr(instance.claimant, attr, value)
+            # Only allow updates to email, phone_number, and age
+            allowed_fields = ["email", "phone_number", "age"]
+            for field in allowed_fields:
+                if field in claimant_metadata:
+                    setattr(instance.claimant, field, claimant_metadata[field])
             instance.claimant.save()
 
-        # Update claim information if provided
+        # for claim details
         claim_details = validated_data.get("claim_details")
         if claim_details:
-            for attr, value in claim_details.items():
-                setattr(instance, attr, value)
+            # Only allow updates to incident_date and incident_description
+            allowed_fields = ["incident_date", "incident_description"]
+            for field in allowed_fields:
+                if field in claim_details:
+                    setattr(instance, field, claim_details[field])
 
-        # Handle supporting documents update if needed
-        supporting_documents = claim_details.get("supporting_documents", [])
+        # for witness details
+        witness_details = validated_data.get("witness_details")
+        if witness_details:
+            # remove all existing witnesses of this claim
+            instance.witnesses.all().delete()
+            for witness_data in witness_details:
+                ClaimWitness.objects.create(claim=instance, **witness_data)
+
+        # for supporting documents in future
+        supporting_documents = (
+            claim_details.get("supporting_documents", []) if claim_details else []
+        )
+
         if supporting_documents:
-            instance.documents.all().delete()  # Delete old documents
+            instance.documents.all().delete()  # Delete existing documents
             for document_data in supporting_documents:
                 ClaimDocument.objects.create(claim=instance, **document_data)
-
-        # TODO: update witness details if provided
-        # TODO: update authority report if provided
-        #
-        # Handle these later
 
         instance.save()
         return instance

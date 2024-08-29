@@ -1,6 +1,8 @@
 import logging
 from uuid import uuid4
 import uuid
+
+from rest_framework.pagination import LimitOffsetPagination
 from .openapi import products_response_example
 from datetime import datetime, timedelta
 from core.permissions import (
@@ -38,10 +40,15 @@ from django.db.models import Q
 from rest_framework import filters
 from .openapi import (
     travel_insurance_example,
+    travel_insurance_with_product_id_example,
     health_insurance_example,
+    health_insurance_with_product_id_example,
     home_insurance_example,
+    home_insurance_with_product_id_example,
     gadget_insurance_example,
+    gadget_insurance_with_product_id_example,
     auto_insurance_example,
+    auto_insurance_with_product_id_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
     limited_policy_renewal_example,
@@ -180,10 +187,10 @@ class PolicyByProductTypeView(generics.ListAPIView):
 
 
 @extend_schema(
-    summary="Retrieve a product by ID or name",
+    summary="Retrieve a product by ID",
     operation_id="retrieve_product",
     tags=["Products"],
-    description="Retrieve a specific product by its ID or name",
+    description="Retrieve a specific product by its ID",
     request=OpenApiRequest(
         request=ProductSerializer,
         examples=[
@@ -224,23 +231,25 @@ class PolicyByProductTypeView(generics.ListAPIView):
         )
     },
 )
-class ProductRetrieveView(generics.RetrieveAPIView):
+class ProductRetrieveView(generics.GenericAPIView):
     """
     This endpoint lets you find a product by its ID or name
 
     e.g
 
-        /api/v1/products/1
+        /api/v1/products/<uuid:pk>
 
-        /api/v1/products/health-insurance
-        /api/v1/products/health-insurance?product_id=1
+        /api/v1/products/<str:product_name>
     """
 
     serializer_class = ProductSerializer
     queryset = ProductService.list_products()
+    pagination_class = LimitOffsetPagination
+    http_method_names = ["get"]
+
     # authentication_classes = [APIKeyAuthentication]
 
-    def get_object(self):
+    def get(self, request, *args, **kwargs):
         # Priority is given to the product_id
         # if the product_id is provided, we will use it to retrieve the product
         # if the product_id is not provided, we will fallback to the product_name
@@ -249,8 +258,53 @@ class ProductRetrieveView(generics.RetrieveAPIView):
         product_name = self.kwargs.get("product_name")
 
         if product_id:
-            return ProductService.get_product_by_id(product_id)
-        return ProductService.get_product(product_name)
+            try:
+                product = ProductService.get_product_by_id(product_id)
+                serializer = self.get_serializer(product)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except Product.DoesNotExist:
+                return Response(
+                    {"error": f"Product with ID '{product_id}' not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        elif product_name:
+            # multiple objects can be returned - although we only care for exact matches
+            # if there are no exact matches, we will return a 404
+            product_exact_matches = ProductService.get_product_by_name(product_name)
+            logger.info(f"Products: {product_exact_matches}")
+
+            if product_exact_matches.exists():
+                print(
+                    f"Product exact matches: {product_exact_matches.values_list('name', flat=True)}"
+                )
+                # single product returned, just return the product
+                if product_exact_matches.count() == 1:
+                    print("found just one match")
+                    serializer = self.get_serializer(product_exact_matches.first())
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+
+                # multple objects returned, return a paginated response
+                print("found multiple matches")
+                page = self.paginate_queryset(product_exact_matches)
+                if page is not None:
+                    serializer = self.get_serializer(page, many=True)
+                    return self.get_paginated_response(serializer.data)
+
+                # pagingation failed? return all the products
+                serializer = self.get_serializer(product_exact_matches, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # no products returned, 404
+            return Response(
+                {"error": f"Product with name '{product_name}' not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        # no product id or product name? client fucked up! return 404
+        return Response(
+            {"error": "Please provide a valid Product ID or Product Name"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class PolicyAPIViewSet(
@@ -740,10 +794,15 @@ class RequestQuoteView(views.APIView):
             QuoteRequestSerializer,
             examples=[
                 travel_insurance_example,
+                travel_insurance_with_product_id_example,
                 health_insurance_example,
+                health_insurance_with_product_id_example,
                 home_insurance_example,
+                home_insurance_with_product_id_example,
                 gadget_insurance_example,
+                gadget_insurance_with_product_id_example,
                 auto_insurance_example,
+                auto_insurance_with_product_id_example,
             ],
         ),
         responses={

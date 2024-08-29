@@ -182,3 +182,20 @@ class ClaimDocument(models.Model):
         # should be replaced with the actual URL
         # and be in the form of f"https://example.com/preview/{self.blob}"
         pass
+
+
+class ClaimWitness(models.Model):
+    """
+    Details of a witness to an incident that led to a claim.
+    """
+
+    full_name = models.CharField(
+        max_length=100,
+        help_text='Full name of the witness in the format, "First Name Last Name"',
+    )
+    contact_phone = models.CharField()
+    contact_email = models.EmailField()
+    statement = models.CharField(
+        max_length=255,
+        help_text="A brief statement from the witness about the incident",
+    )

@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404
 from core.user.models import Customer
 from core.claims.models import StatusTimeline, ClaimDocument, Claim
 from api.notifications.services import PolicyNotificationService
+from django.db.utils import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -112,13 +113,21 @@ class ClaimService(IClaim):
         Ensures that a claim is created with the given data while ensuring data integrity
         """
         try:
-            ClaimService._create_claim(validated_data)
-
+            claim = ClaimService._create_claim(validated_data)
+        except IntegrityError as exc:
+            if "duplicate key value violates unique constraint" in str(exc):
+                raise ValidationError(
+                    "A customer with the provided email already exists. Please use a different email address."
+                )
+            # handle other integrity errors
+            raise ValidationError(
+                f"An error occurred while processing the claim. Please try again later. Error: {exc}"
+            ) from exc
         except Exception as exc:
             raise ValidationError(
-                f"An error occurred while processing the claim."
-                f" Please try again later. Error: {exc}"
+                f"An error occurred while processing the claim. Please try again later. Error: {exc}"
             ) from exc
+        return claim
 
     @staticmethod
     @transaction.atomic
@@ -168,7 +177,19 @@ class ClaimService(IClaim):
 
         StatusTimeline.objects.create(claim=claim, status="pending")
 
-        PolicyNotificationService.notify_merchant(action="claim_policy", policy=policy)
+        # we want to use this transaction date when notifying the merchant
+        transaction_date = claim.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        customer = {
+            "first_name": customer.first_name,
+            "last_name": customer.last_name,
+            "customer_email": customer.email,
+        }
+        PolicyNotificationService.notify_merchant(
+            action="claim_policy",
+            policy=policy,
+            customer=customer,
+            transaction_date=transaction_date,
+        )
         return claim
 
     @staticmethod

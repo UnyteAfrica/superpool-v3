@@ -51,6 +51,7 @@ ACTION_REGISTRY = {
         "merchant": {
             "subject": MESSAGE_MERCHANT_PURCHASE_POLICY,
             "body": "A customer has just purchased a policy",
+            "template": "superpool/emails/superpool-purchase-policy.html",
         },
     },
     ACTION_ACCEPT_POLICY: {
@@ -71,6 +72,7 @@ ACTION_REGISTRY = {
         "merchant": {
             "subject": MESSAGE_MERCHANT_CANCEL_POLICY,
             "body": "A customer has just cancelled a policy",
+            "template": "superpool/emails/superpool-cancel-policy.html",
         },
     },
     ACTION_STATUS_UPDATE: {
@@ -91,6 +93,7 @@ ACTION_REGISTRY = {
         "merchant": {
             "subject": MESSAGE_MERCHANT_RENEW_POLICY,
             "body": "A customer has just renewed a policy",
+            "template": "superpool/emails/superpool-renew-policy.html",
         },
     },
     ACTION_CLAIM_POLICY: {
@@ -101,6 +104,7 @@ ACTION_REGISTRY = {
         "merchant": {
             "subject": MESSAGE_MERCHANT_CLAIM_POLICY,
             "body": "A customer has just submitted a claim request",
+            "template": "superpool/emails/superpool-submit-claim.html",
         },
     },
 }

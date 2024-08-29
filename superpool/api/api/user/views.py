@@ -267,16 +267,15 @@ class MerchantLoginView(APIView):
             password = serializer.validated_data["password"]
 
             try:
-                merchant = Merchant.objects.get(tenant_id=tenant_id)
+                merchant = Merchant.objects.filter(tenant_id=tenant_id).first()
             except Merchant.DoesNotExist:
                 return Response(
                     {"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND
                 )
 
             # Authenticate using the merchant's associated user account
-            user = authenticate(
-                request, username=merchant.user.username, password=password
-            )
+            merchant_email = merchant.business_email
+            user = authenticate(request, username=merchant_email, password=password)
 
             if user is not None:
                 refresh = RefreshToken.for_user(user)

@@ -39,11 +39,12 @@ class ProductService:
         return Product.objects.all()
 
     @staticmethod
-    def get_product(product_name: str) -> Product:
+    def get_product_by_name(product_name: str) -> QuerySet:
         """
-        Returns a product by name
+        Returns a list of products by name.
+        If multiple products with the same name exist, they will all be returned.
         """
-        return get_object_or_404(Product, name=product_name)
+        return Product.objects.filter(name__iexact=product_name)
 
     @staticmethod
     def get_product_by_id(product_id: int) -> Product:
@@ -92,6 +93,7 @@ class PolicyService:
         return policy_id or policy_number
 
     @staticmethod
+    @transaction.atomic
     def renew_policy(
         policy_id: str | None = None,
         policy_number: str | None = None,
@@ -116,6 +118,13 @@ class PolicyService:
             if policy.status != "active":
                 policy.status = "active"
 
+            # check if the policy is already active and within its valid effective period
+            today = timezone.now().date()
+            if policy.effective_from <= today <= policy.effective_through:
+                raise ValidationError(
+                    "Policy is currently active and within its valid effective period. Renewal is not needed."
+                )
+
             if policy_start_date:
                 policy.effective_from = policy_start_date
             if policy_expiry_date:
@@ -124,10 +133,14 @@ class PolicyService:
 
             if include_additional_coverage:
                 # TODO: Implement this later
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Additional coverage implementation is not yet available."
+                )
             if modify_exisitng_coverage:
                 # TODO: implement this later
-                raise NotImplementedError
+                raise NotImplementedError(
+                    "Modification of existing coverage is not yet available."
+                )
 
             update_fields = [
                 "status",
@@ -137,8 +150,19 @@ class PolicyService:
             ]
             policy.save(update_fields=update_fields)
 
+            transaction_date = policy.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            customer = {
+                "first_name": policy.policy_holder.first_name,
+                "last_name": policy.policy_holder.last_name,
+                "customer_email": policy.policy_holder.email,
+            }
             try:
-                PolicyNotificationService.notify_merchant("renew_policy", policy)
+                PolicyNotificationService.notify_merchant(
+                    "renew_policy",
+                    policy,
+                    customer=customer,
+                    transaction_date=transaction_date,
+                )
             except Exception as exc:
                 raise RuntimeError(
                     f"An error occured while attempting to send notification for policy renewal: {str(exc)}"
@@ -300,13 +324,23 @@ class PolicyService:
                 activation_details,
                 renewal_date=renewal_date,
             )
+            policy_created_at = policy.created_at
 
+            transaction_date = policy_created_at.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"Policy created at: {transaction_date}")
+            print(f"customer: {customer_metadata}")
+            print("transaction date: ", transaction_date)
             # notify the merchant and customer
             try:
-                PolicyNotificationService.notify_merchant("purchase_policy", policy)
-                PolicyNotificationService.notify_customer(
-                    "purchase_policy", policy, customer_metadata["customer_email"]
+                PolicyNotificationService.notify_merchant(
+                    "purchase_policy",
+                    policy,
+                    customer=customer_metadata,
+                    transaction_date=transaction_date,
                 )
+                # PolicyNotificationService.notify_customer(
+                #     "purchase_policy", policy, customer_metadata["customer_email"]
+                # )
             except TypeError as exc:
                 raise Exception(f"Error sending notification: \n{str(exc)}")
             except Exception as exc:
@@ -419,8 +453,8 @@ class PolicyService:
                 raise ValidationError("Payment status must be completed to proceed")
 
             # Check if the amount paid matches the policy price
-            if paid_amount != policy_price_amount:
-                raise ValidationError("Amount paid does not match the policy price")
+            # if paid_amount != policy_price_amount:
+            # raise ValidationError("Amount paid does not match the policy price")
         except ValueError as exc:
             raise ValidationError(f"Invalid amount information: {str(exc)}")
 

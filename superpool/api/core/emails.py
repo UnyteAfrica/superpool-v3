@@ -141,7 +141,7 @@ class OnboardingEmail(BaseEmailMessage):
     Email message class for welcoming a newly verified merchant on he platform.
     """
 
-    template = "superpool/emails/welcome.html"
+    template = "superpool/emails/superpool-merchant-onboarding.html"
 
     def __init__(
         self,
