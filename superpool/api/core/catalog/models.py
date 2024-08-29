@@ -30,6 +30,8 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
         HOME = "Home", "Home Insurance"
+        STUDENT_PROTECTION = "Student_Protection", "Student Protection"
+        PERSONAL_ACCIDENT = "Personal_Accident", "Personal Accident Insurance"
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True,
