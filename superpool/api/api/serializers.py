@@ -3,6 +3,10 @@ from typing import Any, ClassVar, NewType  # noqa
 from django.db.models import Model
 from rest_framework import serializers
 from core.providers.models import Provider
+from core.merchants.models import Merchant
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class LimitedScopeSerializer(serializers.ModelSerializer):
@@ -50,3 +54,34 @@ class ProviderSerializer(serializers.ModelSerializer):
             "support_email",
         ]
         read_only_fields = fields
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    tenant_id = serializers.UUIDField()
+    new_password = serializers.CharField()
+
+    def validate(self, attrs):
+        tenant_id = attrs.get("tenant_id")
+        new_password = attrs.get("new_password")
+
+        try:
+            # retreive the merchant information from the User table
+            merchant = Merchant.objects.get(tenant_id=tenant_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError("Invalid user.")
+
+        user = merchant.user
+
+        # check if the user is a merchant
+        if user.role != User.USER_TYPES.MERCHANT:
+            raise serializers.ValidationError(
+                "Only merchants can complete registration via this endpoint."
+            )
+
+        # security gurard against password
+        if len(new_password) < 8:
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long."
+            )
+
+        return attrs
