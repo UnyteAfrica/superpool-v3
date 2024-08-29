@@ -202,6 +202,7 @@ class PolicyService:
             raise ValueError("Policy not found.")
 
     @staticmethod
+    @transaction.atomic
     def cancel_policy(
         policy_id: str | None = None,
         policy_number: str | None = None,
@@ -238,9 +239,17 @@ class PolicyService:
                 update_fields=["status", "cancellation_reason", "cancellation_date"]
             )
 
+            transaction_date = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+            customer = {
+                "first_name": policy.policy_holder.first_name,
+                "last_name": policy.policy_holder.last_name,
+                "customer_email": policy.policy_holder.email,
+            }
             # send notification emails to stakeholders - in this case, our merchant  and their customer
             try:
-                PolicyNotificationService.notify_merchant("cancel_policy", policy)
+                PolicyNotificationService.notify_merchant(
+                    "cancel_policy", policy, customer, transaction_date
+                )
             except Exception as mail_exc:
                 raise Exception(
                     "An error occured while initiating notification to merchant"
