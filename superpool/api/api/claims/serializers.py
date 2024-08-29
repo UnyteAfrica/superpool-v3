@@ -169,6 +169,12 @@ class WitnessSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClaimWitness
+        fields = [
+            "witness_name",
+            "witness_contact_phone",
+            "witness_contact_email",
+            "witness_statement",
+        ]
 
 
 class ClaimDocumentSerializer(serializers.ModelSerializer):
