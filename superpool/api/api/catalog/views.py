@@ -1,6 +1,8 @@
 import logging
 from uuid import uuid4
 import uuid
+
+from rest_framework.pagination import LimitOffsetPagination
 from .openapi import products_response_example
 from datetime import datetime, timedelta
 from core.permissions import (
@@ -185,10 +187,10 @@ class PolicyByProductTypeView(generics.ListAPIView):
 
 
 @extend_schema(
-    summary="Retrieve a product by ID or name",
+    summary="Retrieve a product by ID",
     operation_id="retrieve_product",
     tags=["Products"],
-    description="Retrieve a specific product by its ID or name",
+    description="Retrieve a specific product by its ID",
     request=OpenApiRequest(
         request=ProductSerializer,
         examples=[
@@ -229,20 +231,20 @@ class PolicyByProductTypeView(generics.ListAPIView):
         )
     },
 )
-class ProductRetrieveView(generics.RetrieveAPIView):
+class ProductRetrieveView(generics.GenericAPIView):
     """
     This endpoint lets you find a product by its ID or name
 
     e.g
 
-        /api/v1/products/1
+        /api/v1/products/<uuid:pk>
 
-        /api/v1/products/health-insurance
-        /api/v1/products/health-insurance?product_id=1
+        /api/v1/products/<str:product_name>
     """
 
     serializer_class = ProductSerializer
     queryset = ProductService.list_products()
+    pagination_class = LimitOffsetPagination
     # authentication_classes = [APIKeyAuthentication]
 
     def get_object(self):
@@ -254,8 +256,37 @@ class ProductRetrieveView(generics.RetrieveAPIView):
         product_name = self.kwargs.get("product_name")
 
         if product_id:
-            return ProductService.get_product_by_id(product_id)
-        return ProductService.get_product(product_name)
+            product = ProductService.get_product_by_id(product_id)
+            serializer = self.get_serializer(product)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif product_name:
+            # multiple objects can be returned - although we only care for exact matches
+            # if there are no exact matches, we will return a 404
+            products = ProductService.get_product_by_name(product_name)
+
+            # single product returned, just return the product
+            if len(products) == 1:
+                serializer = self.get_serializer(products[0])
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # multple objects returned, return a paginated response
+            if len(products) > 1:
+                page = self.paginate_queryset(products)
+                if page is not None:
+                    serializer = self.get_serializer(page, many=True)
+                    return self.get_paginated_response(serializer.data)
+
+            # no products returned, 404
+            return Response(
+                {"error": "Product with name '{product_name}' not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        # no product id or product name? client fucked up! return 404
+        return Response(
+            {"error": "Please provide a valid Product ID or Product Name"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class PolicyAPIViewSet(

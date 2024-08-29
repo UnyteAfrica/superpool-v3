@@ -39,11 +39,12 @@ class ProductService:
         return Product.objects.all()
 
     @staticmethod
-    def get_product(product_name: str) -> Product:
+    def get_product_by_name(product_name: str) -> Product | list[Product]:
         """
-        Returns a product by name
+        Returns a list of products by name.
+        If multiple products with the same name exist, they will all be returned.
         """
-        return get_object_or_404(Product, name=product_name)
+        return Product.objects.filter(name__iexact=product_name)
 
     @staticmethod
     def get_product_by_id(product_id: int) -> Product:
