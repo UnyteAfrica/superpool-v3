@@ -222,7 +222,86 @@ class ClaimsViewSet(viewsets.ViewSet):
                 description="Claim Reference Number issued by the Insurance provider to help manage/track claim object",
             ),
         ],
-        responses={200: ClaimSerializer},
+        request=OpenApiRequest(
+            request=ClaimUpdateSerializer,
+            examples=[
+                OpenApiExample(
+                    "Update request allowing fields like email or incident date",
+                    value={
+                        "claimant_metadata": {
+                            "email": "new.email@example.com",
+                            "phone_number": "+1234567890",
+                            "age": 35,
+                        },
+                        "claim_details": {
+                            "incident_date": "2024-08-01",
+                            "incident_description": "Updated description of the incident.",
+                        },
+                    },
+                ),
+                OpenApiExample(
+                    "Attempt to update restricted fields like claim number, first_name, last_name, etc.",
+                    value={
+                        "claimant_metadata": {
+                            "first_name": "Jane",
+                            "last_name": "Doe",
+                        },
+                        "claim_details": {
+                            "claim_id": "b17bb95a-21d7-4e9e-9414-7fc39e53c478"
+                        },
+                    },
+                ),
+            ],
+        ),
+        responses={
+            200: OpenApiResponse(
+                response=ClaimSerializer,
+                description="Success response with updated claim data.",
+                examples=[
+                    OpenApiExample(
+                        "Successful response",
+                        value={
+                            "status": "success",
+                            "message": "Claim updated successfully.",
+                            "data": {
+                                "id": "c45bca2a-b134-4f0e-95a1-5fdea8b662e9",
+                                "claimant": {
+                                    "first_name": "John",
+                                    "last_name": "Doe",
+                                    "email": "new.email@example.com",
+                                    "phone_number": "+1234567890",
+                                    "age": 35,
+                                },
+                                "claim_details": {
+                                    "incident_date": "2024-08-01",
+                                    "incident_description": "Updated description of the incident.",
+                                },
+                            },
+                        },
+                    )
+                ],
+            ),
+            400: OpenApiResponse(
+                response={"error": "ERR_MESSAGE"},
+                description="Bad Request",
+                examples=[
+                    OpenApiExample(
+                        "Error response", value={"error": "Claim ID is required."}
+                    ),
+                    OpenApiExample(
+                        "Error response",
+                        value={"error": "Invalid UUID format."},
+                    ),
+                ],
+            ),
+            404: OpenApiResponse(
+                response={"error": "Claim not found"},
+                description="Claim not found",
+            ),
+            500: OpenApiResponse(
+                description="Internal Server Error",
+            ),
+        },
     )
     def update(self, request, pk=None):
         """
