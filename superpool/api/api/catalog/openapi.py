@@ -6,6 +6,7 @@ travel_insurance_example = OpenApiExample(
         "product_type": "Travel",
         "insurance_name": "World Travel Protection",
         "insurance_details": {
+            "coverage_type": "standard",
             "destination": "France",
             "departure_date": "2023-09-01",
             "return_date": "2023-09-15",
@@ -24,6 +25,29 @@ travel_insurance_example = OpenApiExample(
     },
     request_only=True,  # indicates this is a request example
     response_only=False,
+)
+
+travel_insurance_with_product_id_example = OpenApiExample(
+    name="Request Travel Insurance using the Product ID",
+    value={
+        "product_id": "d0378ac1-f7e2-45ca-9312-6473d8d3d567",
+        "insurance_name": "World Travel Protection",
+        "insurance_details": {
+            "coverage_type": "standard",
+            "destination": "France",
+            "departure_date": "2023-09-01",
+            "return_date": "2023-09-15",
+            "number_of_travellers": 2,
+            "trip_duration": 14,
+            "trip_type": "round_trip",
+            "trip_type_details": "leisure",
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "example@email.com",
+        },
+    },
 )
 
 health_insurance_example = OpenApiExample(
@@ -49,12 +73,33 @@ health_insurance_example = OpenApiExample(
     response_only=False,
 )
 
+health_insurance_with_product_id_example = OpenApiExample(
+    name="Request Health Insurance using the Product ID",
+    value={
+        "product_id": "5fc4f5d2-c1de-4007-b8f7-fe44836473ed",
+        "insurance_name": "Smart Health Insurance",
+        "insurance_details": {
+            "health_condition": "good",
+            "age": 30,
+            "coverage_type": "standard",
+            "coverage_type_details": "individual",
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "example@email.com",
+            "customer_address": "Planet Pluto",
+        },
+    },
+)
+
 home_insurance_example = OpenApiExample(
     name="Home Insurance",
     value={
         "product_type": "Home",
         "insurance_name": "Home Protection",
         "insurance_details": {
+            "coverage_type": "standard",
             "home_type": "apartment",
             "home_location": "New York",
             "home_value": 500000,
@@ -72,12 +117,34 @@ home_insurance_example = OpenApiExample(
     response_only=False,
 )
 
+home_insurance_with_product_id_example = OpenApiExample(
+    name="Request Home Insurance using the Product ID",
+    value={
+        "product_id": "d0378ac1-f7e2-45ca-9312-6473d8d3d567",
+        "insurance_name": "Home Protection",
+        "insurance_details": {
+            "coverage_type": "standard",
+            "home_type": "apartment",
+            "home_location": "New York",
+            "home_value": 500000,
+            "home_age": 10,
+        },
+        "customer_metadata": {
+            "first_name": "Pluto",
+            "last_name": "Presido",
+            "customer_email": "example@email.com",
+            "customer_address": "Planet Pluto",
+        },
+    },
+)
+
 gadget_insurance_example = OpenApiExample(
     name="Gadget Insurance",
     value={
         "product_type": "Gadget",
         "insurance_name": "Gadget Protection",
         "insurance_details": {
+            "coverage_type": "standard",
             "gadget_type": "smartphone",
             "gadget_brand": "Apple",
             "gadget_model": "iPhone 13",
