@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from api.notifications.base import INotification
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from typing import Any, Dict
 from django.template.loader import render_to_string
 import logging
@@ -86,21 +86,20 @@ class EmailNotification(NotificationChannel):
         """
         Send the email message to the recipient
         """
-        print(
-            f"Sending email to {recipient} with subject: {subject} and message: {message}"
-        )
+        logger.info(f"Preparing to send email to {recipient} with subject: {subject}")
+
         try:
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [recipient],
-                fail_silently=False,
+            email = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[recipient],
             )
+            email.attach_alternative(message, "text/html")
+            email.send(fail_silently=False)
             logger.info(f"Email sent to {recipient} with subject: {subject}")
         except Exception as e:
-            print(f"Failed to send email to {recipient}")
-            logger.error(f"An error occurred while sending message: \n{e}")
+            logger.error(f"Failed to send email to {recipient}: {e}")
 
 
 class SMSNotification(NotificationChannel):
