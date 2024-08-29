@@ -245,9 +245,11 @@ class ProductRetrieveView(generics.GenericAPIView):
     serializer_class = ProductSerializer
     queryset = ProductService.list_products()
     pagination_class = LimitOffsetPagination
+    http_method_names = ["get"]
+
     # authentication_classes = [APIKeyAuthentication]
 
-    def get_object(self):
+    def get(self, request, *args, **kwargs):
         # Priority is given to the product_id
         # if the product_id is provided, we will use it to retrieve the product
         # if the product_id is not provided, we will fallback to the product_name
@@ -256,30 +258,46 @@ class ProductRetrieveView(generics.GenericAPIView):
         product_name = self.kwargs.get("product_name")
 
         if product_id:
-            product = ProductService.get_product_by_id(product_id)
-            serializer = self.get_serializer(product)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            try:
+                product = ProductService.get_product_by_id(product_id)
+                serializer = self.get_serializer(product)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except Product.DoesNotExist:
+                return Response(
+                    {"error": f"Product with ID '{product_id}' not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
         elif product_name:
             # multiple objects can be returned - although we only care for exact matches
             # if there are no exact matches, we will return a 404
-            products = ProductService.get_product_by_name(product_name)
+            product_exact_matches = ProductService.get_product_by_name(product_name)
+            logger.info(f"Products: {product_exact_matches}")
 
-            # single product returned, just return the product
-            if len(products) == 1:
-                serializer = self.get_serializer(products[0])
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            if product_exact_matches.exists():
+                print(
+                    f"Product exact matches: {product_exact_matches.values_list('name', flat=True)}"
+                )
+                # single product returned, just return the product
+                if product_exact_matches.count() == 1:
+                    print("found just one match")
+                    serializer = self.get_serializer(product_exact_matches.first())
+                    return Response(serializer.data, status=status.HTTP_200_OK)
 
-            # multple objects returned, return a paginated response
-            if len(products) > 1:
-                page = self.paginate_queryset(products)
+                # multple objects returned, return a paginated response
+                print("found multiple matches")
+                page = self.paginate_queryset(product_exact_matches)
                 if page is not None:
                     serializer = self.get_serializer(page, many=True)
                     return self.get_paginated_response(serializer.data)
 
+                # pagingation failed? return all the products
+                serializer = self.get_serializer(product_exact_matches, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
             # no products returned, 404
             return Response(
-                {"error": "Product with name '{product_name}' not found."},
+                {"error": f"Product with name '{product_name}' not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         # no product id or product name? client fucked up! return 404
