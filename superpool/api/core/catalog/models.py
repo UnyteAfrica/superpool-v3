@@ -10,6 +10,7 @@ from core.utils import generate_id
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_stubs_ext.db.models import TypedModelMeta
+from django.utils import timezone
 
 
 class Product(TimestampMixin, TrashableModelMixin, models.Model):
@@ -246,6 +247,10 @@ class Price(models.Model):
     currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
 
 
+def default_expiry_date():
+    return timezone.now() + timedelta(days=30)
+
+
 class Quote(models.Model):
     """
     Represents an insurance quote for a policy
@@ -279,8 +284,8 @@ class Quote(models.Model):
         help_text="The calculated premium for the quote",
     )
     expires_in = models.DateTimeField(
-        auto_now_add=True,
         help_text="The expiry date of the quote.",
+        default=default_expiry_date,
     )
     status = models.CharField(max_length=20, choices=QUOTE_STATUS, default="pending")
     additional_metadata = models.JSONField(
