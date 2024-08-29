@@ -3,6 +3,7 @@ from api.notifications.base import INotification
 from django.conf import settings
 from django.core.mail import send_mail
 from typing import Any, Dict
+from django.template.loader import render_to_string
 import logging
 from .constants import ACTION_REGISTRY
 
@@ -34,12 +35,40 @@ class EmailNotification(NotificationChannel):
     Email Notification service
     """
 
-    def prepare_message(self, action: str, recipient: str) -> Dict[str, Any]:
-        message = ACTION_REGISTRY.get(action, {}).get(recipient, {})
-        if not message:
+    def prepare_message(
+        self, action: str, recipient: str, context: dict = None
+    ) -> Dict[str, Any]:
+        action_data = ACTION_REGISTRY.get(action, {}).get(recipient, {})
+
+        # no action data?
+        if not action_data:
             logger.error(f"Action {action} is not supported")
             return {}
-        return message
+
+        template_path = action_data.get("template")
+
+        if context is None:
+            context = {}
+
+        if template_path:
+            # render the template with the context if the template path is provided
+            subject = action_data.get("subject", "")
+            body = render_to_string(template_path, context)
+        else:
+            # otherwise, use the default subject and message
+            subject = action_data.get("subject", "")
+            body = action_data.get("message", "")
+
+        if not subject or not body:
+            logger.error(
+                f"Action {action} is not supported is not supported for {recipient}"
+            )
+            return {}
+
+        return {
+            "subject": subject,
+            "message": body,
+        }
 
     def send(self, recipient: str, subject: str, message: str) -> None:
         """
