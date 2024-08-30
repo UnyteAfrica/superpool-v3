@@ -327,8 +327,30 @@ class PolicyService:
                 customer = PolicyService._create_or_retrieve_customer(customer_metadata)
                 merchant = PolicyService._get_merchant(validated_data["merchant_code"])
 
-                insurer_id = quote_data["product"]["provider"]
-                insurer = get_object_or_404(InsurancePartner, id=insurer_id)
+                # import pdb
+                #
+                # pdb.set_trace()
+
+                # extract information about the insurer using the provider id
+                # otherwise, fallback to a fail-safe of using the insurer name
+                # in the output of the serializer
+
+                provider_info = product_data.get("provider", {})
+                insurer_id = provider_info.get("provider_id")
+                insurer_name = provider_info.get("provider_name")
+
+                try:
+                    if insurer_id:
+                        insurer = get_object_or_404(InsurancePartner, id=insurer_id)
+                    else:
+                        # we want to use case-insensitive exact match
+                        insurer = InsurancePartner.objects.get(
+                            Q(provider_name__iexact=insurer_name)
+                        )
+                except InsurancePartner.DoesNotExist:
+                    raise ValidationError(
+                        f"Insurer with name '{insurer_name}' does not exist"
+                    )
 
                 # process policy purchase
                 policy = PolicyService._create_policy(
@@ -341,17 +363,23 @@ class PolicyService:
                     renewal_date=renewal_date,
                 )
                 policy_created_at = policy.created_at
-
                 transaction_date = policy_created_at.strftime("%Y-%m-%d %H:%M:%S")
+
                 print(f"Policy created at: {transaction_date}")
                 print(f"customer: {customer_metadata}")
                 print("transaction date: ", transaction_date)
+
                 # notify the merchant and customer
+                customer_context = {
+                    "first_name": customer_metadata.get("first_name", ""),
+                    "last_name": customer_metadata.get("last_name", ""),
+                    "customer_email": customer_metadata.get("customer_email"),
+                }
                 try:
                     PolicyNotificationService.notify_merchant(
                         "purchase_policy",
                         policy,
-                        customer=customer_metadata,
+                        customer=customer_context,
                         transaction_date=transaction_date,
                     )
                 except TypeError as exc:
