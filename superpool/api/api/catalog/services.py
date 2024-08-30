@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import uuid
+import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
@@ -361,20 +362,24 @@ class PolicyService:
                     )
 
                 return policy
-        except ObjectDoesNotExist as exc:
-            logger.error(f"ObjectDoesNotExist: {str(exc)}")
-            raise ValidationError("Required object does not exist")
-
-        except KeyError as exc:
-            logger.error(f"KeyError: {str(exc)}")
-            raise ValidationError(f"Missing required data: {str(exc)}")
-
-        except Quote.DoesNotExist as exc:
-            logger.error(f"Quote does not exist: {str(exc)}")
-            raise ValidationError("Quote does not exist for the provided quote code")
-        except (DatabaseError, Exception) as exc:
-            logger.error(f"DatabaseError or Exception: {str(exc)}")
-            raise Exception(f"An error occurred: {str(exc)}")
+        except (
+            ObjectDoesNotExist,
+            KeyError,
+            ValidationError,
+            Quote.DoesNotExist,
+        ) as exc:
+            logger.error(f"Exception occurred: {str(exc)}")
+            raise ValidationError(f"Error: {str(exc)}")
+        except DatabaseError as exc:
+            logger.error(
+                f"DatabaseError occurred: {str(exc)}\n{traceback.format_exc()}"
+            )
+            raise Exception(f"DatabaseError: {str(exc)}")
+        except Exception as exc:
+            logger.error(
+                f"Unexpected error occurred: {str(exc)}\n{traceback.format_exc()}"
+            )
+            raise Exception(f"An unexpected error occurred: {str(exc)}")
 
     @staticmethod
     def _create_policy(
