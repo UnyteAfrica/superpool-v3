@@ -14,9 +14,39 @@ from core.user.models import Customer
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
 from core.catalog.models import Beneficiary
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 logger = logging.getLogger(__name__)
+
+
+class CoverageSerializer(serializers.ModelSerializer):
+    coverage_description = serializers.CharField(source="description")
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Coverage
+        fields = ["coverage_id", "coverage_name", "coverage_description", "url"]
+        read_only_fields = fields
+
+    def get_url(self, obj):
+        """
+        Generates a URL to access the coverage details.
+        """
+        try:
+            return reverse("coverage-detail", kwargs={"pk": obj.coverage_id})
+        except NoReverseMatch:
+            return "no-url-implementation-for-this-coverage-yet"
+
+
+class PolicyProviderSerializer(serializers.ModelSerializer):
+    provider_id = serializers.UUIDField(source="id")
+    provider_name = serializers.CharField(source="name")
+    email = serializers.EmailField(source="support_email")
+
+    class Meta:
+        model = Provider
+        fields = ["provider_id", "provider_name", "email"]
+        read_only_fields = fields
 
 
 class ProductSerializer(ModelSerializer):
@@ -24,9 +54,30 @@ class ProductSerializer(ModelSerializer):
     Serializer for the Product model
     """
 
+    coverages = CoverageSerializer(many=True)
+    provider = PolicyProviderSerializer()
+
     class Meta:
         model = Product
         fields = "__all__"
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        representation["updated_at"] = instance.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+        representation["created_at"] = instance.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+        if instance.provider:
+            representation["provider"] = PolicyProviderSerializer(
+                instance.provider
+            ).data
+
+        if instance.coverages.exists():
+            representation["coverages"] = CoverageSerializer(
+                instance.coverages.all(), many=True
+            ).data
+
+        return representation
 
 
 class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
@@ -105,6 +156,14 @@ class QuoteSerializer(serializers.ModelSerializer):
         model = Quote
         fields = ["quote_code", "base_price", "product", "quote_expiry_date", "price"]
         extra_kwargs = {"quote_code": {"read_only": True}}
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        representation["quote_expiry_date"] = instance.expires_in.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        return representation
 
     def create(self, validated_data):
         # Verify that when creating new quote there is a quote_code, corresponding product,
@@ -859,27 +918,6 @@ class PolicyRenewalSerializer(serializers.ModelSerializer):
         return None
 
 
-class CoverageSerializer(serializers.ModelSerializer):
-    coverage_id = serializers.UUIDField(source="id")
-    coverage_name = serializers.CharField(source="name")
-    coverage_description = serializers.CharField(source="description")
-    url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Coverage
-        fields = ["coverage_id", "coverage_name", "coverage_description", "url"]
-        read_only_fields = fields
-
-    def get_url(self, obj):
-        """
-        Generates a URL to access the coverage details.
-        """
-        request = self.context.get(
-            "request"
-        )  # Get the request context to build absolute URLs
-        return reverse("coverage-detail", kwargs={"pk": obj.id}, request=request)
-
-
 class PolicyMerchantSerializer(serializers.ModelSerializer):
     merchant_id = serializers.UUIDField(source="id")
     merchant_name = serializers.CharField(source="name")
@@ -910,17 +948,6 @@ class PolicyCustomerSerializer(serializers.ModelSerializer):
     def get_customer_name(self, instance):
         """Returns the full name of the customer"""
         return f"{instance.first_name} {instance.last_name}"
-
-
-class PolicyProviderSerializer(serializers.ModelSerializer):
-    provider_id = serializers.UUIDField(source="id")
-    provider_name = serializers.CharField(source="name")
-    email = serializers.EmailField(source="support_email")
-
-    class Meta:
-        model = Provider
-        fields = ["provider_id", "provider_name", "email"]
-        read_only_fields = fields
 
 
 class PolicyBeneficiarySerializer(serializers.ModelSerializer):
