@@ -38,17 +38,17 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
         name="product-detail-by-name",
     ),
     path(
-        "products/<uuid:pk>/coverages/",
+        "products/<uuid:product_id>/coverages/",
         ProductCoverageListView.as_view(),
         name="product-coverages-list",
     ),
     path(
-        "products/<uuid:pk>/coverages/<str:coverage_id>/",
+        "products/<uuid:product_id>/coverages/<str:coverage_id>/",
         ProductCoverageRetrieveView.as_view(),
         name="product-coverages-detail",
     ),
     path(
-        "products/coverages/",
+        "coverages/search/",
         ProductCoverageSearchView.as_view(),
         name="product-coverages-search",
     ),

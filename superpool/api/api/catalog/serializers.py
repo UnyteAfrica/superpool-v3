@@ -39,6 +39,38 @@ class CoverageSerializer(serializers.ModelSerializer):
             return "no-url-implementation-for-this-coverage-yet"
 
 
+class FullCoverageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for formatting the full information regarding an insurance coverage
+    """
+
+    coverage_id = serializers.CharField()
+    coverage_name = serializers.CharField()
+    coverage_limit = serializers.DecimalField(
+        max_digits=10, decimal_places=2, allow_null=True, required=False
+    )
+    currency = serializers.CharField(default="NGN")
+    description = serializers.CharField()
+    coverage_period_end = serializers.DateField(
+        format="%Y-%m-%d", allow_null=True, required=False
+    )
+    benefits = serializers.CharField(allow_blank=True, required=False)
+    exclusions = serializers.CharField(allow_blank=True, required=False)
+
+    class Meta:
+        model = Coverage
+        fields = [
+            "coverage_id",
+            "coverage_name",
+            "coverage_limit",
+            "currency",
+            "description",
+            "coverage_period_end",
+            "benefits",
+            "exclusions",
+        ]
+
+
 class PolicyProviderSerializer(serializers.ModelSerializer):
     provider_id = serializers.UUIDField(source="id")
     provider_name = serializers.CharField(source="name")
