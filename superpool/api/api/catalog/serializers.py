@@ -15,6 +15,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
 from core.catalog.models import Beneficiary
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -777,6 +778,9 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
                 "Only one of Policy ID or Policy Number must be provided in a request"
             )
 
+        if not policy_id and not policy_number:
+            raise ValidationError("Either policy ID or policy number must be provided")
+
         # validate a policy is renewable
         try:
             if policy_id:
@@ -785,18 +789,22 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
                 policy = Policy.objects.get(policy_id=attrs["policy_id"])
         except Policy.DoesNotExist:
             raise ValidationError("Policy not found with the provided policy ID")
+
         if not policy.renewable:
             raise ValidationError("Policy is not renewable")
 
         # guard against un-nessary renewal in as much policy is active within effective date
-        # now = datetime.now().date()
-        # if (
-        #     policy.status == "active"
-        #     and policy.effective_from <= now <= policy.effective_through
-        # ):
-        #     raise ValidationError(
-        #         "Policy is currently active and within its valid effective period. Renewal is not needed."
-        #     )
+        # only allow renewals if the policy is nearing expiry
+        today = timezone.now().date()
+        if policy.effective_from <= today <= policy.effective_through:
+            # Allow renewal if the policy is nearing its end or if it's a valid renewal request
+            if (
+                preferred_policy_start_date
+                and preferred_policy_start_date <= policy.effective_through
+            ):
+                raise ValidationError(
+                    "Policy is currently active and within its valid effective period. Renewal is not needed if the renewal period starts before or within the current period."
+                )
 
         # merchant can choose to modify coverage based on customer preferance or
         # include additional coverage as part of the renewal
@@ -817,25 +825,6 @@ class PolicyRenewalRequestSerializer(serializers.Serializer):
                     "Coverage details must be provided when modifying or including additional coverage"
                 )
 
-        # additional security layer!
-        # supplmentary to
-        # you can't set current preferred policy start date is < than that previously on the db
-        preferred_policy_start_date = attrs.get("preferred_policy_start_date")
-        if preferred_policy_start_date:
-            if (
-                policy.effective_through
-                and preferred_policy_start_date <= policy.effective_through
-            ):
-                raise ValidationError(
-                    "Preferred start date must be after the current policy's effective end date."
-                )
-            if (
-                policy.effective_from
-                and preferred_policy_start_date <= policy.effective_from
-            ):
-                raise ValidationError(
-                    "Preferred start date must be after the current policy's effective start date."
-                )
         return attrs
 
     def validate_preferred_policy_start_date(self, value):
