@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
 from api.notifications.base import NotificationService
+from core.models import Coverage
 from core.providers.models import Provider as InsurancePartner
 from django.db import transaction
 
@@ -202,6 +203,7 @@ class PolicyService:
             raise ValueError("Policy not found.")
 
     @staticmethod
+    @transaction.atomic
     def cancel_policy(
         policy_id: str | None = None,
         policy_number: str | None = None,
@@ -238,9 +240,17 @@ class PolicyService:
                 update_fields=["status", "cancellation_reason", "cancellation_date"]
             )
 
+            transaction_date = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+            customer = {
+                "first_name": policy.policy_holder.first_name,
+                "last_name": policy.policy_holder.last_name,
+                "customer_email": policy.policy_holder.email,
+            }
             # send notification emails to stakeholders - in this case, our merchant  and their customer
             try:
-                PolicyNotificationService.notify_merchant("cancel_policy", policy)
+                PolicyNotificationService.notify_merchant(
+                    "cancel_policy", policy, customer, transaction_date
+                )
             except Exception as mail_exc:
                 raise Exception(
                     "An error occured while initiating notification to merchant"
@@ -500,50 +510,48 @@ class IQuote(ABC):
 class QuoteService(IQuote):
     FLAT_FEES = {
         # Product Type -> (Coverage Type -> Flat Fee)
-        "Auto": {
-            "Basic": Decimal("2000.00"),
-            "Standard": Decimal("3500.00"),
-            "Premium": Decimal("5500.00"),
-        },
-        "Health": {
-            "Standard": Decimal("3000.00"),
-            "Premium": Decimal("5000.00"),
-        },
-        "Travel": {
-            "Bronze": Decimal("2000.00"),
-            "Silver": Decimal("3000.00"),
-            "Gold": Decimal("1500.00"),
-        },
-        "Gadget": {
-            "Basic": Decimal("2000.00"),
-            "Advanced": Decimal("3500.00"),
-        },
         "Smart Generations Protection": {
             "Bronze": Decimal("2500.00"),
             "Silver": Decimal("3500.00"),
             "Gold": Decimal("5000.00"),
         },
-        "Life": {
+        Product.ProductType.LIFE: {
             "Basic": Decimal("5000.00"),
             "Comprehensive": Decimal("10000.00"),
         },
-        "Home": {
+        Product.ProductType.AUTO: {
+            "Basic": Decimal("2000.00"),
+            "Standard": Decimal("3500.00"),
+            "Premium": Decimal("5500.00"),
+            "Autobase": Decimal("30000.00"),
+            "Third-Party": Decimal("15000.00"),
+        },
+        Product.ProductType.HEALTH: {
+            "Standard": Decimal("3000.00"),
+            "Premium": Decimal("5000.00"),
+        },
+        Product.ProductType.TRAVEL: {
+            "Bronze": Decimal("2000.00"),
+            "Silver": Decimal("3000.00"),
+            "Gold": Decimal("1500.00"),
+        },
+        Product.ProductType.GADGET: {
+            "Basic": Decimal("2000.00"),
+            "Advanced": Decimal("3500.00"),
+        },
+        Product.ProductType.HOME: {
             "Bronze": Decimal("1500.00"),
             "Silver": Decimal("2500.00"),
             "Gold": Decimal("3500.00"),
             "Platinum": Decimal("5000.00"),
         },
-        "Personal Accident": {
+        Product.ProductType.PERSONAL_ACCIDENT: {
             "Basic": Decimal("1250.00"),
             "Silver": Decimal("2450.00"),
         },
-        "Student Protection": {
+        Product.ProductType.STUDENT_PROTECTION: {
             "Annually": Decimal("12000.00"),
             "Monthly": Decimal("1000.00"),
-        },
-        "Auto Insurance": {
-            "Autobase": Decimal("30000.00"),
-            "Third-Party": Decimal("15000.00"),
         },
     }
 
@@ -656,59 +664,74 @@ class QuoteService(IQuote):
             except Product.DoesNotExist:
                 raise ValueError(f"Product with ID '{product_id}' not found.")
         else:
-            if product_type not in PRODUCT_TYPES:
-                raise ValueError(
-                    f"Invalid product type. Expected one of {PRODUCT_TYPES}."
-                )
-
-            # retrieve te coverage types for the product type
-            COVERAGE_TYPES = self._get_coverage_types_for_product_type(product_type)
-            coverage_type = insurance_details.get("coverage_type") or kwargs.get(
-                "coverage_type"
-            )
-            coverage_type = coverage_type.capitalize()
-            if coverage_type not in COVERAGE_TYPES:
-                raise ValueError(
-                    f"Invalid coverage type. Expected one of {COVERAGE_TYPES}."
-                )
-
+            product_type = product_type or kwargs.get("product_type")
             product_name = product_name or kwargs.get("insurance_name")
-            try:
-                if product_name:
-                    product = Product.objects.get(
-                        product_type=product_type, name__iexact=product_name
-                    )
-                else:
-                    product = Product.objects.get(product_type=product_type)
-            except Product.DoesNotExist:
+
+            # if product_type not in PRODUCT_TYPES:
+            #     raise ValueError(
+            #         f"Invalid product type. Expected one of {PRODUCT_TYPES}."
+            #     )
+            product = Product.objects.filter(
+                product_type=product_type, name__iexact=product_name
+            ).first()
+
+            if not product:
                 raise ValueError(
                     f"Product with type '{product_type}' and name '{product_name}' not found."
                 )
 
-        # determine the base price based on product_type and coverage_type
-        try:
-            base_price = self.FLAT_FEES[product_type][coverage_type]
-        except KeyError:
-            raise ValueError(
-                f"Flat fee for product type '{product_type}' and coverage type '{coverage_type}' not found."
+            # determine the base price for the quote based on coverage ID or the flat fees
+            coverage_id = insurance_details.get("coverage_id") or kwargs.get(
+                "coverage_id"
+            )
+            coverage_type = insurance_details.get("coverage_type") or kwargs.get(
+                "coverage_type"
             )
 
-        premium_amount = Decimal(kwargs.get("premium_amount", "0.0"))
-        premium_description = kwargs.get("insurance_name", product_name)
-        premium = Price.objects.create(
-            amount=premium_amount,
-            description=premium_description,
-        )
+            if coverage_id:
+                try:
+                    coverage = Coverage.objects.get(id=coverage_id)
+                    base_price = coverage.coverage_limit
+                except Coverage.DoesNotExist:
+                    raise ValueError(f"Coverage with ID '{coverage_id}' not found.")
 
-        with transaction.atomic():
-            quote = Quote.objects.create(
-                product=product,
-                base_price=base_price,
-                premium=premium,
-                additional_metadata=insurance_details,
+            elif coverage_type:
+                # coverage_id not provided? then we need to get the coverage type
+                # and determine the base price based on the flat fees
+
+                # retrieve te coverage types for the product type
+                COVERAGE_TYPES = self._get_coverage_types_for_product_type(product_type)
+
+                if coverage_type not in COVERAGE_TYPES:
+                    raise ValueError(
+                        f"Invalid coverage type. Expected one of {COVERAGE_TYPES}."
+                    )
+                try:
+                    base_price = self.FLAT_FEES[product_type][coverage_type]
+                except KeyError:
+                    raise ValueError(
+                        f"Flat fee for product type '{product_type}' and coverage type '{coverage_type}' not found."
+                    )
+            else:
+                raise ValueError(
+                    "Either coverage_id or coverage_type must be provided."
+                )
+
+            premium_amount = Decimal(kwargs.get("premium_amount", "0.0"))
+            premium_description = kwargs.get("insurance_name", product_name)
+            premium = Price.objects.create(
+                amount=premium_amount,
+                description=premium_description,
             )
 
-        return quote
+            with transaction.atomic():
+                quote = Quote.objects.create(
+                    product=product,
+                    base_price=base_price,
+                    premium=premium,
+                    additional_metadata=insurance_details,
+                )
+            return quote
 
     def get_quote(
         self,

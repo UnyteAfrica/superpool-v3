@@ -91,13 +91,15 @@ class CompleteRegistrationSerializer(serializers.Serializer):
     def save(self):
         tenant_id = self.validated_data["tenant_id"]
         password = self.validated_data["password"]
+        merchant_email = validated_data["merchant_email"]
 
         # Find the merchant and set the user password
         merchant = Merchant.objects.filter(tenant_id=tenant_id).first()
-        user = User.objects.create(
-            email=merchant.business_email, role=User.USER_TYPES.MERCHANT
-        )
+        user = User.objects.create(email=merchant_email, role=User.USER_TYPES.MERCHANT)
         user.set_password(password)
         user.save()
+
+        merchant.user = user
+        merchant.save()
 
         return user

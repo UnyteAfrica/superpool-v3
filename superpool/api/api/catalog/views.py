@@ -894,24 +894,6 @@ class RequestQuoteView(views.APIView):
                         product_name=insurance_name,
                         insurance_details=insurance_details,
                     )
-                # quote_data = quote_service.get_quote(
-                #     product=request_data.get(
-                #         "product_type"
-                #     ),  # an insurance type have to be provided e.g Auto, Travel, Health
-                #     product_name=request_data.get(
-                #         "insurance_name"
-                #     ),  # as an addition, a policy name (Smart Health Insurance) can be provided
-                #     quote_code=request_data.get("quote_code"),
-                #     insurance_details=insurance_details,
-                # )
-
-                # # this should fix the error that am passing serializer instance rather than .data or .errors
-                # if isinstance(quote_data, QuoteSerializer):
-                #     quote_data = quote_data.data
-                #     return Response(quote_data, status=status.HTTP_200_OK)
-                # else:
-                #     quote_serializer = QuoteSerializer(quote_data)
-                #     return Response(quote_serializer.data, status=status.HTTP_200_OK)
 
                 # If the result is a Quote object, serialize it
                 if isinstance(quote_data, Quote):
