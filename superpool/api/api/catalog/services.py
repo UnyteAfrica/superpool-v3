@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 import uuid
+import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, NewType, Union
 from api.notifications.base import NotificationService
 from core.models import Coverage
 from core.providers.models import Provider as InsurancePartner
-from django.db import transaction
+from django.db import transaction, DatabaseError
 
 from rest_framework.generics import get_object_or_404
 
@@ -271,105 +272,114 @@ class PolicyService:
         quote_code = validated_data["quote_code"]
 
         try:
-            # retrieve quote information and process it
-            quote_code = validated_data["quote_code"]
+            with transaction.atomic():
+                # retrieve quote information and process it
+                quote_code = validated_data["quote_code"]
 
-            # quote here, is actually a serializer and not the actual data
-            # from serializr, LoL.
-            quote_serializer = quote_service._get_quote_by_code(quote_code)
-            if not quote_serializer:
-                raise ValidationError(f"Quote with code {quote_code} does not exist")
+                # quote here, is actually a serializer and not the actual data
+                # from serializr, LoL.
+                quote_serializer = quote_service._get_quote_by_code(quote_code)
+                if not quote_serializer:
+                    raise ValidationError(
+                        f"Quote with code {quote_code} does not exist"
+                    )
 
-            # extract information about the product and the applicable premium from the quote
-            quote_data = quote_serializer.data  # shoudl be a dict with serialized data
-            product_data = quote_data.get("product")
-            # print(f"Product data: {product_data}")
+                # extract information about the product and the applicable premium from the quote
+                quote_data = (
+                    quote_serializer.data
+                )  # shoudl be a dict with serialized data
+                product_data = quote_data.get("product")
+                # print(f"Product data: {product_data}")
 
-            price_data = quote_data.get("price", {})
-            premium = price_data.get("amount")
+                price_data = quote_data.get("price", {})
+                premium = price_data.get("amount")
 
-            # we want to ensure to handle adequate type conversion for the premium amount
-            # django often stores Decimal values as strings in the database
-            #
-            # convert the premium amount to a Decimal if it is a string
-            if isinstance(premium, str):
+                # we want to ensure to handle adequate type conversion for the premium amount
+                # django often stores Decimal values as strings in the database
+                #
+                # convert the premium amount to a Decimal if it is a string
+                if isinstance(premium, str):
+                    try:
+                        premium = Decimal(premium)  # Convert to Decimal
+                    except ValueError:
+                        raise ValidationError("Invalid premium amount format")
+
+                # extract product information from the product data
+                product_id = product_data.get("id")
+                product = get_object_or_404(Product, id=product_id)
+
+                # validate incoming data where neccessary
+                customer_metadata = validated_data["customer_metadata"]
+                product_metadata = validated_data["product_metadata"]
+                payment_information = validated_data["payment_metadata"]
+                activation_details = validated_data["activation_metadata"]
+
+                # handle payment validation
+                PolicyService._validate_payment(payment_information, price_data)
+
+                # are we renewing the policy?
+                renewal_date = (
+                    activation_details.get("policy_expiry_date") + timedelta(days=1)
+                    if activation_details.get("renew")
+                    else None
+                )
+                # next, we want to process merhant and customer information
+                customer = PolicyService._create_or_retrieve_customer(customer_metadata)
+                merchant = PolicyService._get_merchant(validated_data["merchant_code"])
+
+                insurer_id = quote_data["product"]["provider"]
+                insurer = get_object_or_404(InsurancePartner, id=insurer_id)
+
+                # process policy purchase
+                policy = PolicyService._create_policy(
+                    customer,
+                    product,
+                    premium,
+                    merchant,
+                    insurer,
+                    activation_details,
+                    renewal_date=renewal_date,
+                )
+                policy_created_at = policy.created_at
+
+                transaction_date = policy_created_at.strftime("%Y-%m-%d %H:%M:%S")
+                print(f"Policy created at: {transaction_date}")
+                print(f"customer: {customer_metadata}")
+                print("transaction date: ", transaction_date)
+                # notify the merchant and customer
                 try:
-                    premium = Decimal(premium)  # Convert to Decimal
-                except ValueError:
-                    raise ValidationError("Invalid premium amount format")
+                    PolicyNotificationService.notify_merchant(
+                        "purchase_policy",
+                        policy,
+                        customer=customer_metadata,
+                        transaction_date=transaction_date,
+                    )
+                except TypeError as exc:
+                    raise Exception(f"Error sending notification: \n{str(exc)}")
+                except Exception as exc:
+                    raise Exception(
+                        f"An error occured while attempting to send notification for policy purchase: \n{str(exc)}",
+                    )
 
-            # extract product information from the product data
-            product_id = product_data.get("id")
-            product = get_object_or_404(Product, id=product_id)
-
-            # validate incoming data where neccessary
-            customer_metadata = validated_data["customer_metadata"]
-            product_metadata = validated_data["product_metadata"]
-            payment_information = validated_data["payment_metadata"]
-            activation_details = validated_data["activation_metadata"]
-
-            # handle payment validation
-            PolicyService._validate_payment(payment_information, price_data)
-
-            # are we renewing the policy?
-            renewal_date = (
-                activation_details.get("policy_expiry_date") + timedelta(days=1)
-                if activation_details.get("renew")
-                else None
+                return policy
+        except (
+            ObjectDoesNotExist,
+            KeyError,
+            ValidationError,
+            Quote.DoesNotExist,
+        ) as exc:
+            logger.error(f"Exception occurred: {str(exc)}")
+            raise ValidationError(f"Error: {str(exc)}")
+        except DatabaseError as exc:
+            logger.error(
+                f"DatabaseError occurred: {str(exc)}\n{traceback.format_exc()}"
             )
-            # next, we want to process merhant and customer information
-            customer = PolicyService._create_or_retrieve_customer(customer_metadata)
-            merchant = PolicyService._get_merchant(validated_data["merchant_code"])
-
-            insurer_id = quote_data["product"]["provider"]
-            insurer = get_object_or_404(InsurancePartner, id=insurer_id)
-
-            # process policy purchase
-            policy = PolicyService._create_policy(
-                customer,
-                product,
-                premium,
-                merchant,
-                insurer,
-                activation_details,
-                renewal_date=renewal_date,
+            raise Exception(f"DatabaseError: {str(exc)}")
+        except Exception as exc:
+            logger.error(
+                f"Unexpected error occurred: {str(exc)}\n{traceback.format_exc()}"
             )
-            policy_created_at = policy.created_at
-
-            transaction_date = policy_created_at.strftime("%Y-%m-%d %H:%M:%S")
-            print(f"Policy created at: {transaction_date}")
-            print(f"customer: {customer_metadata}")
-            print("transaction date: ", transaction_date)
-            # notify the merchant and customer
-            try:
-                PolicyNotificationService.notify_merchant(
-                    "purchase_policy",
-                    policy,
-                    customer=customer_metadata,
-                    transaction_date=transaction_date,
-                )
-                # PolicyNotificationService.notify_customer(
-                #     "purchase_policy", policy, customer_metadata["customer_email"]
-                # )
-            except TypeError as exc:
-                raise Exception(f"Error sending notification: \n{str(exc)}")
-            except Exception as exc:
-                raise Exception(
-                    f"An error occured while attempting to send notification for policy purchase: \n{str(exc)}",
-                )
-
-            return policy
-        except ObjectDoesNotExist as exc:
-            logger.error(f"ObjectDoesNotExist: {str(exc)}")
-            raise ValidationError("Required object does not exist")
-
-        except KeyError as exc:
-            logger.error(f"KeyError: {str(exc)}")
-            raise ValidationError(f"Missing required data: {str(exc)}")
-
-        except Quote.DoesNotExist as exc:
-            logger.error(f"Quote does not exist: {str(exc)}")
-            raise ValidationError("Quote does not exist for the provided quote code")
+            raise Exception(f"An unexpected error occurred: {str(exc)}")
 
     @staticmethod
     def _create_policy(
