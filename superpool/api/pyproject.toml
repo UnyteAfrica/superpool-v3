@@ -1,0 +1,76 @@
+[tool.poetry]
+name = "superpool"
+version = "0.1"
+description = "Insurance Aggregation Platform for Financial Institutions"
+authors = ["unyte-africa <support@unyte.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11.1"
+djangorestframework = "^3.15.1"
+django-cors-headers = "^4.3.1"
+djangorestframework-simplejwt = "^5.3.1"
+djangorestframework-api-key = "^3.0.0"
+django-two-factor-auth = "^1.16.0"
+django-environ = "^0.11.2"
+drf-spectacular = "^0.27.2"
+django-storages = {extras = ["google"], version = "^1.14.3"}
+django-phonenumber-field = {extras = ["phonenumberslite"], version = "^7.3.0"}
+gunicorn = "^22.0.0"
+psycopg = "^3.1.19"
+django = "^5.0.6"
+django-redis = "^5.4.0"
+django-filter = "^24.2"
+pytest-django = "^4.8.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+faker = "^25.4.0"
+factory-boy = "^3.3.0"
+django-extensions = "^3.2.3"
+ipdb = "^0.13.13"
+watchman = "^0.0.1"
+django-debug-toolbar = "^4.4.2"
+rich = "^13.7.1"
+psycopg2-binary = "^2.9.9"
+pytest-django = "^4.8.0"
+django-stubs = {extras = ["compatible-mypy"], version = "^5.0.2"}
+django-types = "^0.19.1"
+djangorestframework-stubs = {extras = ["compatible-mypy"], version = "^3.15.0"}
+flake8 = "^7.1.0"
+pytest-mock = "^3.14.0"
+pytest-xdist = "^3.6.1"
+requests-mock = "^1.12.1"
+werkzeug = "^3.0.4"
+
+[tool.pytest.ini_options]
+# addopts = "-p no:warnings"
+# DJANGO_SETTINGS_MODULE = 'config.settings'
+DJANGO_SETTINGS_MODULE = 'config.settings.environments.test'
+# testpaths = ["superpool/api/tests", "tests"]
+norecursedirs = ["migrations", "__pycache__"]
+python_files = ["tests.py", "test_*.py", "*_tests.py", "test.py"]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+strict_optional = true
+no_implicit_optional = true
+incremental = true # make mypy faster by rechecking only changed files
+follow_imports = "silent" # report missing imports, but don't fail
+
+# [mypy.plugins.django-stubs]
+# ignore_missing_model_attributes = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+strict_settings = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

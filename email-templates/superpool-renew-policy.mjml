@@ -1,0 +1,45 @@
+<mjml>
+  <mj-head>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter" />
+    <mj-attributes>
+      <mj-text font-size="16px" font-family="Inter, Verdana, sans-serif" />
+      <mj-section background-color="#fff" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#eee">
+    <mj-section>
+      <mj-column>
+        <mj-image src="https://storage.googleapis.com/unyte-public-assets/email-assets/UnyteLogo.png" width="100px" />
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="600">Dear [Merchant Name],</mj-text>
+        <mj-text>We are pleased to inform you that the renewal of the [Policy Type] policy has been successfully completed. Below are the details of the transaction:</mj-text>
+        <mj-text font-weight="600">Customer Name: [Customer Name]</mj-text>
+        <mj-text font-weight="600">Customer ID: [Customer ID]</mj-text>
+        <mj-text font-weight="600">Transaction Date: [Transaction Date]</mj-text>
+        <mj-text> Thank you for your continued trust in our services.</mj-text>
+        <mj-text> If you have any questions or need assistance, feel free to reach out to our support team at <a href="mailto:tech@unyte.africa">tech@unyte.africa</a>. </mj-text>
+        <mj-text> Thank you for choosing Unyte. We look forward to supporting you in your management journey. </mj-text>
+        <mj-text padding-top="20px" padding-bottom="0px" font-weight="600"> Unyte Africa, </mj-text>
+        <mj-text padding-top="0px" padding-bottom="0px" font-weight="400">Better Together</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section>
+      <mj-column>
+        <mj-social align="left">
+          <mj-social-element href="https://www.linkedin.com/company/unyteafrica/" icon-size="32px" icon-height="32px" src="https://storage.googleapis.com/unyte-public-assets/email-assets/linkedin-email.png"></mj-social-element>
+          <mj-social-element href="https://www.instagram.com/unyteafrica" icon-size="32px" icon-height="32px" src="https://storage.googleapis.com/unyte-public-assets/email-assets/instagram-email.png"></mj-social-element>
+          <mj-social-element href="https://x.com/unyte_africa" icon-size="32px" icon-height="32px" src="https://storage.googleapis.com/unyte-public-assets/email-assets/twitter-email.png"></mj-social-element>
+        </mj-social>
+        <mj-text font-size="14px" color="#6f767e">Copyright &copy; [Current Year] Unyte Africa, All rights reserved.</mj-text>
+        <mj-text font-size="14px" color="#6f767e">
+          <span style="display: block; padding-bottom: 10px;">Our mailing address is:</span>
+          <span style="display: block;  padding-bottom: 10px;">20A Kunsela Road,</span>
+          <span style="display: block;  padding-bottom: 10px;">Ikate, Lekki, Lagos.</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
