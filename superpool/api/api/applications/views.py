@@ -99,6 +99,7 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
     @extend_schema(
         summary="Retrieve all applications for the authenticated merchant",
         description="This endpoint retrieves all sandbox or production applications for the merchant, including the hashed API keys.",
+        tags=["Application"],
         responses={
             200: OpenApiResponse(ApplicationSerializer(many=True)),
         },
@@ -133,6 +134,7 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
     @extend_schema(
         summary="Create a new application",
         description="This endpoint allows the merchant to create a sandbox or production application. The response includes the application ID, name, mode, and hashed API key.",
+        tags=["Application"],
         request=ApplicationSerializer,
         responses={
             201: OpenApiResponse(ApplicationSerializer),

@@ -2,7 +2,11 @@ import logging
 from uuid import uuid4
 import uuid
 
+from django.core.exceptions import MultipleObjectsReturned
+from django_stubs_ext import types
 from rest_framework.pagination import LimitOffsetPagination
+
+from core.models import Coverage
 from .openapi import products_response_example
 from datetime import datetime, timedelta
 from core.permissions import (
@@ -30,7 +34,7 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -59,6 +63,8 @@ from .openapi import (
 
 from .exceptions import ProductNotFoundError
 from .serializers import (
+    CoverageSerializer,
+    FullCoverageSerializer,
     PolicyCancellationRequestSerializer,
     PolicyCancellationResponseSerializer,
     PolicyCancellationSerializer,
@@ -1094,3 +1100,168 @@ class PolicyCancellationView(generics.GenericAPIView):
                 logger.error(f"An unkown error occured: {str(exc)}")
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    tags=["Coverage"],
+)
+class ProductCoverageListView(generics.ListAPIView):
+    """
+    Returns list of all coverages associated with a certain product
+    """
+
+    serializer_class = CoverageSerializer
+
+    def get_queryset(self):
+        product_id = self.kwargs["product_id"]
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            raise NotFound("Product Not Found")
+        return product.coverages.all()
+
+
+@extend_schema(
+    summary="View the coverage information regarding an insurance product ",
+    description="With this endpoint you can view the coverage information regaridng a certain insurance product to get insights on what is going on.",
+    tags=["Coverage"],
+    responses=OpenApiResponse(
+        response=FullCoverageSerializer,
+        description="Coverage Information",
+        examples=[
+            OpenApiExample(
+                "Coverage",
+                value={
+                    "coverage_id": "COV_uklZyZPPrN2M",
+                    "coverage_name": "Travel Medical Emergency",
+                    "coverage_limit": "10000.00",
+                    "currency": "NGN",
+                    "description": "Covers emergency medical expenses incurred while traveling.",
+                    "coverage_period_end": "2024-12-31",
+                    "benefits": "Covers hospitalization, medical evacuation, and repatriation.",
+                    "exclusions": "Does not cover pre-existing conditions or routine medical visits.",
+                },
+            )
+        ],
+    ),
+)
+class ProductCoverageRetrieveView(generics.RetrieveAPIView):
+    """
+    View the coverage information regarding an insurance product
+    """
+
+    queryset = Coverage.objects.all()
+    serializer_class = FullCoverageSerializer
+
+    def get_object(self) -> QuerySet:
+        product_id = self.kwargs["product_id"]
+        coverage_id = self.kwargs["coverage_id"]
+
+        try:
+            product = Product.objects.get(pk=product_id)
+            coverage = product.coverages.get(coverage_id=coverage_id)
+        except Product.DoesNotExist:
+            logger.error(f"Product with ID: {product_id} does not exist")
+            raise NotFound("Product not found!")
+        except Coverage.DoesNotExist:
+            logger.error(f"Coverage with ID: {coverage_id} does not exist")
+            raise NotFound("Coverage not found")
+        except MultipleObjectsReturned as exc:
+            logger.error(f"Multiple object returned by product id: {product_id}")
+            raise Exception(
+                {"error": f"Multiple Objects returned by product id: {product_id}"},
+            ) from exc
+        except Exception as e:
+            raise e
+
+        return coverage
+
+
+@extend_schema(
+    summary="Search for insurance coverages",
+    description="Search for insurance coverages using various parameters. Supports both partial and exact case-insensitive matches.",
+    tags=["Coverage"],
+    parameters=[
+        OpenApiParameter(
+            "coverage_name",
+            description="Case-insensiteive name of the coverage you are trying to search. We allow partial and exact matches of your query",
+        ),
+        OpenApiParameter(
+            "coverage_id",
+            type=OpenApiTypes.STR,
+            description="Unique string-generated ID of the coverage",
+            examples=[OpenApiExample("example coverage id", value="COV_uklZyZPPrN2M")],
+        ),
+        OpenApiParameter(
+            "product_id",
+            type=OpenApiTypes.UUID,
+            description="Unique resource identifier of the product",
+        ),
+    ],
+    responses=OpenApiResponse(
+        response=CoverageSerializer,
+        description="Coverage Search Results",
+        examples=[
+            OpenApiExample(
+                "Coverage Search Results",
+                value=[
+                    {
+                        "coverage_id": "COV_uklZyZPPrN2M",
+                        "coverage_name": "Travel Medical Emergency",
+                        "coverage_limit": "10000.00",
+                        "currency": "NGN",
+                        "description": "Covers emergency medical expenses incurred while traveling.",
+                        "coverage_period_end": "2024-12-31",
+                        "benefits": "Covers hospitalization, medical evacuation, and repatriation.",
+                        "exclusions": "Does not cover pre-existing conditions or routine medical visits.",
+                    },
+                    {
+                        "coverage_id": "COV_kPvXWWVqGtoz",
+                        "coverage_name": "Homeowners Insurance",
+                        "coverage_limit": "50000.00",
+                        "currency": "NGN",
+                        "description": "Covers damage to the home and personal belongings due to various risks.",
+                        "coverage_period_end": "2024-12-31",
+                        "benefits": "Covers damage from fire, theft, and natural disasters.",
+                        "exclusions": "Does not cover damage from intentional acts or wear and tear.",
+                    },
+                ],
+            )
+        ],
+    ),
+)
+class ProductCoverageSearchView(generics.ListAPIView):
+    """
+    Search for an insurance coverage on the platform using specific paramaters
+    """
+
+    serializer_class = CoverageSerializer
+
+    def get_queryset(self) -> QuerySet:
+        # we want to allow both partial and exact case insentive matches
+        # since the likely application of this one is on a dashboard
+        query_params = self.request.query_params
+        q = Q()
+
+        coverage_name = query_params.get("coverage_name")
+        coverage_id = query_params.get("coverage_id")
+        product_id = query_params.get("product_id")
+
+        if coverage_name:
+            q &= Q(coverage_name__icontains=coverage_name)
+            logger.debug(f"Filtering by coverage_name: {coverage_name}")
+
+        if coverage_id:
+            q &= Q(coverage_id__icontains=coverage_id)
+            logger.debug(f"Filtering by coverage_id: {coverage_id}")
+
+        if product_id:
+            q &= Q(product__id=product_id)
+
+        try:
+            queryset = Coverage.objects.filter(q)
+            logger.debug(f"Queryset retrieved: {queryset}")
+            return queryset
+        except Exception as e:
+            logger.error(f"Error during queryset retrieval: {str(e)}")
+            raise e
