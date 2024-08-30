@@ -327,9 +327,9 @@ class PolicyService:
                 customer = PolicyService._create_or_retrieve_customer(customer_metadata)
                 merchant = PolicyService._get_merchant(validated_data["merchant_code"])
 
-                import pdb
-
-                pdb.set_trace()
+                # import pdb
+                #
+                # pdb.set_trace()
 
                 # extract information about the insurer using the provider id
                 # otherwise, fallback to a fail-safe of using the insurer name
