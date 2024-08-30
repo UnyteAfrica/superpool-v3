@@ -116,17 +116,33 @@ class PolicyService:
                 policy = Policy.objects.get(policy_id=policy_id)
             elif policy_number:
                 policy = Policy.objects.get(policy_number=policy_number)
-
-            if policy.status != "active":
-                policy.status = "active"
-
-            # check if the policy is already active and within its valid effective period
-            today = timezone.now().date()
-            if policy.effective_from <= today <= policy.effective_through:
+            else:
                 raise ValidationError(
-                    "Policy is currently active and within its valid effective period. Renewal is not needed."
+                    "Either policy id or the policy number must be provided."
                 )
 
+            # check if the policy is already active and within its valid effective period
+            # today = timezone.now().date()
+            # if policy.effective_from <= today <= policy.effective_through:
+            #     raise ValidationError(
+            #         "Policy is currently active and within its valid effective period. Renewal is not needed."
+            #     )
+
+            # check that the preferred policy start date is after the current policy's effective end date
+            if policy_start_date:
+                if (
+                    policy.effective_through
+                    and policy_start_date <= policy.effective_through
+                ):
+                    raise ValidationError(
+                        "Preferred start date must be after the current policy's effective end date."
+                    )
+                if policy.effective_from and policy_start_date <= policy.effective_from:
+                    raise ValidationError(
+                        "Preferred start date must be after the current policy's effective start date."
+                    )
+
+            # set the new policy status and dates
             if policy_start_date:
                 policy.effective_from = policy_start_date
             if policy_expiry_date:
