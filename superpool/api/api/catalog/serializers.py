@@ -368,23 +368,21 @@ class QuoteRequestSerializer(serializers.Serializer):
     """Validate the entire quote request payload"""
 
     product_id = serializers.UUIDField(required=False)
-    product_type = serializers.ChoiceField(
-        choices=[
-            (Product.ProductType.LIFE, "Life Insurance"),
-            (Product.ProductType.HEALTH, "Health Insurance"),
-            (Product.ProductType.AUTO, "Auto Insurance"),
-            (Product.ProductType.GADGET, "Gadget Insurance"),
-            (Product.ProductType.TRAVEL, "Travel Insurance"),
-            (Product.ProductType.HOME, "Home Insurance"),
-            (Product.ProductType.STUDENT_PROTECTION, "Student Protection"),
-            (Product.ProductType.PERSONAL_ACCIDENT, "Personal Accident Insurance"),
-        ],
+    product_type = serializers.CharField(
         required=False,
     )
     quote_code = serializers.CharField(required=False)
     insurance_name = serializers.CharField(required=False)
     # customer_metadata = CustomerDetailsSerializer(required=False)
     insurance_details = serializers.JSONField()
+
+    def _normalize_product_type(self, product_type):
+        if product_type:
+            product_type_normalized = product_type.strip().title()
+            for ptype in Product.ProductType:
+                if ptype.label == product_type_normalized:
+                    return ptype
+        return None
 
     def get_serializer_class(self, product_type):
         """Return the appropriate serializer class based on the product type"""
@@ -395,12 +393,12 @@ class QuoteRequestSerializer(serializers.Serializer):
         product_type = product_type.lower()
 
         serializer_mapping = {
-            Product.ProductType.HEALTH.lower(): HealthInsuranceSerializer,
-            Product.ProductType.AUTO.lower(): AutoInsuranceSerializer,
-            Product.ProductType.TRAVEL.lower(): TravelInsuranceSerializer,
-            Product.ProductType.PERSONAL_ACCIDENT.lower(): PersonalAccidentInsuranceSerializer,
-            Product.ProductType.HOME.lower(): HomeInsuranceSerializer,
-            Product.ProductType.GADGET.lower(): GadgetInsuranceSerializer,
+            Product.ProductType.HEALTH: HealthInsuranceSerializer,
+            Product.ProductType.AUTO: AutoInsuranceSerializer,
+            Product.ProductType.TRAVEL: TravelInsuranceSerializer,
+            Product.ProductType.PERSONAL_ACCIDENT: PersonalAccidentInsuranceSerializer,
+            Product.ProductType.HOME: HomeInsuranceSerializer,
+            Product.ProductType.GADGET: GadgetInsuranceSerializer,
         }
         return serializer_mapping.get(product_type)
 
@@ -412,22 +410,23 @@ class QuoteRequestSerializer(serializers.Serializer):
         except Product.DoesNotExist:
             return None
 
-    def validate_insurance_details(self, product_type, value):
-        """Return the insurance details based on the product type"""
-
-        serializer_class = self.get_serializer_class(product_type)
-
-        if not serializer_class:
-            logger.error(
-                f"Invalid product type recieved: {product_type}. Full data: {value}"
-            )
-            raise ValidationError(f"Invalid product type: {product_type}")
-
-        insurance_serializer = serializer_class(data=value)
-        if not insurance_serializer.is_valid():
-            raise ValidationError(insurance_serializer.errors)
-
-        return insurance_serializer.validated_data
+    #
+    # def validate_insurance_details(self, value, product_type):
+    #     """Return the insurance details based on the product type"""
+    #
+    #     serializer_class = self.get_serializer_class(product_type)
+    #
+    #     if not serializer_class:
+    #         logger.error(
+    #             f"Invalid product type recieved: {product_type}. Full data: {value}"
+    #         )
+    #         raise ValidationError(f"Invalid product type: {product_type}")
+    #
+    #     insurance_serializer = serializer_class(data=value)
+    #     if not insurance_serializer.is_valid():
+    #         raise ValidationError(insurance_serializer.errors)
+    #
+    #     return insurance_serializer.validated_data
 
     def validate(self, attrs):
         """Validates the incoming request based on the product type"""
@@ -435,16 +434,21 @@ class QuoteRequestSerializer(serializers.Serializer):
         product_type = attrs.get("product_type")
         product_id = attrs.get("product_id")
         insurance_name = attrs.get("insurance_name")
-        insurance_details = attrs.get("insurance_details")
+        insurance_details = attrs.get("insurance_details", {})
+
+        print(
+            f"Initial validation values: product_type={product_type}, product_id={product_id}, "
+            f"insurance_name={insurance_name}, insurance_details={insurance_details}"
+        )
 
         # normalize prouct type to lowercase for consitent matching
-        if product_type:
-            product_type = product_type.lower()
-            attrs["product_type"] = product_type
+        normalized_product_type = self._normalize_product_type(product_type)
+        if normalized_product_type:
+            attrs["product_type"] = normalized_product_type
 
         # ensure either product_id or product_type and insurance_name are provided
         if not product_id:
-            if not product_type or not insurance_name:
+            if not normalized_product_type or not insurance_name:
                 raise ValidationError(
                     "You must provide either 'product_id' "
                     "or 'product_type' and 'insurance_name'"
@@ -457,16 +461,30 @@ class QuoteRequestSerializer(serializers.Serializer):
                 )
 
             # ensure product type is valid
-            if product_type not in (p.lower() for p in Product.ProductType.values):
+            valid_product_types = [p.lower() for p in Product.ProductType.values]
+            if normalized_product_type not in valid_product_types:
                 raise ValidationError(
                     f"Invalid product type: {product_type}"
-                    f"Expected one of: {[p.lower() for p in Product.ProductType.values]}"
+                    f"Expected one of: {valid_product_types}"
                 )
 
+            serializer_class = self.get_serializer_class(normalized_product_type)
+            if not serializer_class:
+                raise ValidationError(
+                    f"Invalid product type: {normalized_product_type}"
+                )
+
+            insurance_serializer = serializer_class(data=insurance_details)
+            if not insurance_serializer.is_valid():
+                raise ValidationError(insurance_serializer.errors)
+
+            attrs["insurance_details"] = insurance_serializer.validated_data
+
             # validate insurance details from the provided product type
-            attrs["insurance_details"] = self.validate_insurance_details(
-                product_type, insurance_details
-            )
+            # insurance_details["product_type"] = product_type
+            # attrs["insurance_details"] = self.validate_insurance_details(
+            #     product_type, insurance_details
+            # )
 
         else:
             product = self.get_product_from_id(product_id)

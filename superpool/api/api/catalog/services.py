@@ -664,7 +664,7 @@ class QuoteService(IQuote):
             except Product.DoesNotExist:
                 raise ValueError(f"Product with ID '{product_id}' not found.")
         else:
-            product_type = (product_type or kwargs.get("product_type")).title()
+            product_type = product_type or kwargs.get("product_type")
             product_name = product_name or kwargs.get("insurance_name")
 
             # if product_type not in PRODUCT_TYPES:
@@ -696,10 +696,9 @@ class QuoteService(IQuote):
 
                 # retrieve te coverage types for the product type
                 COVERAGE_TYPES = self._get_coverage_types_for_product_type(product_type)
-                coverage_type = (
-                    insurance_details.get("coverage_type")
-                    or kwargs.get("coverage_type")
-                ).title()
+                coverage_type = insurance_details.get("coverage_type") or kwargs.get(
+                    "coverage_type"
+                )
 
                 if coverage_type not in COVERAGE_TYPES:
                     raise ValueError(
