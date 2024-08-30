@@ -1094,3 +1094,39 @@ class PolicyCancellationView(generics.GenericAPIView):
                 logger.error(f"An unkown error occured: {str(exc)}")
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    tags=["Coverage"],
+)
+class ProductCoverageListView(generics.ListAPIView):
+    """
+    Returns list of all coverages associated with a certain product
+    """
+
+    def get_queryset(self):
+        pass
+
+
+@extend_schema(
+    tags=["Coverage"],
+)
+class ProductCoverageRetrieveView(generics.RetrieveAPIView):
+    """
+    View the coverage information regarding an insurance product
+    """
+
+    def get_queryset(self):
+        pass
+
+
+@extend_schema(
+    tags=["Coverage"],
+)
+class ProductCoverageSearchView(generics.ListAPIView):
+    """
+    Search for an insurance coverage on the platform using specific paramaters
+    """
+
+    def get_queryset(self):
+        pass
