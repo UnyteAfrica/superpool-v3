@@ -684,21 +684,23 @@ class QuoteService(IQuote):
             coverage_id = insurance_details.get("coverage_id") or kwargs.get(
                 "coverage_id"
             )
+            coverage_type = insurance_details.get("coverage_type") or kwargs.get(
+                "coverage_type"
+            )
+
             if coverage_id:
                 try:
                     coverage = Coverage.objects.get(id=coverage_id)
                     base_price = coverage.coverage_limit
                 except Coverage.DoesNotExist:
                     raise ValueError(f"Coverage with ID '{coverage_id}' not found.")
-            else:
+
+            elif coverage_type:
                 # coverage_id not provided? then we need to get the coverage type
                 # and determine the base price based on the flat fees
 
                 # retrieve te coverage types for the product type
                 COVERAGE_TYPES = self._get_coverage_types_for_product_type(product_type)
-                coverage_type = insurance_details.get("coverage_type") or kwargs.get(
-                    "coverage_type"
-                )
 
                 if coverage_type not in COVERAGE_TYPES:
                     raise ValueError(
@@ -710,10 +712,11 @@ class QuoteService(IQuote):
                     raise ValueError(
                         f"Flat fee for product type '{product_type}' and coverage type '{coverage_type}' not found."
                     )
+            else:
+                raise ValueError(
+                    "Either coverage_id or coverage_type must be provided."
+                )
 
-                raise ValueError("Coverage ID must be provided.")
-
-            # create the premium amount
             premium_amount = Decimal(kwargs.get("premium_amount", "0.0"))
             premium_description = kwargs.get("insurance_name", product_name)
             premium = Price.objects.create(
