@@ -728,7 +728,7 @@ class QuoteService(IQuote):
 
             if coverage_id:
                 try:
-                    coverage = Coverage.objects.get(id=coverage_id)
+                    coverage = Coverage.objects.get(pk=coverage_id)
                     base_price = coverage.coverage_limit
                 except Coverage.DoesNotExist:
                     raise ValueError(f"Coverage with ID '{coverage_id}' not found.")
