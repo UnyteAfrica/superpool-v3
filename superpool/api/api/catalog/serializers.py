@@ -87,7 +87,13 @@ class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
 class PriceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Price
-        exclude = ["id"]
+        fields = [
+            "currency",
+            "amount",
+            "description",
+            "discount_amount",
+            "surcharges",
+        ]
 
 
 class QuoteSerializer(serializers.ModelSerializer):
@@ -143,7 +149,7 @@ class CustomerDetailsSerializer(serializers.Serializer):
     customer_phone = serializers.CharField(max_length=20, required=False)
     customer_address = serializers.CharField()
     customer_date_of_birth = serializers.DateField(
-        input_formats=["%d-%m-%Y"], required=False
+        input_formats=["%Y-%m-%d"], required=False
     )
     customer_gender = serializers.ChoiceField(
         choices=[("M", "Male"), ("F", "Female")], required=False
@@ -364,15 +370,14 @@ class QuoteRequestSerializer(serializers.Serializer):
     product_id = serializers.UUIDField(required=False)
     product_type = serializers.ChoiceField(
         choices=[
-            "Auto",
-            "Health",
-            "Travel",
-            "Gadget",
-            "Smart Generations Protection",
-            "Life",
-            "Home",
-            "Personal Accident",
-            "Student Protection",
+            (Product.ProductType.LIFE, "Life Insurance"),
+            (Product.ProductType.HEALTH, "Health Insurance"),
+            (Product.ProductType.AUTO, "Auto Insurance"),
+            (Product.ProductType.GADGET, "Gadget Insurance"),
+            (Product.ProductType.TRAVEL, "Travel Insurance"),
+            (Product.ProductType.HOME, "Home Insurance"),
+            (Product.ProductType.STUDENT_PROTECTION, "Student Protection"),
+            (Product.ProductType.PERSONAL_ACCIDENT, "Personal Accident Insurance"),
         ],
         required=False,
     )
@@ -385,20 +390,15 @@ class QuoteRequestSerializer(serializers.Serializer):
         """Return the appropriate serializer class based on the product type"""
         if product_type is None:
             logger.error("No product type provided to get_serializer_class.")
-            raise ValueError("Product type cannot be None")
-
-        product_type = product_type.lower()
-
-        if product_type == "personal accident":
-            product_type = "personal_accident"
+            raise ValidationError("Product type cannot be None")
 
         serializer_mapping = {
-            "health": HealthInsuranceSerializer,
-            "auto": AutoInsuranceSerializer,
-            "travel": TravelInsuranceSerializer,
-            "personal_accident": PersonalAccidentInsuranceSerializer,
-            "home": HomeInsuranceSerializer,
-            "gadget": GadgetInsuranceSerializer,
+            Product.ProductType.HEALTH.lower(): HealthInsuranceSerializer,
+            Product.ProductType.AUTO.lower(): AutoInsuranceSerializer,
+            Product.ProductType.TRAVEL.lower(): TravelInsuranceSerializer,
+            Product.ProductType.PERSONAL_ACCIDENT.lower(): PersonalAccidentInsuranceSerializer,
+            Product.ProductType.HOME.lower(): HomeInsuranceSerializer,
+            Product.ProductType.GADGET.lower(): GadgetInsuranceSerializer,
         }
         return serializer_mapping.get(product_type)
 
@@ -410,31 +410,31 @@ class QuoteRequestSerializer(serializers.Serializer):
         except Product.DoesNotExist:
             return None
 
-    def validate_insurance_details(self, value):
-        """Return the insurance details based on the product type"""
-        product_type = self.initial_data.get("product_type")
-
-        if not product_type:
-            # don't call get_serializer_class if product_type is not provided
-            logger.error("No product type provided for insurance details validation.")
-            raise ValidationError(
-                "Product type must be provided for insurance details."
-            )
-
-        serializer_class = self.get_serializer_class(product_type)
-
-        if not serializer_class:
-            logger.error(
-                f"Invalid product type recieved: {product_type}. Full data: {value}"
-            )
-            raise ValidationError(f"Invalid product type: {product_type}")
-
-        insurance_serializer = serializer_class(data=value)
-        if not insurance_serializer.is_valid():
-            raise ValidationError(insurance_serializer.errors)
-
-        return insurance_serializer.validated_data
-
+    # def validate_insurance_details(self, value):
+    #     """Return the insurance details based on the product type"""
+    #     product_type = self.initial_data.get("product_type")
+    #
+    #     if not product_type:
+    #         # don't call get_serializer_class if product_type is not provided
+    #         logger.error("No product type provided for insurance details validation.")
+    #         raise ValidationError(
+    #             "Product type must be provided for insurance details."
+    #         )
+    #
+    #     serializer_class = self.get_serializer_class(product_type)
+    #
+    #     if not serializer_class:
+    #         logger.error(
+    #             f"Invalid product type recieved: {product_type}. Full data: {value}"
+    #         )
+    #         raise ValidationError(f"Invalid product type: {product_type}")
+    #
+    #     insurance_serializer = serializer_class(data=value)
+    #     if not insurance_serializer.is_valid():
+    #         raise ValidationError(insurance_serializer.errors)
+    #
+    #     return insurance_serializer.validated_data
+    #
     def validate(self, attrs):
         """Validates the incoming request based on the product type"""
 
@@ -443,14 +443,12 @@ class QuoteRequestSerializer(serializers.Serializer):
         insurance_name = attrs.get("insurance_name")
         insurance_details = attrs.get("insurance_details")
 
-        # Ensure either product_id is provided or insurance_name with product_type and coverage_type
         if not (
-            product_id or (insurance_name and insurance_details.get("coverage_type"))
+            product_id or (insurance_name and insurance_details.get("coverage_id"))
         ):
             raise ValidationError(
                 "You must provide either 'product_id' "
-                "or the 'product_id' along with the 'product_type' "
-                "or the 'insurance_name' along with 'coverage_type' from 'insurance_details' is provided."
+                "or 'insurance_name' and 'coverage_id' in the request."
             )
 
         if product_id:
