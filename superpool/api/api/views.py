@@ -327,14 +327,17 @@ class InsuranceProviderSearchView(APIView):
 
 class MerchantSetPasswordView(APIView):
     """
-    API view for setting a new password for a merchant account
+    API view for completing merchant registration for the Superpool
+    dashboard.
+
+    You can use this endpoint to set a new password for a merchant account.
     """
 
     permission_classes = []
 
     @extend_schema(
-        summary="Set a new password for a merchant account",
-        operation_id="set-merchant-password",
+        summary="Complete merchant registration for the Superpool dashboard",
+        operation_id="complete-merchant-registration",
         tags=["Auth"],
         request=OpenApiRequest(request=CompleteRegistrationSerializer),
         responses={
