@@ -472,6 +472,7 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         operation_id="retrieve-policy-by-id",
+        summary="View the details of a specific insurance policy by its ID",
         description="Retrieve a specific policy by its ID",
         tags=["Policies"],
         responses={
@@ -496,7 +497,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         operation_id="search-policies",
-        description="Search for policies based on certain parameters",
+        summary="Search and filter for policies",
+        # description="Search for policies based on certain parameters",
         tags=["Policies"],
         parameters=[
             OpenApiParameter(
@@ -1103,7 +1105,52 @@ class PolicyCancellationView(generics.GenericAPIView):
 
 
 @extend_schema(
+    summary="View all coverages associated with an insurance product",
     tags=["Coverage"],
+    responses={
+        200: OpenApiResponse(
+            response=CoverageSerializer,
+            description="List of all coverages associated with an insurance product",
+            examples=[
+                OpenApiExample(
+                    "Coverage List Example",
+                    value=[
+                        {
+                            "coverage_id": "COV_uklZyZPPrN2M",
+                            "coverage_name": "Travel Medical Emergency",
+                            "coverage_limit": "10000.00",
+                            "currency": "NGN",
+                            "description": "Covers emergency medical expenses incurred while traveling.",
+                            "coverage_period_end": "2024-12-31",
+                            "benefits": "Covers hospitalization, medical evacuation, and repatriation.",
+                            "exclusions": "Does not cover pre-existing conditions or routine medical visits.",
+                        },
+                        {
+                            "coverage_id": "COV_kPvXWWVqGtoz",
+                            "coverage_name": "Homeowners Insurance",
+                            "coverage_limit": "50000.00",
+                            "currency": "NGN",
+                            "description": "Covers damage to the home and personal belongings due to various risks.",
+                            "coverage_period_end": "2024-12-31",
+                            "benefits": "Covers damage from fire, theft, and natural disasters.",
+                            "exclusions": "Does not cover damage from intentional acts or wear and tear.",
+                        },
+                    ],
+                ),
+            ],
+        ),
+        404: OpenApiResponse(description="No coverages found for this product"),
+        400: OpenApiResponse(description="Bad Request"),
+        500: OpenApiResponse(
+            description="Internal Server Error",
+            examples=[
+                OpenApiExample(
+                    "Internal Server Error Example",
+                    value={"error": "Internal Server Error"},
+                )
+            ],
+        ),
+    },
 )
 class ProductCoverageListView(generics.ListAPIView):
     """
