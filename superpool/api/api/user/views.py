@@ -64,6 +64,7 @@ class SignUpView(APIView):
             ],
         ),
         operation_id="register",
+        summary="Create a new user - Admin or Customer Support",
         description="Create a new user with the provided data, and a new profile is created for the user.",
         responses={
             201: OpenApiResponse(
@@ -159,6 +160,7 @@ class SignInView(APIView):
         ),
         tags=["Auth"],
         operation_id="login",
+        summary="Authenticate as an internal user - Admin or Customer Support",
         description="Sign in to the application with the provided data. If the credentials are valid, a new access token will be generated.",
         responses={200: ScopedUserSerializer},
     )
@@ -197,6 +199,7 @@ class MerchantLoginView(APIView):
             request=MerchantAuthSerializer,
         ),
         operation_id="merchant_login",
+        summary="Logon to superpool dashboard as a merchant",
         description="Authenticate a merchant using their tenant ID and password.",
         responses={
             200: OpenApiResponse(
