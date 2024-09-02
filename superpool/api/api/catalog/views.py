@@ -787,6 +787,52 @@ class QuoteAPIViewSet(viewsets.ViewSet):
 
 
 class RequestQuoteView(views.APIView):
+    """
+    This endpoint allows users to request an insurance quote by either creating a new quote or retrieving
+    an existing quote based on a provided quote code. Users can specify details such as the product type,
+    product name, and insurance details including coverage type to get an accurate quote.
+
+    You can provide either:
+    - A `quote_code` to retrieve an existing quote.
+    - A `product_id` and `insurance_details` to request a new quote.
+    - `product_type` and `insurance_name` along with optional `insurance_details` to create a new quote.
+
+    ## Request Parameters
+
+    - **quote_code** (str, optional): The unique identifier of an existing quote. If provided, the endpoint
+      will retrieve the quote associated with this code.
+    - **product_type** (str, optional): The type of insurance product (e.g., LIFE, AUTO, HEALTH). Required if
+      `quote_code` is not provided.
+    - **insurance_name** (str, optional): The name of the insurance product. Used along with `product_type`
+      to find the product if `quote_code` is not provided.
+    - **insurance_details** (dict, optional): A dictionary containing additional details for the insurance quote,
+      including `coverage_type` and other specifics.
+
+    ## Request Body Examples
+
+    Examples of valid request payloads:
+
+    - Requesting a new quote for travel insurance:
+      ```json
+      {
+        "product_type": "TRAVEL",
+        "insurance_name": "Travel Insurance",
+        "insurance_details": {
+          "coverage_type": "Silver"
+        }
+      }
+
+      OR
+
+      {
+        "product_id": "c0883345-7566-42e7-8bb1-a62871261163",
+        "insurance_name": "Travel Insurance",
+        "insurance_details": {
+          "coverage_type": "Silver"
+        }
+      }
+    """
+
     # permission_classes = [
     #     IsMerchant,
     # ]

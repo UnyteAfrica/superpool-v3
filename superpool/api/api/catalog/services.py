@@ -705,8 +705,50 @@ class QuoteService(IQuote):
         **kwargs,
     ):
         """
-        Creates a new insurance quote for a given product type and optional product name.
+        Creates a new insurance quote based on the specified product and coverage details.
 
+        This endpoint allows you to generate an insurance quote by specifying either a product ID,
+        product type, and optional product name. The quote is determined by either providing a coverage ID
+        or coverage type. If a coverage type is provided, the base price is retrieved from predefined flat fees.
+
+        Arguments:
+            product_id (str, optional): The unique identifier of the product. If provided, overrides
+                other product type and name parameters.
+            product_type (str, optional): The type of insurance product (e.g., LIFE, AUTO, HEALTH).
+                If `product_id` is not provided, this parameter is required.
+            product_name (str, optional): The name of the insurance product. If `product_id` is not provided,
+                this parameter is used along with `product_type` to identify the product.
+            insurance_details (dict): A dictionary containing details related to the insurance quote.
+                This can include 'coverage_id' and 'coverage_type'.
+            **kwargs: Additional keyword arguments. Can include 'coverage_id', 'coverage_type', and 'premium_amount'.
+
+        Returns:
+            Quote: An instance of the `Quote` model representing the created insurance quote.
+
+        Raises:
+            ValueError: If the provided `product_id` does not exist, if no product is found with the given
+                `product_type` and `product_name`, if neither `coverage_id` nor `coverage_type` is provided,
+                or if an invalid coverage type is specified.
+
+        Examples:
+            - To create a quote using a product ID:
+              ```
+              _create_quote(product_id="12345")
+              ```
+
+            - To create a quote using product type and name:
+              ```
+              _create_quote(product_type="AUTO", product_name="Basic Car Insurance", insurance_details={"coverage_type": "Standard"})
+              ```
+
+            - To create a quote using coverage ID:
+              ```
+              _create_quote(product_type="HEALTH", insurance_details={"coverage_id": "7890"})
+              ```
+
+        Notes:
+            - The `coverage_id` and `coverage_type` cannot both be provided. Only one should be used to determine the base price.
+            - The `premium_amount` can be specified to adjust the premium details of the quote.
         """
         PRODUCT_TYPES = list(self.FLAT_FEES.keys())
 
