@@ -6,6 +6,8 @@ from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.utils.html import strip_tags
 
+from core.merchants.models import Merchant
+
 _EmailType = Union[str, list[str]]
 
 
@@ -161,3 +163,29 @@ class OnboardingEmail(BaseEmailMessage):
 
     def get_subject(self) -> str:
         return _("Unyte - Welcome to the best insure-tech infrastructure!")
+
+
+def send_password_reset_email(
+    merchant: Merchant, reset_link: str | None = None
+) -> None:
+    """
+    Sends an email to a merchant with a reset URL and a generated token
+    """
+
+    subject = "Action Required - Reset Your Password!"
+    merchant_email = merchant.business_email
+    merchant_name = merchant.name
+
+    context = {"merchant_name": merchant_name, "reset_link": reset_link}
+    html_content = render_to_string(
+        "superpool/emails/superpool-reset-password.html", context
+    )
+
+    reset_email = EmailMultiAlternatives(
+        subject=subject,
+        body="Please use the following link to reset your password.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[merchant_email],
+    )
+    reset_email.attach_alternative(html_content, "text/html")
+    reset_email.send()

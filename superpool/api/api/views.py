@@ -3,9 +3,12 @@ This module will contain the shared views (endpoints) for the application.
 """
 
 import logging
-from django.core.exceptions import ValidationError
+from os import stat
+from django.core.exceptions import MultipleObjectsReturned, ValidationError
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
+from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,18 +16,34 @@ from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsAdminUser
 from core.providers.models import Provider
 from api.serializers import ProviderSerializer
-from drf_spectacular.utils import OpenApiParameter, OpenApiRequest, extend_schema
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiRequest,
+    extend_schema,
+)
 from drf_spectacular.utils import OpenApiResponse
 from rest_framework import generics
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import NotFound
 from django.db.models import Q
 
-from core.emails import OnboardingEmail
+from core.emails import OnboardingEmail, send_password_reset_email
 from core.merchants.models import Merchant
 from django.utils import timezone
-from .openapi import insurance_provider_search_example, insurance_provider_list_example
-from .serializers import CompleteRegistrationSerializer
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str, force_str
+from .openapi import (
+    BASE_URL,
+    insurance_provider_search_example,
+    insurance_provider_list_example,
+)
+from .serializers import (
+    CompleteRegistrationSerializer,
+    PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -358,3 +377,97 @@ class MerchantSetPasswordView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Initiate a password reset request",
+    request=OpenApiRequest(request=PasswordResetSerializer),
+    responses={
+        200: OpenApiResponse(
+            response={"message": "Password reset email sent successfully"},
+            description="Password reset email has been sent to the merchant's email address.",
+        ),
+        400: OpenApiResponse(
+            response={
+                "message": "Email cannot be empty. Please provide your email address."
+            },
+            description="Returned when the request does not contain an email.",
+        ),
+        404: OpenApiResponse(
+            response={"message": "Email not found!"},
+            description="Returned when the email does not correspond to any merchant account.",
+        ),
+    },
+)
+class PasswordResetView(APIView):
+    """
+    Handles password reset initiation for merchants.
+
+    Merchants submit their email, and if the email is valid and associated with a merchant,
+    the system generates a password reset link with the merchant's `tenant_id` (UUID4) and a reset token.
+    """
+
+    permission_classes = []
+    serializer_class = PasswordResetSerializer
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get("email", None)
+
+        if not email:
+            return Response(
+                {
+                    "message": "Email cannot be empty. Please provide your email address."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            merchant = Merchant.objects.get(business_email__iexact=email)
+            # logger.info(f"Merchant information: {merchant}")
+            logger.info(f"Merchant Name: {merchant.name}")
+            logger.info(f"Merchant Email: {merchant.business_email}")
+
+            token = default_token_generator.make_token(merchant.user)
+            encoded_tenant_id = urlsafe_base64_encode(force_bytes(merchant.tenant_id))
+
+            reset_link = (
+                f"{BASE_URL}/auth/merchant/reset-password/{encoded_tenant_id}/{token}/"
+            )
+
+            try:
+                send_password_reset_email(merchant, reset_link)
+            except Exception as mail_exc:
+                logger.error({"error_type": "MAILER_EXCEPTION", "error": str(mail_exc)})
+                return Response(
+                    {"message": "Failed to send password reset email"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            return Response(
+                {"message": "Password reset email sent successfully"},
+                status=status.HTTP_200_OK,
+            )
+        except Merchant.DoesNotExist:
+            logger.error(
+                "Merchant does not exist - Unable to send password reset email"
+            )
+            return Response(
+                {"message": "Email not found!"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+@extend_schema(tags=["Auth"], summary="Finalize a password reset process")
+class PasswordResetConfirmView(APIView):
+    """
+    Handles password reset confirmation for merchants.
+
+    Merchants submit their new password along with the `tenant_id` and reset token.
+    The system ensures that the new password is different from the old one and updates the password.
+    A confirmation email is sent to the merchant upon successful reset.
+    """
+
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        pass
