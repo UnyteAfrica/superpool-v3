@@ -4,12 +4,15 @@ This module will contain the shared views (endpoints) for the application.
 
 import logging
 from os import stat
+import uuid
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
 from django.core.mail import EmailMultiAlternatives, send_mail
+from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
 from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -28,7 +31,11 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import NotFound
 from django.db.models import Q
 
-from core.emails import OnboardingEmail, send_password_reset_email
+from core.emails import (
+    OnboardingEmail,
+    send_password_reset_email,
+    send_password_reset_confirm_email,
+)
 from core.merchants.models import Merchant
 from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
@@ -368,14 +375,15 @@ class MerchantSetPasswordView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = CompleteRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response(
-                {
-                    "status": "success",
-                    "message": "Registration completed successfully.",
-                },
-                status=status.HTTP_200_OK,
-            )
+            with transaction.atomic():
+                serializer.save()
+                return Response(
+                    {
+                        "status": "success",
+                        "message": "Registration completed successfully.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -457,7 +465,12 @@ class PasswordResetView(APIView):
             )
 
 
-@extend_schema(tags=["Auth"], summary="Finalize a password reset process")
+@extend_schema(
+    tags=["Auth"],
+    summary="Finalize a password reset process",
+    request=OpenApiRequest(request=PasswordResetConfirmSerializer),
+    responses={},
+)
 class PasswordResetConfirmView(APIView):
     """
     Handles password reset confirmation for merchants.
@@ -468,6 +481,43 @@ class PasswordResetConfirmView(APIView):
     """
 
     permission_classes = []
+    serializer_class = PasswordResetConfirmSerializer
 
-    def post(self, request, *args, **kwargs):
-        pass
+    def post(self, request: Request, tenant_id_b64: str, token: str):
+        try:
+            # first we decode the incoming encoded tenant id
+            tenant_id = uuid.UUID(force_str(urlsafe_base64_decode(tenant_id_b64)))
+            merchant = Merchant.objects.get(tenant_id=tenant_id)
+
+            if not default_token_generator.check_token(merchant.user, token):
+                return Response(
+                    {"message": "Token expired! Please resend reset request"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer = PasswordResetConfirmSerializer(data=request.data)
+
+            if serializer.is_valid():
+                new_password = serializer.validated_data["new_password"]
+
+                # this new password should never be the same with the current password
+                if merchant.user.check_password(new_password):
+                    return Response(
+                        {
+                            "message": "New password cannot be the same as the old password"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                merchant.user.set_password(new_password)
+                merchant.user.save()
+
+                # send email back to the merchant
+                send_password_reset_confirm_email(merchant)
+
+                return Response(
+                    {"message": "Your password has been successfully updated"},
+                    status=status.HTTP_200_OK,
+                )
+        except Exception as e:
+            raise e
