@@ -63,3 +63,21 @@ def test_password_reset_invalid_email(api_client, invalid_email):
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "message" in response.data
     assert response.data["message"] == "Email not found!"
+
+
+@pytest.mark.django_db
+def test_password_reset_no_args_unsuccessful(api_client):
+    url = reverse("password-reset")
+    response = api_client.post(url, data={"email": ""}, format="json")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "message" in response.data
+
+
+@pytest.mark.django_db
+def test_password_confirmation_successful(api_client):
+    url = reverse("password-reset-confirm")
+    response = api_client.post(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert "message" in response.data
+    assert response.data["message"] == "Your password has been successfully updated"

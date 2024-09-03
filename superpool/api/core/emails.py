@@ -189,3 +189,23 @@ def send_password_reset_email(
     )
     reset_email.attach_alternative(html_content, "text/html")
     reset_email.send()
+
+
+def send_password_reset_confirm_email(merchant: Merchant) -> None:
+    merchant_name = merchant.name
+    merchant_email = merchant.business_email
+    subject = "Password changed"
+
+    context = {"merchant_name": merchant_name, "merchant_email": merchant_email}
+    html_content = render_to_string(
+        "superpool/emails/superpool-reset-password-confirmation-notification.html",
+        context,
+    )
+    reset_confirmation_email = EmailMultiAlternatives(
+        subject=subject,
+        body="our password has been successfully updated.",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[merchant_email],
+    )
+    reset_confirmation_email.attach_alternative(html_content, "text/html")
+    reset_confirmation_email.send()
