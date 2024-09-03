@@ -103,3 +103,11 @@ class CompleteRegistrationSerializer(serializers.Serializer):
         merchant.save()
 
         return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    pass

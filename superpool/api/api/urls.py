@@ -15,6 +15,8 @@ from .views import (
     InsurerAPIView,
     InsuranceProviderDetailView,
     InsuranceProviderSearchView,
+    PasswordResetView,
+    PasswordResetConfirmView,
 )
 
 router = DefaultRouter()
@@ -30,6 +32,16 @@ urlpatterns = [
         "auth/merchant/registration/",
         MerchantSetPasswordView.as_view(),
         name="complete_merchant_registration",
+    ),
+    path(
+        "auth/merchant/forgot-password/",
+        PasswordResetView.as_view(),
+        name="password-reset",
+    ),
+    path(
+        "auth/merchant/reset-password/<str:tenant_id_b64>/<str:token>/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
     ),
     # path("sandbox/", ApplicationView.as_view(), name="sandbox_application"),
     # path("sandbox/create/", create_application_view, name="sandbox_create_application"),
