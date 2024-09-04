@@ -75,6 +75,7 @@ from .serializers import (
     QuoteRequestSerializer,
     QuoteSerializer,
     PolicyRenewalRequestSerializer,
+    PolicyUpdateSerializer,
 )
 from .services import PolicyService, ProductService, QuoteService
 
@@ -325,7 +326,7 @@ class PolicyAPIViewSet(
         if self.action == "renew":
             return PolicyRenewalRequestSerializer
         elif self.action == "update_policy":
-            return PolicySerializer
+            return PolicyUpdateSerializer
         elif self.action == "search":
             return PolicySerializer
         return PolicySerializer
@@ -554,12 +555,12 @@ class PolicyAPIViewSet(
             OpenApiParameter(
                 name="policy_id",
             ),
-            OpenApiParameter(
-                name="policy_number",
-                description="policy reference number assigned by the insurer",
-            ),
+            # OpenApiParameter(
+            #     name="policy_number",
+            #     description="policy reference number assigned by the insurer",
+            # ),
         ],
-        request=OpenApiRequest(request=PolicySerializer),
+        request=OpenApiRequest(request=PolicyUpdateSerializer),
         responses={
             200: OpenApiResponse(PolicySerializer, "Policy updated successfully"),
             400: {"error": "string", "detail": "string"},
@@ -568,47 +569,40 @@ class PolicyAPIViewSet(
     @action(detail=False, methods=["patch"], url_path="update")
     def update_policy(self, request):
         """
-        Update an insurance policy using the policy ID or the policy number
+        Update an insurance policy using the policy ID
         """
         policy_id = request.data.get("policy_id")
-        policy_number = request.data.get("policy_number")
 
-        if not policy_number or not policy_id:
+        if not policy_id:
             return Response(
                 {
-                    "error": "Error! Provide a policy_id or policy_number to update policy",
-                    "detail": "You must provide either policy ID issued by us or the policy reference number issued by the insurer.",
+                    "error": "Error! Provide a 'policy_id' to update the policy",
+                    "detail": "You must provide the policy ID issued by us to update the policy.",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if policy_id:
-            try:
-                instance = Policy.objects.get(policy_id=policy_id)
-            except Policy.DoesNotExist:
-                return Response(
-                    {"error": "Policy not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-        elif policy_number:
-            try:
-                instance = Policy.objects.get(policy_number=policy_number)
-            except Policy.DoesNotExist:
-                return Response(
-                    {"error": "Policy not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-        else:
+        try:
+            instance = Policy.objects.get(policy_id=policy_id)
+        except Policy.DoesNotExist:
             return Response(
-                {"error": "You must provide either policy_id or policy_number."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"error": "Policy not found"},
+                status=status.HTTP_404_NOT_FOUND,
             )
+        except MultipleObjectsReturned as data_integrity_err:
+            logger.error(
+                f"Multiple policies found for: {policy_id}. "
+                f"ERROR: {str(data_integrity_err)}"
+            )
+            instance = Policy.objects.filter(policy_id=policy_id).first()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            policy = Policy.objects.get(policy_id=policy_id)
+            response_serializer = PolicySerializer(policy)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
