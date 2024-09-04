@@ -1,5 +1,6 @@
 import factory
 from core.merchants.models import Merchant
+from core.user.models import Customer
 from faker import Faker
 
 fake = Faker()
@@ -10,10 +11,21 @@ class MerchantFactory(factory.django.DjangoModelFactory):
         model = Merchant
 
     name = fake.company()
-    short_code = factory.Sequence(lambda n: f"MER-{n:03d}")
+    # short_code = factory.Sequence(lambda n: f"MER-{n:03d}")
     business_email = fake.email()
     support_email = fake.email()
     is_active = True
     address = fake.address()
-    api_key = fake.uuid4()
+    # api_key = fake.uuid4()
     kyc_verified = True
+
+
+class CustomerFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Customer
+
+    first_name = fake.first_name()
+    last_name = fake.last_name()
+    email = fake.email()
+    address = fake.address()
+    merchant = factory.SubFactory(MerchantFactory)
