@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, date, timedelta
 from typing import Union
+from django.db import transaction
 
 from api.catalog.services import PolicyService
 from api.notifications.services import PolicyNotificationService
@@ -1026,3 +1027,60 @@ class PolicySerializer(ModelSerializer):
         Returns the type of the policy
         """
         return obj.product.product_type if obj.product else None
+
+
+class PolicyUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating policy holder-related information within a policy.
+    Only allows updates to the following fields: first_name, last_name, dob, email, and address.
+    """
+
+    policy_id = serializers.UUIDField()
+    policy_holder = serializers.DictField(child=serializers.CharField(), required=False)
+    # policy_holder_first_name = serializers.CharField(
+    #     source="policy_holder.first_name", required=False
+    # )
+    # policy_holder_last_name = serializers.CharField(
+    #     source="policy_holder.last_name", required=False
+    # )
+    # policy_holder_dob = serializers.DateField(
+    #     source="policy_holder.dob", required=False
+    # )
+    # policy_holder_email = serializers.EmailField(
+    #     source="policy_holder.email", required=False
+    # )
+    # policy_holder_address = serializers.CharField(
+    #     source="policy_holder.address", required=False
+    # )
+    #
+
+    class Meta:
+        model = Policy
+        fields = ["policy_id", "policy_holder"]
+
+    def update(self, instance, validated_data):
+        """
+        Update policy holder's personal information.
+        """
+        policy_holder_data = validated_data.get("policy_holder", {})
+
+        with transaction.atomic():
+            if policy_holder_data:
+                customer = instance.policy_holder
+
+                customer.first_name = policy_holder_data.get(
+                    "first_name", customer.first_name
+                )
+                customer.last_name = policy_holder_data.get(
+                    "last_name", customer.last_name
+                )
+                customer.email = policy_holder_data.get(
+                    "customer_email", customer.email
+                )
+                customer.dob = policy_holder_data.get("dob", customer.dob)
+                customer.address = policy_holder_data.get("address", customer.address)
+
+                if "dob" in policy_holder_data:
+                    customer.dob = policy_holder_data["dob"]
+                customer.save()
+            return instance
