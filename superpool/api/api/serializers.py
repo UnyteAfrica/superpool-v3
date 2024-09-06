@@ -91,10 +91,10 @@ class CompleteRegistrationSerializer(serializers.Serializer):
     def save(self):
         tenant_id = self.validated_data["tenant_id"]
         password = self.validated_data["password"]
-        merchant_email = validated_data["merchant_email"]
 
         # Find the merchant and set the user password
         merchant = Merchant.objects.filter(tenant_id=tenant_id).first()
+        merchant_email = merchant.business_email
         user = User.objects.create(email=merchant_email, role=User.USER_TYPES.MERCHANT)
         user.set_password(password)
         user.save()
@@ -103,3 +103,21 @@ class CompleteRegistrationSerializer(serializers.Serializer):
         merchant.save()
 
         return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        """
+        Ensure the new password and the confirm password fields match at all times
+        """
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise ValidationError("Password do not match")
+
+        return attrs

@@ -44,7 +44,7 @@ requests-mock = "^1.12.1"
 werkzeug = "^3.0.4"
 
 [tool.pytest.ini_options]
-# addopts = "-p no:warnings"
+addopts = "--reuse-db -p no:warnings"
 # DJANGO_SETTINGS_MODULE = 'config.settings'
 DJANGO_SETTINGS_MODULE = 'config.settings.environments.test'
 # testpaths = ["superpool/api/tests", "tests"]

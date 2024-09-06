@@ -75,6 +75,7 @@ from .serializers import (
     QuoteRequestSerializer,
     QuoteSerializer,
     PolicyRenewalRequestSerializer,
+    PolicyUpdateSerializer,
 )
 from .services import PolicyService, ProductService, QuoteService
 
@@ -325,7 +326,7 @@ class PolicyAPIViewSet(
         if self.action == "renew":
             return PolicyRenewalRequestSerializer
         elif self.action == "update_policy":
-            return PolicySerializer
+            return PolicyUpdateSerializer
         elif self.action == "search":
             return PolicySerializer
         return PolicySerializer
@@ -472,6 +473,7 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         operation_id="retrieve-policy-by-id",
+        summary="View the details of a specific insurance policy by its ID",
         description="Retrieve a specific policy by its ID",
         tags=["Policies"],
         responses={
@@ -496,7 +498,8 @@ class PolicyAPIViewSet(
 
     @extend_schema(
         operation_id="search-policies",
-        description="Search for policies based on certain parameters",
+        summary="Search and filter for policies",
+        # description="Search for policies based on certain parameters",
         tags=["Policies"],
         parameters=[
             OpenApiParameter(
@@ -552,12 +555,12 @@ class PolicyAPIViewSet(
             OpenApiParameter(
                 name="policy_id",
             ),
-            OpenApiParameter(
-                name="policy_number",
-                description="policy reference number assigned by the insurer",
-            ),
+            # OpenApiParameter(
+            #     name="policy_number",
+            #     description="policy reference number assigned by the insurer",
+            # ),
         ],
-        request=OpenApiRequest(request=PolicySerializer),
+        request=OpenApiRequest(request=PolicyUpdateSerializer),
         responses={
             200: OpenApiResponse(PolicySerializer, "Policy updated successfully"),
             400: {"error": "string", "detail": "string"},
@@ -566,47 +569,40 @@ class PolicyAPIViewSet(
     @action(detail=False, methods=["patch"], url_path="update")
     def update_policy(self, request):
         """
-        Update an insurance policy using the policy ID or the policy number
+        Update an insurance policy using the policy ID
         """
         policy_id = request.data.get("policy_id")
-        policy_number = request.data.get("policy_number")
 
-        if not policy_number or not policy_id:
+        if not policy_id:
             return Response(
                 {
-                    "error": "Error! Provide a policy_id or policy_number to update policy",
-                    "detail": "You must provide either policy ID issued by us or the policy reference number issued by the insurer.",
+                    "error": "Error! Provide a 'policy_id' to update the policy",
+                    "detail": "You must provide the policy ID issued by us to update the policy.",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if policy_id:
-            try:
-                instance = Policy.objects.get(policy_id=policy_id)
-            except Policy.DoesNotExist:
-                return Response(
-                    {"error": "Policy not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-        elif policy_number:
-            try:
-                instance = Policy.objects.get(policy_number=policy_number)
-            except Policy.DoesNotExist:
-                return Response(
-                    {"error": "Policy not found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-        else:
+        try:
+            instance = Policy.objects.get(policy_id=policy_id)
+        except Policy.DoesNotExist:
             return Response(
-                {"error": "You must provide either policy_id or policy_number."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"error": "Policy not found"},
+                status=status.HTTP_404_NOT_FOUND,
             )
+        except MultipleObjectsReturned as data_integrity_err:
+            logger.error(
+                f"Multiple policies found for: {policy_id}. "
+                f"ERROR: {str(data_integrity_err)}"
+            )
+            instance = Policy.objects.filter(policy_id=policy_id).first()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            policy = Policy.objects.get(policy_id=policy_id)
+            response_serializer = PolicySerializer(policy)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -785,6 +781,52 @@ class QuoteAPIViewSet(viewsets.ViewSet):
 
 
 class RequestQuoteView(views.APIView):
+    """
+    This endpoint allows users to request an insurance quote by either creating a new quote or retrieving
+    an existing quote based on a provided quote code. Users can specify details such as the product type,
+    product name, and insurance details including coverage type to get an accurate quote.
+
+    You can provide either:
+    - A `quote_code` to retrieve an existing quote.
+    - A `product_id` and `insurance_details` to request a new quote.
+    - `product_type` and `insurance_name` along with optional `insurance_details` to create a new quote.
+
+    ## Request Parameters
+
+    - **quote_code** (str, optional): The unique identifier of an existing quote. If provided, the endpoint
+      will retrieve the quote associated with this code.
+    - **product_type** (str, optional): The type of insurance product (e.g., LIFE, AUTO, HEALTH). Required if
+      `quote_code` is not provided.
+    - **insurance_name** (str, optional): The name of the insurance product. Used along with `product_type`
+      to find the product if `quote_code` is not provided.
+    - **insurance_details** (dict, optional): A dictionary containing additional details for the insurance quote,
+      including `coverage_type` and other specifics.
+
+    ## Request Body Examples
+
+    Examples of valid request payloads:
+
+    - Requesting a new quote for travel insurance:
+      ```json
+      {
+        "product_type": "TRAVEL",
+        "insurance_name": "Travel Insurance",
+        "insurance_details": {
+          "coverage_type": "Silver"
+        }
+      }
+
+      OR
+
+      {
+        "product_id": "c0883345-7566-42e7-8bb1-a62871261163",
+        "insurance_name": "Travel Insurance",
+        "insurance_details": {
+          "coverage_type": "Silver"
+        }
+      }
+    """
+
     # permission_classes = [
     #     IsMerchant,
     # ]
@@ -1103,7 +1145,52 @@ class PolicyCancellationView(generics.GenericAPIView):
 
 
 @extend_schema(
+    summary="View all coverages associated with an insurance product",
     tags=["Coverage"],
+    responses={
+        200: OpenApiResponse(
+            response=CoverageSerializer,
+            description="List of all coverages associated with an insurance product",
+            examples=[
+                OpenApiExample(
+                    "Coverage List Example",
+                    value=[
+                        {
+                            "coverage_id": "COV_uklZyZPPrN2M",
+                            "coverage_name": "Travel Medical Emergency",
+                            "coverage_limit": "10000.00",
+                            "currency": "NGN",
+                            "description": "Covers emergency medical expenses incurred while traveling.",
+                            "coverage_period_end": "2024-12-31",
+                            "benefits": "Covers hospitalization, medical evacuation, and repatriation.",
+                            "exclusions": "Does not cover pre-existing conditions or routine medical visits.",
+                        },
+                        {
+                            "coverage_id": "COV_kPvXWWVqGtoz",
+                            "coverage_name": "Homeowners Insurance",
+                            "coverage_limit": "50000.00",
+                            "currency": "NGN",
+                            "description": "Covers damage to the home and personal belongings due to various risks.",
+                            "coverage_period_end": "2024-12-31",
+                            "benefits": "Covers damage from fire, theft, and natural disasters.",
+                            "exclusions": "Does not cover damage from intentional acts or wear and tear.",
+                        },
+                    ],
+                ),
+            ],
+        ),
+        404: OpenApiResponse(description="No coverages found for this product"),
+        400: OpenApiResponse(description="Bad Request"),
+        500: OpenApiResponse(
+            description="Internal Server Error",
+            examples=[
+                OpenApiExample(
+                    "Internal Server Error Example",
+                    value={"error": "Internal Server Error"},
+                )
+            ],
+        ),
+    },
 )
 class ProductCoverageListView(generics.ListAPIView):
     """
