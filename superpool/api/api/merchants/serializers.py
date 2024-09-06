@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from api.serializers import LimitedScopeSerializer
 from core.claims.models import Claim
+from core.catalog.models import Policy
 from core.merchants.models import Merchant
 from core.user.models import Customer
 from rest_framework import serializers
@@ -123,14 +124,37 @@ class CustomerInformationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_active_claims(self):
-        return []
+    def get_active_claims(self, obj) -> dict:
+        claims = obj.claims.filter(status="active")
+        return CustomerClaimSerializer(claims, many=True).data
 
-    def get_active_policies(self):
-        return []
+    def get_active_policies(self, obj) -> dict:
+        active_policies = obj.policies.filter(status="active")
+        return CustomerPolicySerializer(active_policies, many=True).data
 
-    def get_purchase_policies(self):
-        return []
+    def get_purchase_policies(self, obj) -> dict:
+        policies = obj.policies.all()
+        return CustomerPolicySerializer(policies, many=True).data
+
+
+class CustomerPolicySerializer(serializers.ModelSerializer):
+    start_date = serializers.DateField(source="effective_from", format="%Y-%m-%d")
+    end_date = serializers.DateField(source="effective_through", format="%Y-%m-%d")
+    policy_type = serializers.CharField(source="product.product_type")
+    premium_amount = serializers.DecimalField(
+        source="premium", max_digits=10, decimal_places=2
+    )
+
+    class Meta:
+        model = Policy
+        fields = [
+            "policy_id",
+            "policy_type",
+            "status",
+            "start_date",
+            "end_date",
+            "premium_amount",
+        ]
 
 
 class CustomerClaimSerializer(serializers.ModelSerializer):
