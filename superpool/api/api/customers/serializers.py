@@ -3,6 +3,7 @@ from rest_framework.exceptions import ValidationError
 from core.catalog.models import Policy
 from core.claims.models import Claim
 from core.user.models import Customer
+from decimal import Decimal
 
 
 class CustomerInformationSerializer(serializers.ModelSerializer):
@@ -10,8 +11,8 @@ class CustomerInformationSerializer(serializers.ModelSerializer):
     Formats the full information displayed about a merchant's customer
     """
 
-    customer_id = serializers.PrimaryKeyRelatedField()
-    full_name = serializers.CharField(source="full_name")
+    customer_id = serializers.PrimaryKeyRelatedField(source="id", read_only=True)
+    full_name = serializers.SerializerMethodField()
     customer_email = serializers.EmailField(source="email")
     customer_phone = serializers.CharField(source="phone_number")
     date_of_birth = serializers.DateField(format="%Y-%m-%D", source="dob")
@@ -33,6 +34,9 @@ class CustomerInformationSerializer(serializers.ModelSerializer):
             "active_claims",
         ]
         read_only_fields = fields
+
+    def get_full_name(self, obj) -> str:
+        return obj.full_name
 
     def get_active_claims(self, obj) -> dict:
         claims = obj.claims.filter(status="active")
@@ -68,7 +72,7 @@ class CustomerPolicySerializer(serializers.ModelSerializer):
 
 
 class CustomerClaimSerializer(serializers.ModelSerializer):
-    claim_id = serializers.PrimaryKeyRelatedField(source="id")
+    claim_id = serializers.PrimaryKeyRelatedField(source="id", read_only=True)
     policy_id = serializers.UUIDField(source="policy.policy_id")
     claim_status = serializers.CharField(source="status")
     claim_amount = serializers.DecimalField(

@@ -3,9 +3,9 @@ from rest_framework.routers import DefaultRouter
 from api.customers.views import CustomerViewSet, MerchantCustomerViewSet
 
 
-router = DefaultRouter(trailing_slash=False)
+router = DefaultRouter()
 router.register(
-    r"merchants/(?P<str:tenant_id>[^/.]+)/customers",
+    r"merchants/(?P<tenant_id>[^/.]+)/customers",
     MerchantCustomerViewSet,
     basename="customers",
 )
