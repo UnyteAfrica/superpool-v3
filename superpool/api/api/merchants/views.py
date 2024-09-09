@@ -10,7 +10,6 @@ from api.merchants.serializers import (
     MerchantSerializer,
     MerchantSerializerV2,
     MerchantWriteSerializerV2,
-    CustomerInformationSerializer,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (

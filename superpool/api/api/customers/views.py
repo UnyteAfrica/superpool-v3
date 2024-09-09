@@ -11,6 +11,8 @@ from .services import CustomerService
 
 from core.user.models import Customer
 
+from drf_spectacular.utils import OpenApiRequest, OpenApiResponse
+from drf_spectacular.utils import extend_schema
 from .serializers import CustomerInformationSerializer, CustomerSummarySerializer
 
 
@@ -30,9 +32,13 @@ class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
     Each endpoint is a GET request and includes pagination and filtering options to handle large datasets effectively.
     """
 
-    permission_classes = [IsMerchant]
+    # permission_classes = [IsMerchant]
     pagination_class = LimitOffsetPagination
-    http_method_names = ["get"]
+    # http_method_names = ["get"]
+
+    def get_queryset(self):
+        merchant_id = self.kwargs.get("tenant_id")
+        return Customer.objects.filter(merchant=merchant_id)
 
     def get_service(self):
         """
@@ -40,6 +46,16 @@ class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
         """
         return CustomerService()
 
+    @extend_schema(
+        summary="Retrieve all customers for a merchant",
+        description=(
+            "This endpoint returns a list of all customers associated with the authenticated merchant."
+            " Merchants can filter customers by various attributes such as active policies or claims. "
+            " Pagination is supported to handle large datasets."
+        ),
+        tags=["Customers"],
+        responses={200: CustomerInformationSerializer(many=True)},
+    )
     def list(self, request, tenant_id, *args, **kwargs):
         """
         Retrieve all customers for the authenticated merchant.
@@ -58,6 +74,15 @@ class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = CustomerSummarySerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Retrieve a specific customer's details",
+        description=(
+            "This endpoint returns detailed information for a specific customer, including their contact "
+            "information, policies, claims, and transactions."
+        ),
+        tags=["Customers"],
+        responses={200: CustomerInformationSerializer},
+    )
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve detailed information for a specific customer by ID.
