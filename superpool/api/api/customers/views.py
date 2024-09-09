@@ -2,26 +2,42 @@ from rest_framework import status, viewsets
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from core.permissions import IsAdminUser as IsAdmin, IsCustomerSupport, IsMerchant
 from core.merchants.models import Merchant
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.decorators import action
 from .services import CustomerService
+from .filters import CustomerFilter
 
 from core.user.models import Customer
 
 from drf_spectacular.utils import OpenApiRequest, OpenApiResponse
 from drf_spectacular.utils import extend_schema
-from .serializers import CustomerInformationSerializer, CustomerSummarySerializer
+from .serializers import (
+    CustomerInformationSerializer,
+    CustomerSummarySerializer,
+    CustomerPolicySerializer,
+    CustomerClaimSerializer,
+)
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
+@extend_schema(
+    tags=["Customers"],
+    summary="Track, Monitor and Manage customers as an admin or customer support",
+)
+class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Viewset for Admin and Customer Support to manage customers
     """
 
-    permission_classes = [IsAdmin, IsCustomerSupport]
+    queryset = Customer.objects.all()
+    # permission_classes = [IsAdminUser, IsCustomerSupport]
+    serializer_class = CustomerSummarySerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CustomerFilter
 
 
 class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
@@ -34,7 +50,8 @@ class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
 
     # permission_classes = [IsMerchant]
     pagination_class = LimitOffsetPagination
-    # http_method_names = ["get"]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CustomerFilter
 
     def get_queryset(self):
         merchant_id = self.kwargs.get("tenant_id")
@@ -92,9 +109,51 @@ class MerchantCustomerViewSet(viewsets.ReadOnlyModelViewSet):
         Returns:
             - The full details of a customer, including their associated policies, claims, and transactions.
 
-        Usage:
-            GET /merchants/{merchantId}/customers/{customerId}/
         """
         customer = self.get_object()
         serializer = CustomerInformationSerializer(customer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Retrieve all active policies for a specific customer",
+        description="This endpoint returns a list of all active policies associated with the customer. Filters are "
+        "available to query by active, inactive, or expired policies.",
+        tags=["Customers"],
+        responses={200: CustomerPolicySerializer(many=True)},
+    )
+    @action(detail=True, methods=["get"], url_path="policies")
+    def policies(self, request, pk=None):
+        """
+        Retrieve all policies associated with a customer.
+
+        This can include active, inactive, or expired policies. The endpoint provides filters to narrow down the results to the relevant policies.
+
+        Returns:
+            - A list of all policies for the customer, including their status, start and end dates, and premium amounts.
+        """
+        customer = self.get_object()
+        policies = CustomerService.get_customer_policies(customer)
+        serializer = CustomerPolicySerializer(policies, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Retrieve all claims for a specific customer",
+        description="This endpoint returns a list of all claims made by the customer, including active, inactive, "
+        "or resolved claims.",
+        tags=["Customers"],
+        responses={200: CustomerClaimSerializer(many=True)},
+    )
+    @action(detail=True, methods=["get"], url_path="claims")
+    def claims(self, request, pk=None):
+        """
+        Retrieve all claims made by the customer.
+
+        The list includes both active and resolved claims. Each claim includes information such as the claim amount, status, and related policy.
+
+        Returns:
+            - A list of claims with details such as status, claim amount, and date of resolution.
+        """
+        customer = self.get_object()
+        claims = CustomerService.get_active_claims(customer)
+        serializer = CustomerClaimSerializer(claims, many=True)
+        return Response(serializer.data)

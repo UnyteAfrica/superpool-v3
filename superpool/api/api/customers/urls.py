@@ -9,7 +9,14 @@ router.register(
     MerchantCustomerViewSet,
     basename="customers",
 )
+router.register("customers", CustomerViewSet, basename="base-customer")
 
-urlpatterns = []
+urlpatterns = [
+    # path(
+    #     "customers",
+    #     CustomerViewSet.as_view({"list": "get"}),
+    #     name="admin-customers-list",
+    # ),
+]
 
 urlpatterns += router.urls
