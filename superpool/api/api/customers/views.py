@@ -1,3 +1,4 @@
+from django.views.generic import ListView
 from rest_framework import status, viewsets
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -36,6 +37,7 @@ class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Customer.objects.all()
     # permission_classes = [IsAdminUser, IsCustomerSupport]
     serializer_class = CustomerSummarySerializer
+    pagination_class = LimitOffsetPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = CustomerFilter
 
