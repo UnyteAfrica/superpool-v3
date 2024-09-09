@@ -1,6 +1,8 @@
 import logging
 from typing import Any
 
+from rest_framework.views import APIView
+
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
 from api.merchants.serializers import (
@@ -8,6 +10,7 @@ from api.merchants.serializers import (
     MerchantSerializer,
     MerchantSerializerV2,
     MerchantWriteSerializerV2,
+    CustomerInformationSerializer,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (
@@ -25,6 +28,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+
+from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
 
