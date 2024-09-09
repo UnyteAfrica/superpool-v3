@@ -102,11 +102,11 @@ class CustomerSummarySerializer(serializers.ModelSerializer):
     """
 
     customer_id = serializers.PrimaryKeyRelatedField(read_only=True)
-    full_name = serializers.CharField()
-    customer_email = serializers.EmailField()
+    customer_name = serializers.CharField(source="full_name")
+    customer_email = serializers.EmailField(source="email")
     customer_phone = serializers.CharField(source="phone_number")
 
     class Meta:
         model = Customer
-        fields = ["customer_id", "full_name", "customer_email", "customer_phone"]
+        fields = ["customer_id", "customer_name", "customer_email", "customer_phone"]
         read_only_fields = fields
