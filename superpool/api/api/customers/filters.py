@@ -34,13 +34,14 @@ class CustomerFilter(filters.FilterSet):
         """
         Filter customers by those with active claims, that is:
 
-        anything that is not 'paid', 'denied', or 'pending'
+        anything that is not 'paid', 'denied', or 'pending' and the there they have at least ONE claim
         """
-        return qs.exclude(
-            Q(claims__status="paid")
-            | Q(claims__status="denied")
-            | Q(claims__status="pending")
-        )
+        inactive_statuses = ["paid", "denied", "pending"]
+        active_claims_filter = ~Q(claims__status__in=inactive_statuses)
+        return qs.exclude(active_claims_filter).distinct()
 
     def filter_pending_claims(self, qs: QuerySet, name: str, value: Any) -> QuerySet:
-        return qs.filter(claims__status="pending")
+        """
+        Filter for customers with pending claims
+        """
+        return qs.filter(claims__status="pending").distinct()
