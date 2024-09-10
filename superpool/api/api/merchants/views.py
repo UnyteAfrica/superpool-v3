@@ -1,7 +1,9 @@
 import logging
 from typing import Any
 
+from django.core.exceptions import MultipleObjectsReturned
 from rest_framework.views import APIView
+from rest_framework import generics
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
@@ -10,6 +12,8 @@ from api.merchants.serializers import (
     MerchantSerializer,
     MerchantSerializerV2,
     MerchantWriteSerializerV2,
+    MerchantUpdateSerializer,
+    MerchantUpdateResponseSerializer,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (
@@ -19,7 +23,7 @@ from core.merchants.errors import (
 )
 from core.merchants.models import Merchant
 from django.http.response import Http404
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -27,6 +31,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+
+from core.permissions import IsCustomerSupport
+from rest_framework.permissions import IsAuthenticated
 
 from core.user.models import Customer
 
@@ -344,3 +351,75 @@ class MerchantViewSet(ViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@extend_schema(
+    tags=["Merchant"],
+    summary="Update a merchant information as a customer support agent",
+    request=OpenApiRequest(
+        request=MerchantUpdateSerializer,
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=MerchantUpdateSerializer,
+            description="Successful response with updated merchant information.",
+        ),
+        400: OpenApiResponse(description="Validation error"),
+        404: OpenApiResponse(description="Merchant not found."),
+    },
+)
+class MerchantUpdateView(APIView):
+    """
+    API view to update a merchant's core information using the merchant's tenant ID.
+
+    Only accessible by users with customer support permissions.
+    """
+
+    # permission_classes = [
+    #     IsAuthenticated,
+    #     IsCustomerSupport,
+    # ]
+
+    def get_object(self, tenant_id):
+        """
+        Get a merchant by tenant_id.
+        """
+        try:
+            return Merchant.objects.get(tenant_id=tenant_id)
+        except Merchant.DoesNotExist:
+            raise Http404("Merchant not found")
+        except MultipleObjectsReturned:
+            return Merchant.objects.filter(tenant_id=tenant_id).first()
+
+    def patch(self, request, tenant_id):
+        merchant_instance = self.get_object(tenant_id)
+        serializer = MerchantUpdateSerializer(
+            merchant_instance, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            logger.info("successfully saved merchant information")
+
+            response_serializer = MerchantUpdateResponseSerializer(
+                data={
+                    "message": "Merchant information updated successfully.",
+                    "updated_merchant": serializer.data,
+                }
+            )
+            print("Attempting to serialize response....")
+            if response_serializer.is_valid():
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            else:
+                logger.error(
+                    f"Response serializer validation error: {response_serializer.errors}"
+                )
+                return Response(
+                    {
+                        "error": "Response serialization failed. Please reach out to customer support",
+                        "detail": response_serializer.errors["updated_merchant"],
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            logger.error(f"Encountered an error: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
