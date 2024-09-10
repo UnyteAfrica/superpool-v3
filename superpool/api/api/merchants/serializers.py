@@ -124,22 +124,27 @@ class MerchantUpdateSerializer(serializers.ModelSerializer):
             "registration_number",
             "address",
         ]
+        read_only_fields = ["tenant_id", "active", "kyc_verified"]
 
     def validate(self, attrs):
         """
         Validate the data before updating the merchant instance.
         """
 
-        # ensure the business email is unique
-        if (
-            Merchant.objects.exclude(pk=self.instance.pk)
-            .filter(business_email=attrs.get("business_email"))
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                {"business_email": "This email address is already in use."}
-            )
+        business_email = attrs.get("business_email", None)
+        # ensure the business email is unique (if provided)
 
+        if self.instance:
+            instance = self.instance
+            if (
+                business_email
+                and Merchant.objects.exclude(pk=instance.pk)
+                .filter(business_email=business_email)
+                .exists()
+            ):
+                raise serializers.ValidationError(
+                    {"business_email": "This email address is already in use."}
+                )
         return attrs
 
     def update(self, instance, validated_data):
@@ -153,3 +158,21 @@ class MerchantUpdateSerializer(serializers.ModelSerializer):
                 setattr(instance, attr, value)
             instance.save()
             return instance
+
+
+class MerchantUpdateResponseSerializer(serializers.Serializer):
+    """
+    Serializer for the response after updating a merchant's information.
+
+    Fields:
+        - message: A message indicating the success of the operation.
+        - updated_merchant: The updated merchant information.
+    """
+
+    message = serializers.CharField(
+        max_length=255,
+        help_text="A message indicating the success of the update operation.",
+    )
+    updated_merchant = MerchantUpdateSerializer(
+        help_text="The updated information of the merchant."
+    )
