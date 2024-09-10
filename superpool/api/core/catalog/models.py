@@ -139,6 +139,7 @@ class Policy(TimestampMixin, TrashableModelMixin, models.Model):
         Customer,
         on_delete=models.CASCADE,
         help_text="User who purchased the policy",
+        related_name="policies",
     )
     effective_from: models.DateField = models.DateField(
         help_text="Date the policy was purchased"
