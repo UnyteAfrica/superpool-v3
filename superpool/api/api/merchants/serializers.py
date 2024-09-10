@@ -1,7 +1,11 @@
 from typing import Union
+from decimal import Decimal
 
 from api.serializers import LimitedScopeSerializer
+from core.claims.models import Claim
+from core.catalog.models import Policy
 from core.merchants.models import Merchant
+from core.user.models import Customer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 

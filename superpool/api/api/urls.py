@@ -18,6 +18,7 @@ from .views import (
     PasswordResetView,
     PasswordResetConfirmView,
 )
+from .customers.urls import router as customer_router, urlpatterns as customer_route
 
 router = DefaultRouter()
 router.register(r"sandbox", ApplicationViewSetV2, basename="application")
@@ -74,3 +75,5 @@ urlpatterns = [
 ]
 
 urlpatterns += router.urls
+urlpatterns += customer_route
+urlpatterns += customer_router.urls
