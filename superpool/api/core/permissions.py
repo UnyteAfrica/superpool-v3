@@ -17,10 +17,11 @@ class IsCustomerSupport(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return (
-            user.is_authenticated
+            user
+            and user.is_authenticated
             and user.groups.filter(name="CustomerSupport").exists()
             and user.role == User.USER_TYPES.SUPPORT
-            and user.role in VERIFIED_ROLES
+            # and user.role in VERIFIED_ROLES
         )
 
 
@@ -28,10 +29,11 @@ class IsMerchant(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return (
-            user.is_authenticated
+            user
+            and user.is_authenticated
             and user.groups.filter(name="Merchant").exists()
             and user.role == User.USER_TYPES.MERCHANT
-            and user.role in VERIFIED_ROLES
+            # and user.role in VERIFIED_ROLES
         )
 
 

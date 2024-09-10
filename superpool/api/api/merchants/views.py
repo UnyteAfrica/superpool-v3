@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from rest_framework.views import APIView
+from rest_framework import generics
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
@@ -10,6 +11,7 @@ from api.merchants.serializers import (
     MerchantSerializer,
     MerchantSerializerV2,
     MerchantWriteSerializerV2,
+    MerchantUpdateSerializer,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (
@@ -19,7 +21,7 @@ from core.merchants.errors import (
 )
 from core.merchants.models import Merchant
 from django.http.response import Http404
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -27,6 +29,9 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+
+from core.permissions import IsCustomerSupport
+from rest_framework.permissions import IsAuthenticated
 
 from core.user.models import Customer
 
@@ -344,3 +349,33 @@ class MerchantViewSet(ViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@extend_schema(
+    tags=["Merchant"],
+    summary="Update a merchant information as a customer support agent",
+    request=OpenApiRequest(
+        request=MerchantUpdateSerializer,
+    ),
+    responses=OpenApiResponse(),
+)
+class MerchantUpdateView(generics.UpdateAPIView):
+    """
+    Update a merchant information
+    """
+
+    queryset = Merchant.objects.all()
+    serializer_class = MerchantUpdateSerializer
+    permission_classes = [
+        IsAuthenticated,
+        IsCustomerSupport,
+    ]
+
+    def update(self, request, *args, **kwargs):
+        merchant = self.get_object()
+
+        serializer = self.get_serializer(merchant, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
