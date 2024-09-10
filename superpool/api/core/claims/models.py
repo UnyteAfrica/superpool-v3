@@ -53,7 +53,9 @@ class Claim(TimestampMixin, models.Model):
     estimated_loss = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     payout_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name="claims")
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    customer = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, related_name="claims"
+    )
     status = models.CharField(max_length=30, choices=CLAIM_STATUS, default="pending")
     provider = models.ForeignKey(Provider, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
