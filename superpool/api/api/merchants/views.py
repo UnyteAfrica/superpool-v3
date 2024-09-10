@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from django.core.exceptions import MultipleObjectsReturned
 from rest_framework.views import APIView
 from rest_framework import generics
 
@@ -12,6 +13,7 @@ from api.merchants.serializers import (
     MerchantSerializerV2,
     MerchantWriteSerializerV2,
     MerchantUpdateSerializer,
+    MerchantUpdateResponseSerializer,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (
@@ -357,25 +359,67 @@ class MerchantViewSet(ViewSet):
     request=OpenApiRequest(
         request=MerchantUpdateSerializer,
     ),
-    responses=OpenApiResponse(),
+    responses={
+        200: OpenApiResponse(
+            response=MerchantUpdateSerializer,
+            description="Successful response with updated merchant information.",
+        ),
+        400: OpenApiResponse(description="Validation error"),
+        404: OpenApiResponse(description="Merchant not found."),
+    },
 )
-class MerchantUpdateView(generics.UpdateAPIView):
+class MerchantUpdateView(APIView):
     """
-    Update a merchant information
+    API view to update a merchant's core information using the merchant's tenant ID.
+
+    Only accessible by users with customer support permissions.
     """
 
-    queryset = Merchant.objects.all()
-    serializer_class = MerchantUpdateSerializer
     permission_classes = [
         IsAuthenticated,
         IsCustomerSupport,
     ]
 
-    def update(self, request, *args, **kwargs):
-        merchant = self.get_object()
+    def get_object(self, tenant_id):
+        """
+        Get a merchant by tenant_id.
+        """
+        try:
+            return Merchant.objects.get(tenant_id=tenant_id)
+        except Merchant.DoesNotExist:
+            raise Http404("Merchant not found")
+        except MultipleObjectsReturned:
+            return Merchant.objects.filter(tenant_id=tenant_id).first()
 
-        serializer = self.get_serializer(merchant, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+    def patch(self, request, tenant_id):
+        merchant_instance = self.get_object(tenant_id)
+        serializer = MerchantUpdateSerializer(
+            merchant_instance, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            logger.info("successfully saved merchant information")
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            response_serializer = MerchantUpdateResponseSerializer(
+                data={
+                    "message": "Merchant information updated successfully.",
+                    "updated_merchant": serializer.data,
+                }
+            )
+            print("Attempting to serialize response....")
+            if response_serializer.is_valid():
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            else:
+                logger.error(
+                    f"Response serializer validation error: {response_serializer.errors}"
+                )
+                return Response(
+                    {
+                        "error": "Response serialization failed. Please reach out to customer support",
+                        "detail": response_serializer.errors["updated_merchant"],
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            logger.error(f"Encountered an error: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
