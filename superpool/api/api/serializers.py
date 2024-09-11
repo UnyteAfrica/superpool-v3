@@ -63,7 +63,13 @@ class ProviderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Provider
-        fields = ["provider_id", "provider_name", "support_email", "products_offered"]
+        fields = [
+            "provider_id",
+            "provider_name",
+            "support_email",
+            "support_phone",
+            "products_offered",
+        ]
         read_only_fields = fields
 
 
