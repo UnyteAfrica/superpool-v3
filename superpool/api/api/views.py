@@ -81,11 +81,61 @@ class VerificationAPIView(APIView):
             400: OpenApiResponse(description="Invalid verification token"),
         },
     )
-    def get(self, request, short_code, *args, **kwargs):
+    def get(self, request, merchant_id, *args, **kwargs):
         """
-        Verify the email address of the merchant
+
+        Verify the email address of a merchant based on their verification token.
+
+        This endpoint allows merchants to verify their email addresses after account creation.
+        It is triggered when the merchant clicks on the verification link sent to their email.
+
+        Args:
+            request (HttpRequest): The incoming HTTP request. The request must include a valid
+                `token` as a query parameter.
+            merchant_id (str): This parameter represents the merchant's unique identifier,
+                also referred to as the "short_code" internally. Though renamed to `merchant_id`,
+                the underlying functionality remains unchanged. It helps map merchants in the system.
+            *args: Additional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Response (JSON): Returns a JSON response indicating success or failure of the email
+            verification process.
+
+            Success Response (HTTP 200):
+            {
+                "message": (
+                    "Email verified successfully. Please check your email for onboarding instructions. "
+                    "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
+                    "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
+                )
+            }
+
+            Failure Response (HTTP 400):
+            {
+                "error": "Invalid verification token"
+            }
+
+        Key Details for Non-Technical Stakeholders:
+        - This API is part of the merchant onboarding process, ensuring that the merchant's
+          email is verified before they can fully access the platform.
+        - The `merchant_id` in the URL is a placeholder that simplifies the naming convention
+          for external users but internally still maps to the original "short_code".
+        - The email verification token must be provided by the merchant via the verification link.
+        - If the email is successfully verified, the merchant receives onboarding instructions via email.
+
+        Key Details for Developers:
+        - The `merchant_id` parameter is simply an alias for `short_code`, preserving
+          backward compatibility with existing logic.
+        - The token is checked for validity, and if it has expired or is incorrect,
+          the request is rejected with a 400 response.
+        - Upon successful verification, the merchant's status is updated to verified, and
+          the onboarding email is sent. Errors during email dispatch are logged but do not block verification.
+        - Ensure the token expiration logic works properly to prevent expired tokens from being reused.
+
         """
         token = request.GET.get("token")
+        short_code = merchant_id  # a place holder to map short code to understandable term: merchant_id
 
         if not token:
             return Response(
