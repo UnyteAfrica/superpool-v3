@@ -354,7 +354,7 @@ class MerchantViewSet(ViewSet):
 
 
 @extend_schema(
-    tags=["Merchant"],
+    tags=["Merchant", "Unyte Admin"],
     summary="Update a merchant information as a customer support agent",
     request=OpenApiRequest(
         request=MerchantUpdateSerializer,
