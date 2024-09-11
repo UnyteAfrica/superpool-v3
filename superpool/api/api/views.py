@@ -6,7 +6,7 @@ import logging
 from os import stat
 import uuid
 from django.core.exceptions import MultipleObjectsReturned, ValidationError
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.db import transaction
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext as _
@@ -29,6 +29,7 @@ from drf_spectacular.utils import OpenApiResponse
 from rest_framework import generics
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.exceptions import NotFound
+from django.conf import settings
 from django.db.models import Q
 
 from core.emails import (
@@ -50,6 +51,7 @@ from .serializers import (
     CompleteRegistrationSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
+    MerchantForgotCredentialSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -523,7 +525,41 @@ class PasswordResetConfirmView(APIView):
             raise e
 
 
-@extend_schema(tags=["Auth", "Internal"])
+@extend_schema(
+    summary="Recover Tenant ID for merchant",
+    description=(
+        "This endpoint allows merchants to recover their Tenant ID by submitting their "
+        "registered business email address. If the email is valid and associated with "
+        "a merchant, the Tenant ID is sent to the email address. \n"
+        "NOTE: At the moment, only customer suport agents, can perform this action on behalf of merchants"
+    ),
+    tags=["Auth", "Unyte Admin"],
+    request=OpenApiRequest(
+        {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Registered business email address of the merchant.",
+                }
+            },
+            "required": ["email"],
+        }
+    ),
+    responses={
+        200: OpenApiResponse(
+            description="Tenant ID has been sent to the provided email address."
+        ),
+        400: OpenApiResponse(description="Bad Request: Email is missing or invalid."),
+        404: OpenApiResponse(
+            description="Not Found: No merchant found with the provided email address."
+        ),
+        500: OpenApiResponse(
+            description="Internal Server Error: Multiple records returned for the email address."
+        ),
+    },
+)
 class MerchantForgotTenantIDView(APIView):
     """
     Handles the 'Forget Tenant ID' functionality for merchants.
@@ -548,11 +584,58 @@ class MerchantForgotTenantIDView(APIView):
     - 400 Bad Request: Email is missing or invalid.
 
 
-    IMPORTANT NOTE: Due to security reasons, this action can only be performed on \n
-    behalf on mechants by user with customer support permissons
+    IMPORTANT NOTE: Due to security reasons, this action can only be performed on behalf of mechants by user with customer support permissons
     """
 
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        return Response({"message": "Hello world!"})
+        serializer = MerchantForgotCredentialSerializer(data=request.data)
+
+        if serializer.is_valid():
+            merchant_email = serializer.validated_data["email"]
+            try:
+                merchant = Merchant.objects.get(business_email=merchant_email)
+
+                # we are extracting the messages into variables to enable for change
+                email_subject = "Unyte - Tenant ID Recovery!"
+                email_body = f"""
+                    Dear {merchant.name},
+
+                    We have received your request to recover your Tenant ID associated with your Unyte account.
+
+                    Your Tenant ID is: **{merchant.tenant_id}**
+
+                    Please keep this information safe for future reference. If you have any questions or require further assistance, feel free to reach out to our support team.
+
+                    Best regards,
+                    The Unyte Team
+
+                    ---
+                    This is an automated message. Please do not reply to this email.
+                    """
+                send_mail(
+                    subject=email_subject,
+                    message=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[merchant.business_email],
+                    fail_silently=True,
+                )
+                return Response(
+                    {"message": "Tenant ID sent successfully to merchant"},
+                    status=status.HTTP_200_OK,
+                )
+
+            except Merchant.DoesNotExist:
+                return Response(
+                    {"message": "No merchant found for the provided email address"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except MultipleObjectsReturned:
+                return Response(
+                    {
+                        "error": "We are experiencing some downtime with this service. Please contact support with error code, MERCHANT_RECOVERY_MULTI_OBJ"
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
