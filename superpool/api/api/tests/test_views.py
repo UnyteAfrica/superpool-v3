@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from django.core import mail
 
 from core.merchants.models import Merchant
+from api.merchants.tests.factories import MerchantFactory
 
 User = get_user_model()
 
@@ -81,3 +82,53 @@ def test_password_confirmation_successful(api_client):
     assert response.status_code == status.HTTP_200_OK
     assert "message" in response.data
     assert response.data["message"] == "Your password has been successfully updated"
+
+
+@pytest.mark.django_db
+def test_merchant_forgot_tenant_id_successful(api_client):
+    merchant = MerchantFactory.build(
+        name="Zabuza Incorporation",
+        business_email="rogueninjacorp@hiddenmist.com",
+        support_email="zabuza@akatuski.com",
+    )
+
+    url = reverse("merchant-forgot-credentials")
+    response = api_client.post(url, kwargs={"email": merchant.business_email})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data
+
+    assert len(mail.outbox) == 1
+    email = mail.outbox[0]
+    assert merchant.tenant_id in email.body
+
+
+@pytest.mark.parametrize("email, expected_status, expected_message", [
+    # sceneraio 1 - nonexistent email
+    ('nonexistent@email.com',  status.HTTP_400_BAD_REQUEST, 'No merchant found for the provided email address'),
+
+    # sceneraio 2 - invalid email formaat
+    ('invalid-format', status.HTTP_400_BAD_REQUEST, 'Invalid email address. Enter a valid email addres'),
+
+    # sceneraio 3 - empty email input
+
+    ('', status.HTTP_400_BAD_REQUEST, 'Email address is required'),
+
+])
+@pytest.mark.django_db
+def test_merchant_forgot_tenant_id_invalid_credentials(api_client, email, expected_status, expected_message):
+
+    url = reverse("merchant-forgot-credentials")
+    response = api_client.post(url, kwargs={"email": email})
+
+    assert response.status_code == expected_status
+    assert response.data["message"] == expected_message
+
+
+@pytest.mark.django_db
+def test_merchant_forgot_tenant_id_no_args(api_client):
+    url = reverse("merchant-forgot-credentials")
+    response = api_client.post(url, kwargs={})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data['message'] = 'Email address is required'
