@@ -10,6 +10,7 @@ from .merchants.views import MerchantViewList, MerchantViewSet
 from .user import urls as user_route
 from .user.views import MerchantLoginView
 from .views import (
+    MerchantForgotTenantIDView,
     MerchantSetPasswordView,
     VerificationAPIView,
     InsurerAPIView,
@@ -71,6 +72,11 @@ urlpatterns = [
         "providers/search/",
         InsuranceProviderSearchView.as_view(),
         name="insurance-providers-search",
+    ),
+    path(
+        "auth/merchant/forgot-credentials/",
+        MerchantForgotTenantIDView.as_view(),
+        name="merchant-forgot-credentials",
     ),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
