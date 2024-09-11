@@ -521,3 +521,8 @@ class PasswordResetConfirmView(APIView):
                 )
         except Exception as e:
             raise e
+
+
+class MerchantForgotTenantIDView(APIView):
+    def post(self, request, *args, **kwargs):
+        return Response({"message": "Hello world!"})
