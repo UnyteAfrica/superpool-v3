@@ -523,6 +523,36 @@ class PasswordResetConfirmView(APIView):
             raise e
 
 
+@extend_schema(tags=["Auth", "Internal"])
 class MerchantForgotTenantIDView(APIView):
+    """
+    Handles the 'Forget Tenant ID' functionality for merchants.
+
+    This endpoint allows merchants to recover their tenant ID by submitting their
+    registered business email. Upon successful validation of the provided email,
+    the tenant ID associated with the merchant's account will be emailed to them.
+
+    - Merchants submit a POST request with their email in the request body.
+    - If the email exists, an email with the tenant ID is sent to the merchant.
+    - If the email is not found or invalid, an appropriate error response is returned.
+
+    ```json
+        {
+            "email": "<merchant_business_email>"
+        }
+    ```
+
+    Possible Responses:
+    - 200 OK: Tenant ID has been sent to the provided email address.
+    - 404 Not Found: No merchant found with the provided email address.
+    - 400 Bad Request: Email is missing or invalid.
+
+
+    IMPORTANT NOTE: Due to security reasons, this action can only be performed on \n
+    behalf on mechants by user with customer support permissons
+    """
+
+    permission_classes = []
+
     def post(self, request, *args, **kwargs):
         return Response({"message": "Hello world!"})
