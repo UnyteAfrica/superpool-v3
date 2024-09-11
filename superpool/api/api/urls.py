@@ -74,7 +74,7 @@ urlpatterns = [
         name="insurance-providers-search",
     ),
     path(
-        "merchant/forgot-credentials/",
+        "auth/merchant/forgot-credentials/",
         MerchantForgotTenantIDView.as_view(),
         name="merchant-forgot-credentials",
     ),

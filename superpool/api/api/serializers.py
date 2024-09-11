@@ -121,3 +121,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise ValidationError("Password do not match")
 
         return attrs
+
+
+class MerchantForgotCredentialSerializer(serializers.Serializer):
+    email = serializers.EmailField()
