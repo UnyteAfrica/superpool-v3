@@ -1,3 +1,4 @@
+from datetime import timezone
 from typing import Union
 from decimal import Decimal
 from django.db import transaction
@@ -18,7 +19,27 @@ class MerchantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Merchant
-        fields = "__all__"
+        exclude = [
+            "token",
+            "token_expires_at",
+            "verified",
+        ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        # dates to format
+        dates_to_format = ["created_at", "updated_at", "restored_at", "trashed_at"]
+
+        for field_date in dates_to_format:
+            # access the actual date from the instance
+            date_value = getattr(instance, field_date, None)
+            # format date if its not null
+            formatted_date = (
+                date_value.strftime("%Y-%m-%d %H:%M:%S") if date_value else None
+            )
+            representation[field_date] = formatted_date
+        return representation
 
 
 class MerchantSerializerV2(serializers.ModelSerializer):
@@ -28,7 +49,23 @@ class MerchantSerializerV2(serializers.ModelSerializer):
 
     class Meta:
         model = Merchant
-        exclude = ("id",)
+        exclude = ["id", "token", "token_expires_at"]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        # dates to format
+        dates_to_format = ["created_at", "updated_at", "restored_at", "trashed_at"]
+
+        for field_date in dates_to_format:
+            # access the actual date from the instance
+            date_value = getattr(instance, field_date, None)
+            # format date if its not null
+            formatted_date = (
+                date_value.strftime("%Y-%m-%d %H:%M:%S") if date_value else None
+            )
+            representation[field_date] = formatted_date
+        return representation
 
 
 class MerchantLimitedSerializer(LimitedScopeSerializer):

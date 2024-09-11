@@ -54,7 +54,7 @@ urlpatterns = [
         name="list_merchants",
     ),
     path(
-        "merchants/<str:short_code>/verify/",
+        "merchants/<str:merchant_id>/verify/",
         VerificationAPIView.as_view(),
         name="verify_merchant",
     ),

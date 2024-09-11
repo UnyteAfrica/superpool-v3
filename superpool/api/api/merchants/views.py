@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from django.core.exceptions import MultipleObjectsReturned
+from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
 from rest_framework import generics
 
@@ -23,7 +24,12 @@ from core.merchants.errors import (
 )
 from core.merchants.models import Merchant
 from django.http.response import Http404
-from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -122,8 +128,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
     @extend_schema(
         operation_id="retrieve-a-single-merchant",
         tags=["Merchant"],
-        summary="Retrieve a merchant instance by its unique short code",
-        description="Retrieve a single merchant using its short code",
+        summary="Retrieve a merchant instance by its `merchant_id` (merchant id, refers to a unique merchant code assigned to the merchant)",
         responses={
             status.HTTP_200_OK: MerchantSerializer,
             status.HTTP_404_NOT_FOUND: {
@@ -134,14 +139,15 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
             },
         },
     )
-    @action(detail=False, methods=["get"], url_path="(?P<short_code>[^/.]+)")
-    def retrieve_by_short_code(self, request, short_code=None):
+    @action(detail=False, methods=["get"], url_path="(?P<merchant_id>[^/.]+)")
+    def retrieve_by_short_code(self, request, merchant_id=None):
         """
-        This action allows you to retrieve a single merchant by its unique
-        short code
+        This action allows you to retrieve a single merchant by its unique merchant
+        code.
 
-        e.g AXA-5G36, WEM-GLE2, etc
+        e.g AXA-5G36, WEM-GLE2, MEYOU-2023, X3X-2X24", etc
         """
+        short_code = merchant_id
         try:
             merchant = get_object_or_404(Merchant, short_code=short_code)
         except Http404:
