@@ -103,21 +103,29 @@ def test_merchant_forgot_tenant_id_successful(api_client):
     assert merchant.tenant_id in email.body
 
 
-@pytest.mark.parametrize("email, expected_status, expected_message", [
-    # sceneraio 1 - nonexistent email
-    ('nonexistent@email.com',  status.HTTP_400_BAD_REQUEST, 'No merchant found for the provided email address'),
-
-    # sceneraio 2 - invalid email formaat
-    ('invalid-format', status.HTTP_400_BAD_REQUEST, 'Invalid email address. Enter a valid email addres'),
-
-    # sceneraio 3 - empty email input
-
-    ('', status.HTTP_400_BAD_REQUEST, 'Email address is required'),
-
-])
+@pytest.mark.parametrize(
+    "email, expected_status, expected_message",
+    [
+        # sceneraio 1 - nonexistent email
+        (
+            "nonexistent@email.com",
+            status.HTTP_400_BAD_REQUEST,
+            "No merchant found for the provided email address",
+        ),
+        # sceneraio 2 - invalid email formaat
+        (
+            "invalid-format",
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid email address. Enter a valid email addres",
+        ),
+        # sceneraio 3 - empty email input
+        ("", status.HTTP_400_BAD_REQUEST, "Email address is required"),
+    ],
+)
 @pytest.mark.django_db
-def test_merchant_forgot_tenant_id_invalid_credentials(api_client, email, expected_status, expected_message):
-
+def test_merchant_forgot_tenant_id_invalid_credentials(
+    api_client, email, expected_status, expected_message
+):
     url = reverse("merchant-forgot-credentials")
     response = api_client.post(url, kwargs={"email": email})
 
@@ -131,4 +139,4 @@ def test_merchant_forgot_tenant_id_no_args(api_client):
     response = api_client.post(url, kwargs={})
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data['message'] = 'Email address is required'
+    assert response.data["message"] == "Email address is required"
