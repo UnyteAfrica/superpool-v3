@@ -6,6 +6,7 @@ from django.core.exceptions import MultipleObjectsReturned
 from django_stubs_ext import types
 from rest_framework.pagination import LimitOffsetPagination
 
+from api.catalog.permissions import AdminOnlyInsurerFilterPermission
 from core.models import Coverage
 from .openapi import products_response_example
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ from core.permissions import (
     IsCustomerSupport,
     IsMerchantOrSupport,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -1284,6 +1285,15 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
             type=OpenApiTypes.UUID,
             description="Unique resource identifier of the product",
         ),
+        OpenApiParameter(
+            "insurer_name",
+            description="Case-insensitive name of the insurer. Allows partial and exact matches.",
+        ),
+        OpenApiParameter(
+            "insurer_id",
+            type=OpenApiTypes.UUID,
+            description="Unique identifier of the insurer",
+        ),
     ],
     responses=OpenApiResponse(
         response=CoverageSerializer,
@@ -1323,6 +1333,7 @@ class ProductCoverageSearchView(generics.ListAPIView):
     """
 
     serializer_class = CoverageSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, AdminOnlyInsurerFilterPermission]
 
     def get_queryset(self) -> QuerySet:
         # we want to allow both partial and exact case insentive matches
@@ -1333,6 +1344,8 @@ class ProductCoverageSearchView(generics.ListAPIView):
         coverage_name = query_params.get("coverage_name")
         coverage_id = query_params.get("coverage_id")
         product_id = query_params.get("product_id")
+        insurer_name = query_params.get("insurer_name")
+        insurer_id = query_params.get("insurer_id")
 
         if coverage_name:
             q &= Q(coverage_name__icontains=coverage_name)
@@ -1344,6 +1357,15 @@ class ProductCoverageSearchView(generics.ListAPIView):
 
         if product_id:
             q &= Q(product__id=product_id)
+
+        # filter by insurer naeme (this, is an indirect filteration process)
+        #
+        # We have to reverse-filter through Product -> Provider relationship
+        if insurer_name:
+            q &= Q(product__provider__name__icontains=insurer_name)
+
+        if insurer_id:
+            q &= Q(product__provider__id=insurer_id)
 
         try:
             queryset = Coverage.objects.filter(q)
