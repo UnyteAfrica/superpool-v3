@@ -1267,7 +1267,11 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
 
 @extend_schema(
     summary="Search for insurance coverages",
-    description="Search for insurance coverages using various parameters. Supports both partial and exact case-insensitive matches.",
+    description=(
+        "This API allows users to search for insurance coverages using various filters. "
+        "Admin users (staff - customer-support) have additional access to search using the insurer name and insurer ID. "
+        "Non-admin users can only search by coverage name, coverage ID, and product ID."
+    ),
     tags=["Coverage"],
     parameters=[
         OpenApiParameter(
@@ -1287,12 +1291,22 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
         ),
         OpenApiParameter(
             "insurer_name",
-            description="Case-insensitive name of the insurer. Allows partial and exact matches.",
+            description=(
+                "Admin-only filter. Case-insensitive search by insurer name. "
+                "This filter is accessible only to customer support users."
+            ),
+            required=False,
+            type=OpenApiTypes.STR,
+            examples=[
+                OpenApiExample("Partial match", value="Health Plus"),
+                OpenApiExample("Exact match", value="Global Insurers Ltd."),
+            ],
         ),
         OpenApiParameter(
             "insurer_id",
             type=OpenApiTypes.UUID,
-            description="Unique identifier of the insurer",
+            description="Admin-only filter. Search by unique insurer ID (UUID). Accessible only to admin users.",
+            required=False,
         ),
     ],
     responses=OpenApiResponse(
