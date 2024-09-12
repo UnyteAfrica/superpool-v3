@@ -6,6 +6,7 @@ from django.core.exceptions import MultipleObjectsReturned
 from django_stubs_ext import types
 from rest_framework.pagination import LimitOffsetPagination
 
+from api.catalog.permissions import AdminOnlyInsurerFilterPermission
 from core.models import Coverage
 from .openapi import products_response_example
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ from core.permissions import (
     IsCustomerSupport,
     IsMerchantOrSupport,
 )
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.catalog.exceptions import QuoteNotFoundError
@@ -1266,7 +1267,11 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
 
 @extend_schema(
     summary="Search for insurance coverages",
-    description="Search for insurance coverages using various parameters. Supports both partial and exact case-insensitive matches.",
+    description=(
+        "This API allows users to search for insurance coverages using various filters. "
+        "Admin users (staff - customer-support) have additional access to search using the insurer name and insurer ID. "
+        "Non-admin users can only search by coverage name, coverage ID, and product ID."
+    ),
     tags=["Coverage"],
     parameters=[
         OpenApiParameter(
@@ -1283,6 +1288,25 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
             "product_id",
             type=OpenApiTypes.UUID,
             description="Unique resource identifier of the product",
+        ),
+        OpenApiParameter(
+            "insurer_name",
+            description=(
+                "Admin-only filter. Case-insensitive search by insurer name. "
+                "This filter is accessible only to customer support users."
+            ),
+            required=False,
+            type=OpenApiTypes.STR,
+            examples=[
+                OpenApiExample("Partial match", value="Health Plus"),
+                OpenApiExample("Exact match", value="Global Insurers Ltd."),
+            ],
+        ),
+        OpenApiParameter(
+            "insurer_id",
+            type=OpenApiTypes.UUID,
+            description="Admin-only filter. Search by unique insurer ID (UUID). Accessible only to admin users.",
+            required=False,
         ),
     ],
     responses=OpenApiResponse(
@@ -1323,6 +1347,7 @@ class ProductCoverageSearchView(generics.ListAPIView):
     """
 
     serializer_class = CoverageSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, AdminOnlyInsurerFilterPermission]
 
     def get_queryset(self) -> QuerySet:
         # we want to allow both partial and exact case insentive matches
@@ -1333,6 +1358,8 @@ class ProductCoverageSearchView(generics.ListAPIView):
         coverage_name = query_params.get("coverage_name")
         coverage_id = query_params.get("coverage_id")
         product_id = query_params.get("product_id")
+        insurer_name = query_params.get("insurer_name")
+        insurer_id = query_params.get("insurer_id")
 
         if coverage_name:
             q &= Q(coverage_name__icontains=coverage_name)
@@ -1344,6 +1371,15 @@ class ProductCoverageSearchView(generics.ListAPIView):
 
         if product_id:
             q &= Q(product__id=product_id)
+
+        # filter by insurer naeme (this, is an indirect filteration process)
+        #
+        # We have to reverse-filter through Product -> Provider relationship
+        if insurer_name:
+            q &= Q(product__provider__name__icontains=insurer_name)
+
+        if insurer_id:
+            q &= Q(product__provider__id=insurer_id)
 
         try:
             queryset = Coverage.objects.filter(q)
