@@ -13,6 +13,52 @@ from django_stubs_ext.db.models import TypedModelMeta
 from django.utils import timezone
 
 
+class ProductTier(models.Model):
+    """
+    Represents the tier of a insurance product
+    """
+
+    class TierType(models.TextChoices):
+        """
+        Choices for the type of insurance package
+        """
+
+        BASIC = "Basic", "Basic Insurance"
+        STANDARD = "Standard", "Standard Insurance"
+        PREMIUM = "Premium", "Premium"
+        BRONZE = "Bronze", "Bronze"
+        SILVER = "Silver", "Silver"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        help_text="Insurance package the tier belongs to",
+        related_name="tiers",
+        related_query_name="tier",
+    )
+    tier_name = models.CharField(
+        max_length=255, help_text="Name of the product tier", choices=TierType.choices
+    )
+    description = models.TextField(
+        help_text="Optional - description of the product tier", null=True, blank=True
+    )
+    pricing = models.ForeignKey(
+        "Price", on_delete=models.CASCADE, help_text="Pricing for the product tier"
+    )
+    coverages = models.ManyToManyField(
+        "core.Coverage",
+        blank=True,
+        help_text="Detailed breakdown of what's covered",
+    )
+
+    def __str__(self) -> str:
+        return f"{self.product.name} - {self.tier_name}"
+
+    class Meta:
+        unique_together = ["product", "tier_name"]
+
+
 class Product(TimestampMixin, TrashableModelMixin, models.Model):
     """
     Packages offered by an insurance partner
