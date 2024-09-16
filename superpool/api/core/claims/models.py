@@ -75,8 +75,9 @@ class Claim(TimestampMixin, models.Model):
         ContentType,
         on_delete=models.CASCADE,
         limit_choices_to={"model__in": ("customer", "beneficiary")},
+        null=True,
     )
-    claimant_object_id = models.UUIDField()
+    claimant_object_id = models.UUIDField(null=True)
     claimant = GenericForeignKey("claimant_content_type", "claimant_object_id")
 
     status = models.CharField(max_length=30, choices=CLAIM_STATUS, default="pending")
