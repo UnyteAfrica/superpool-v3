@@ -330,7 +330,7 @@ class Price(models.Model):
     )
     currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
     pricing_model = models.CharField(
-        max_length=20, choices=PriceType.choices, default=PriceType.FLAT
+        max_length=20, choices=PriceType.choices, default=PriceType.FIXED
     )
     frequency = models.CharField(
         max_length=20, choices=PriceFrequency.choices, default=PriceFrequency.MONTHLY
@@ -340,6 +340,18 @@ class Price(models.Model):
         return (
             f"{self.amount} {self.currency} ({self.pricing_model} - {self.frequency})"
         )
+
+    def compute_total_price(self):
+        """
+        Computes the total price for a product tier
+
+        Takes into account the `base_preimum` of the product, and discount_amount
+        """
+        total_price = self.amount
+
+        if self.discount_amount:
+            total_price -= self.discount_amount
+        return total_price
 
 
 def default_expiry_date():
