@@ -6,12 +6,18 @@ from core.providers.models import Provider
 from core.user.models import Customer
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 class Claim(TimestampMixin, models.Model):
     """
     A request for compensation by a policyholder due to a covered loss.
     """
+
+    class ClaimantType(models.TextChoices):
+        CUSTOMER = "customer", "Customer"
+        BENEFICIARY = "beneficiary", "Beneficiary"
 
     CLAIM_STATUS = (
         ("accepted", _("Accepted")),
