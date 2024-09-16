@@ -316,7 +316,6 @@ class Price(models.Model):
         Choices for the type of pricing
         """
 
-        FLAT = "Flat", "Flat Rate"
         FIXED = "Fixed", "Fixed Rate"
         VARIATE = "Dynamic", "Dynamic Rate"
 
