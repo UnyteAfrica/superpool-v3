@@ -55,6 +55,19 @@ class ProductTier(models.Model):
         help_text="Detailed breakdown of what's covered",
     )
 
+    benefits = models.TextField(
+        _("Benefits"),
+        help_text=_("Specific benefits included in the coverage"),
+        blank=True,
+        null=True,
+    )
+    exclusions = models.TextField(
+        _("Exclusions"),
+        help_text=_("Exclusions or limitations of the coverage"),
+        blank=True,
+        null=True,
+    )
+
     def __str__(self) -> str:
         return f"{self.product.name} - {self.tier_name}"
 
