@@ -106,7 +106,7 @@ class Claim(TimestampMixin, models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.id} - {self.claimant}"
+        return f"{self.id} - {self.claimant_name}"
 
     @property
     def claimant_name(self):
