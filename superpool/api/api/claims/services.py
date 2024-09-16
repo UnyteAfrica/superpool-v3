@@ -248,9 +248,9 @@ class ClaimService(IClaim):
         # we want to use this transaction date when notifying the merchant
         transaction_date = claim.created_at.strftime("%Y-%m-%d %H:%M:%S")
         customer = {
-            "first_name": customer.first_name,
-            "last_name": customer.last_name,
-            "customer_email": customer.email,
+            "first_name": claimant.first_name,
+            "last_name": claimant.last_name,
+            "customer_email": claimant.email,
         }
         PolicyNotificationService.notify_merchant(
             action="claim_policy",
