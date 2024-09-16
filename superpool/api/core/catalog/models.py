@@ -337,7 +337,9 @@ class Price(models.Model):
     )
 
     def __str__(self):
-        return f"{self.amount} {self.currency}"
+        return (
+            f"{self.amount} {self.currency} ({self.pricing_model} - {self.frequency})"
+        )
 
 
 def default_expiry_date():
