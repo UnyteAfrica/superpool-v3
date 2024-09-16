@@ -280,6 +280,28 @@ class Price(models.Model):
     Defines the pricing structure for an object e.g a product
     """
 
+    class PricingModel(models.TextChoices):
+        """
+        Choices for the type of pricing model
+        """
+
+        MONTHLY = "Monthly", "Monthly"
+        ANNUAL = "Annual", "Annual"
+        QUARTERLY = "Quarterly", "Quarterly"
+
+    class PriceType(models.TextChoices):
+        """
+        Choices for the type of pricing
+        """
+
+        FLAT = "Flat", "Flat Rate"
+        FIXED = "Fixed", "Fixed Rate"
+        VARIATE = "Variate", "Variate Rate"  # e.g 10% of the total amount
+        DYANMIC = (
+            "Dynamic",
+            "Dynamic Rate",
+        )  # e.g that is not fixed, may change based on some conditions
+
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(null=True, blank=True)
     commision = models.DecimalField(
@@ -292,6 +314,9 @@ class Price(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
+
+    def __str__(self):
+        return f"{self.amount} {self.currency}"
 
 
 def default_expiry_date():
