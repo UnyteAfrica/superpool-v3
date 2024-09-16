@@ -59,9 +59,26 @@ class Claim(TimestampMixin, models.Model):
     estimated_loss = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     payout_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     policy = models.ForeignKey(Policy, on_delete=models.CASCADE, related_name="claims")
-    customer = models.ForeignKey(
-        Customer, on_delete=models.CASCADE, related_name="claims"
+
+    # customer = models.ForeignKey(
+    #     Customer, on_delete=models.CASCADE, related_name="claims"
+    # )
+
+    # Generic relation for claimant (could be Customer or Beneficiary)
+    #
+    # generic relations allows linking of one model to another through
+    # django's model relation manager, 'ContentType'
+    claimant_type = models.CharField(
+        max_length=30, choices=ClaimantType.choices, default=ClaimantType.CUSTOMER
     )
+    claimant_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={"model__in": ("customer", "beneficiary")},
+    )
+    claimant_object_id = models.UUIDField()
+    claimant = GenericForeignKey("claimant_content_type", "claimant_object_id")
+
     status = models.CharField(max_length=30, choices=CLAIM_STATUS, default="pending")
     provider = models.ForeignKey(Provider, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -89,7 +106,21 @@ class Claim(TimestampMixin, models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Claim #{self.id} - {self.get_status_display()}"
+        return f"{self.id} - {self.claimant}"
+
+    @property
+    def claimant_name(self):
+        """
+        Returns the full name of the claimant, whether they are a customer (policyholder)
+        or a beneficiary.
+        """
+        if self.claimant_type == self.ClaimantType.CUSTOMER:
+            return self.claimant.full_name
+        if self.claimant_type == self.ClaimantType.BENEFICIARY:
+            if self.claimant.middle_name:
+                return f"{self.claimant.first_name} {self.claimant.middle_name} {self.claimant.last_name}"
+            else:
+                return f"{self.claimant.first_name} {self.claimant.last_name}"
 
     @property
     def latest_status(self):
