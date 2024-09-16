@@ -78,7 +78,7 @@ class ProductTier(models.Model):
         return f"{self.product.name} - {self.tier_name}"
 
     class Meta:
-        unique_together = ["product", "tier_name"]
+        unique_together = ("product", "tier_name")
 
 
 class Product(TimestampMixin, TrashableModelMixin, models.Model):
