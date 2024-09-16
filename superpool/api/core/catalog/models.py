@@ -43,6 +43,9 @@ class ProductTier(models.Model):
     description = models.TextField(
         help_text="Optional - description of the product tier", null=True, blank=True
     )
+    base_preimum = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Base price for the product tier"
+    )
     pricing = models.ForeignKey(
         "Price", on_delete=models.CASCADE, help_text="Pricing for the product tier"
     )
