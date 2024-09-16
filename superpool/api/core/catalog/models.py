@@ -13,6 +13,74 @@ from django_stubs_ext.db.models import TypedModelMeta
 from django.utils import timezone
 
 
+class ProductTier(models.Model):
+    """
+    Represents the tier of a insurance product
+    """
+
+    class TierType(models.TextChoices):
+        """
+        Choices for the type of insurance package
+        """
+
+        BASIC = "Basic", "Basic Insurance"
+        ADVANCED = "Advanced", "Advanced"
+        STANDARD = "Standard", "Standard Insurance"
+        PREMIUM = "Premium", "Premium"
+        BRONZE = "Bronze", "Bronze"
+        SILVER = "Silver", "Silver"
+        OTHER = "Other", "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        "Product",
+        on_delete=models.CASCADE,
+        help_text="Insurance package the tier belongs to",
+        related_name="tiers",
+        related_query_name="tier",
+    )
+    tier_name = models.CharField(
+        max_length=255, help_text="Name of the product tier", choices=TierType.choices
+    )
+    description = models.TextField(
+        help_text="Optional - description of the product tier", null=True, blank=True
+    )
+    base_preimum = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Base price for the product tier"
+    )
+    pricing = models.ForeignKey(
+        "Price",
+        on_delete=models.SET_NULL,
+        help_text="Pricing for the product tier",
+        null=True,
+        blank=True,
+    )
+    coverages = models.ManyToManyField(
+        "core.Coverage",
+        blank=True,
+        help_text="Detailed breakdown of what's covered",
+    )
+
+    benefits = models.TextField(
+        _("Benefits"),
+        help_text=_("Specific benefits included in the coverage"),
+        blank=True,
+        null=True,
+    )
+    exclusions = models.TextField(
+        _("Exclusions"),
+        help_text=_("Exclusions or limitations of the coverage"),
+        blank=True,
+        null=True,
+    )
+
+    def __str__(self) -> str:
+        return f"{self.product.name} - {self.tier_name}"
+
+    class Meta:
+        unique_together = ("product", "tier_name")
+
+
 class Product(TimestampMixin, TrashableModelMixin, models.Model):
     """
     Packages offered by an insurance partner
@@ -234,18 +302,61 @@ class Price(models.Model):
     Defines the pricing structure for an object e.g a product
     """
 
+    class PriceFrequency(models.TextChoices):
+        """
+        Choices for the type of pricing model
+        """
+
+        MONTHLY = "Monthly", "Monthly"
+        ANNUAL = "Annual", "Annual"
+        QUARTERLY = "Quarterly", "Quarterly"
+
+    class PriceType(models.TextChoices):
+        """
+        Choices for the type of pricing
+        """
+
+        FIXED = "Fixed", "Fixed Rate"
+        VARIATE = "Dynamic", "Dynamic Rate"
+
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(null=True, blank=True)
     commision = models.DecimalField(
         max_digits=3, decimal_places=2, null=True, blank=True
     )
     discount_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
     surcharges = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
+    pricing_model = models.CharField(
+        max_length=20, choices=PriceType.choices, default=PriceType.FIXED
+    )
+    frequency = models.CharField(
+        max_length=20, choices=PriceFrequency.choices, default=PriceFrequency.MONTHLY
+    )
+
+    def __str__(self):
+        return (
+            f"{self.amount} {self.currency} ({self.pricing_model} - {self.frequency})"
+        )
+
+    def compute_total_price(self):
+        """
+        Computes the total price for a product tier
+
+        Takes into account the `base_preimum` of the product, and discount_amount
+        """
+        total_price = self.amount
+
+        if self.discount_amount:
+            total_price -= self.discount_amount
+        return total_price
 
 
 def default_expiry_date():
