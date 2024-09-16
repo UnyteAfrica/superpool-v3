@@ -296,7 +296,7 @@ class Price(models.Model):
     Defines the pricing structure for an object e.g a product
     """
 
-    class PricingModel(models.TextChoices):
+    class PriceFrequency(models.TextChoices):
         """
         Choices for the type of pricing model
         """
@@ -312,11 +312,7 @@ class Price(models.Model):
 
         FLAT = "Flat", "Flat Rate"
         FIXED = "Fixed", "Fixed Rate"
-        VARIATE = "Variate", "Variate Rate"  # e.g 10% of the total amount
-        DYANMIC = (
-            "Dynamic",
-            "Dynamic Rate",
-        )  # e.g that is not fixed, may change based on some conditions
+        VARIATE = "Dynamic", "Dynamic Rate"
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(null=True, blank=True)
@@ -324,12 +320,21 @@ class Price(models.Model):
         max_digits=3, decimal_places=2, null=True, blank=True
     )
     discount_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
     surcharges = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
     currency = models.CharField(max_length=3, default="NGN", help_text="Currency code")
+    pricing_model = models.CharField(
+        max_length=20, choices=PriceType.choices, default=PriceType.FLAT
+    )
+    frequency = models.CharField(
+        max_length=20, choices=PriceFrequency.choices, default=PriceFrequency.MONTHLY
+    )
 
     def __str__(self):
         return f"{self.amount} {self.currency}"
