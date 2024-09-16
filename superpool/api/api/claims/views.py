@@ -201,11 +201,13 @@ class ClaimsViewSet(viewsets.ViewSet):
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
             except ValidationError as err:
+                logger.error(f"ValidationError: \n{err}")
                 return Response(
                     {"error": str(err)},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             except Exception as exc:
+                logger.error(f"An error occurred: {str(exc)}")
                 return Response(
                     {"error": str(exc)},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
