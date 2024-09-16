@@ -272,8 +272,8 @@ class ClaimRequestSerializer(serializers.Serializer):
 
         return attrs
 
-    def create(self, validated_data):
-        ClaimService.submit_claim(validated_data)
+    # def create(self, validated_data):
+    #     ClaimService.submit_claim(validated_data)
 
 
 class ClaimUpdateSerializer(serializers.Serializer):
