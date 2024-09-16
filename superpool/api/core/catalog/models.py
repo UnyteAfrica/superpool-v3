@@ -24,10 +24,12 @@ class ProductTier(models.Model):
         """
 
         BASIC = "Basic", "Basic Insurance"
+        ADVANCED = "Advanced", "Advanced"
         STANDARD = "Standard", "Standard Insurance"
         PREMIUM = "Premium", "Premium"
         BRONZE = "Bronze", "Bronze"
         SILVER = "Silver", "Silver"
+        OTHER = "Other", "Other"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(
