@@ -101,6 +101,9 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         HOME = "Home", "Home Insurance"
         STUDENT_PROTECTION = "Student_Protection", "Student Protection"
         PERSONAL_ACCIDENT = "Personal_Accident", "Personal Accident Insurance"
+        CREDIT_LIFE = "CreditLife", "Credit Life Insurance"
+        PET_INSURANCE = "PetCare", "PetCare Insurance"
+        OTHER = "Other", "Other"
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True,
