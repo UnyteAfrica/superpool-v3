@@ -8,6 +8,7 @@ Maintainer: Eri A. (@50-Course)
 
 import os
 import json
+import requests
 import sys
 from pathlib import Path
 from typing import Any
@@ -39,8 +40,13 @@ class Command(BaseCommand):
         parser.add_argument(
             "--path",
             type=Path,
-            help="File path containing the insurers information to be injested",
+            help="File path (in json) containing the insurers information to be injested",
             required=True,
+        )
+        parser.add_argument(
+            "--url",
+            type=str,
+            help="URL Path containing the json file with the insurers information",
         )
 
     def _map_product_type(self, product_name: str):
@@ -83,15 +89,37 @@ class Command(BaseCommand):
         else:
             return ProductTier.TierType.OTHER
 
+    def _read_from_file_path(self, file_path: Path):
+        """
+        Read JSON file from file path
+        """
+        with open(file_path, encoding="utf-8") as filebuf:
+            return json.load(filebuf)
+
+    def _read_from_network_io(self, url):
+        """
+        Fetch the JSON data from a URL.
+        """
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Ensure we raise an error for bad responses
+        return response.json()
+
     def handle(self, *args: Any, **options: Any) -> str | None:
         json_file_path = options.get("path")
+        json_url = options.get("url")
+
+        if not json_file_path and not json_url:
+            raise CommandError(
+                "Please provide either --path or --url for the JSON input."
+            )
 
         # does our file exists?
-        if not json_file_path.exists():
-            raise CommandError(f"The file path {json_file_path} does not exist.")
-
-        with open(json_file_path, encoding="utf-8") as filebuf:
-            insurer_data = json.load(filebuf)
+        if json_file_path:
+            if not json_file_path.exists():
+                raise CommandError(f"The file path {json_file_path} does not exist.")
+            insurer_data = self._read_from_file_path(json_file_path)
+        elif json_url:
+            insurer_data = self._read_from_network_io(json_url)
 
         # extract out the insurer information
         insurer_name = insurer_data["insurer"]["name"]
@@ -129,7 +157,7 @@ class Command(BaseCommand):
                     case "n" | "N":
                         sys.stdout.write("Understood! Skipping to next process...")
                     case _:
-                        os.close(1)
+                        pass
 
         else:
             provider.support_email = insurer_email
