@@ -68,7 +68,7 @@ class Command(BaseCommand):
 
     def _map_tier_type(self, tier_name: str):
         """
-        Map a tier name to the appropriate TierType.
+        Map a tier type to the appropriate TierType.
         """
         if "Basic" in tier_name:
             return ProductTier.TierType.BASIC
@@ -186,8 +186,9 @@ class Command(BaseCommand):
         tier_name = tier_data["tier_name"]
         tier_pricing = tier_data["pricing"]
         base_premium = Decimal(tier_pricing["base_premium"])
+        _tier_type = tier_data["tier_type"]
 
-        tier_type = self._map_tier_type(tier_name)
+        tier_type = self._map_tier_type(_tier_type)
 
         # Create or update the product tier
         tier, tier_created = ProductTier.objects.get_or_create(
@@ -196,6 +197,7 @@ class Command(BaseCommand):
             defaults={
                 "base_preimum": base_premium,
                 "description": tier_data.get("description", ""),
+                "tier_type": tier_type,
             },
         )
 
@@ -213,6 +215,7 @@ class Command(BaseCommand):
                 defaults={
                     "coverage_limit": coverage_limit,
                     "currency": coverage_data["currency"],
+                    "coverage_type": coverage_type,
                 },
             )
             exclusions_list = tier_data.get("exclusions", [])

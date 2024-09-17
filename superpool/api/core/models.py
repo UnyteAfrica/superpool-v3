@@ -52,6 +52,12 @@ class Coverage(models.Model):
         max_length=100,
         help_text=_("Name of the coverage e.g collision, hospitalization, etc."),
     )
+    coverage_type = models.CharField(
+        help_text=_("Internal recognized of coverages"),
+        choices=CoverageType.choices,
+        null=True,
+        blank=True,
+    )
     coverage_id: models.CharField = models.CharField(
         _("Coverage ID"),
         max_length=100,
