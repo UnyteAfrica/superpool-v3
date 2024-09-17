@@ -135,7 +135,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     )
 
     def __str__(self) -> str:
-        return f"{self.product_type}: {self.name} - {self.provider.name}"
+        return f"{self.name} - {self.provider.name}"
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
