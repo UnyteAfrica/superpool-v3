@@ -11,6 +11,7 @@ import json
 import requests
 import sys
 from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
 from decimal import Decimal
@@ -34,7 +35,23 @@ class Command(BaseCommand):
     see: https://github.com/UnyteAfrica/insurer-policies-quotes?tab=readme-ov-file#superpool
     """
 
-    help = "Onboard insurers and their products onto the platform"
+    help = dedent(
+        """
+        Onboard insurers and their products onto the platform from either a JSON file or a URL.
+
+        Usage:
+
+        1. To ingest data from a local file:
+
+            python manage.py ingest_insurer --path=/path/to/your/file.json
+
+        2. To ingest data from a URL:
+
+            python manage.py ingest_insurer --url=https://example.com/insurer_data.json
+
+        Ensure that only one of --path or --url is provided at a time.
+        """
+    )
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
