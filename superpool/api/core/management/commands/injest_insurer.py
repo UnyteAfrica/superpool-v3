@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
         1. To ingest data from a local file:
 
-            python manage.py ingest_insurer --path=/path/to/your/file.json
+            python manage.py ingest_insurer --path=/path/to/your/file/on/your/system.json
 
         2. To ingest data from a URL:
 
