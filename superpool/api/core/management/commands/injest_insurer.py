@@ -117,11 +117,11 @@ class Command(BaseCommand):
         Fetch the JSON data from a URL.
         """
         try:
-            response = requests.get(url, stream=True, timeout=10)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()  # raise exception is we have errors
             return response.json()
         except requests.RequestException as netioerr:
-            return CommandError("Failed to fetch data from {url}: {netioerr}")
+            return CommandError(f"Failed to fetch data from {url}: {netioerr}")
 
     def handle(self, *args: Any, **options: Any) -> str | None:
         json_file_path = options.get("path")
@@ -171,10 +171,14 @@ class Command(BaseCommand):
                         provider.support_email = insurer_email
                         provider.save()
                         self.stdout.write(
-                            f"Updated email for {insurer_name} to {insurer_email}"
+                            self.style.SUCCESS(
+                                f"Updated email for {insurer_name} to {insurer_email}"
+                            )
                         )
                     case "n" | "N":
-                        sys.stdout.write("Understood! Skipping to next process...")
+                        sys.stdout.write(
+                            self.style.NOTICE("Understood! Skipping to next process...")
+                        )
                     case _:
                         pass
 
@@ -218,9 +222,13 @@ class Command(BaseCommand):
         )
 
         if product_created:
-            self.stdout.write(f"Created new product: {product_name}")
+            self.stdout.write(
+                self.style.SUCCESS(f"Created new product: {product_name}")
+            )
         else:
-            self.stdout.write(f"Product {product_name} already exists")
+            self.stdout.write(
+                self.style.NOTICE(f"Product {product_name} already exists")
+            )
 
         for tier_data in product_data["tiers"]:
             self._process_tier(product, tier_data)
@@ -233,7 +241,7 @@ class Command(BaseCommand):
         tier_name = tier_data["tier_name"]
         tier_pricing = tier_data["pricing"]
         base_premium = Decimal(tier_pricing["base_premium"])
-        _tier_type = tier_data["tier_type"]
+        _tier_type = tier_data.get("tier_type", "Other")
 
         tier_type = self._map_tier_type(_tier_type)
 
@@ -250,7 +258,9 @@ class Command(BaseCommand):
 
         if tier_created:
             self.stdout.write(
-                f"Created tier '{tier_name}' for product '{product.name}'."
+                self.style.SUCCESS(
+                    f"Created tier '{tier_name}' for product '{product.name}'."
+                )
             )
 
         for coverage_data in tier_data["coverage"]:
