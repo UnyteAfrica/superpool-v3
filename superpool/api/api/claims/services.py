@@ -5,11 +5,12 @@ from typing import Any, List, Union
 
 from rest_framework.serializers import ValidationError
 
-from core.catalog.models import Policy
+from core.catalog.models import Beneficiary, Policy
 from core.claims.models import Claim
 from django.db import transaction
 from django.db.models import F, Q, QuerySet
 from django.shortcuts import get_object_or_404
+from django.contrib.contenttypes.models import ContentType
 
 from core.user.models import Customer
 from core.claims.models import StatusTimeline, ClaimDocument, Claim
@@ -130,6 +131,52 @@ class ClaimService(IClaim):
         return claim
 
     @staticmethod
+    def validate_claimant(policy: Policy, claimant_metadata: dict) -> Union[str, None]:
+        """
+        Validates the claimant against the policyholder or beneficiaries.
+        The claimant must be either the policyholder or a beneficiary (for Life/Health insurance).
+        """
+
+        policy_holder = policy.policy_holder
+        policy_type = policy.product.product_type
+
+        policy_holder_birth_date = policy_holder.dob
+
+        if policy_holder.email == claimant_metadata.get(
+            "email"
+        ) and policy_holder_birth_date == claimant_metadata.get("birth_date"):
+            return "policyholder"
+
+        # additionally, check to see if `policy_type` of the policy to be claimed is either
+        # health or life insurance, that way, a beneficiary can also claim the policy
+        if policy_type in ("Life", "Health"):
+            for beneficiary in policy.beneficiaries.all():
+                if beneficiary.email == policy_holder.email:
+                    return "beneficiary"
+
+        # no matches? okay return None
+        return None
+
+    @staticmethod
+    def _check_claimant_role(policy, claimant_metadata):
+        """
+        Check if the claimant is either the policy holder or a valid beneficiary
+        """
+
+        claimant_role = ClaimService.validate_claimant(policy, claimant_metadata)
+
+        match claimant_role:
+            case "policyholder":
+                return claimant_role
+            case "beneficiary":
+                return claimant_role
+            case _:
+                # base condition
+                return ValidationError(
+                    "Claimant is neither the policyholder nor a valid beneficiary for this policy."
+                )
+
+    @staticmethod
     @transaction.atomic
     def _create_claim(validated_data):
         """
@@ -147,12 +194,31 @@ class ClaimService(IClaim):
         # policy = Policy.objects.get(id=policy_id)
         # customer = Customer.objects.get(id=claimant_metadata.get("customer_id"))
         policy = get_object_or_404(Policy, policy_id=policy_id)
-        customer, _ = Customer.objects.get_or_create(
-            first_name=claimant_metadata.get("first_name"),
-            last_name=claimant_metadata.get("last_name"),
-            email=claimant_metadata.get("email"),
-            dob=claimant_metadata.get("birth_date"),
-        )
+
+        # check if the claimant is valid (either a policyholder or a beneficiary to a policy
+        claimant_role = ClaimService._check_claimant_role(policy, claimant_metadata)
+
+        if claimant_role == "policyholder":
+            claimant = policy.policy_holder
+            claimant_type = "customer"
+            claimant_content_type = ContentType.objects.get_for_model(Customer)
+        else:
+            # retrieve the beneficiary who is making the claim
+            claimant_birth_date = claimant_metadata.get("birth_date")
+
+            if claimant_birth_date:
+                claimant = policy.beneficiaries.get(
+                    email=claimant_metadata.get("email"),
+                    date_of_birth=claimant_birth_date,
+                )
+                claimant_content_type = ContentType.objects.get_for_model(Beneficiary)
+                claimant_type = "beneficiary"
+            else:
+                claimant = policy.beneficiaries.get(
+                    email=claimant_metadata.get("email")
+                )
+                claimant_content_type = ContentType.objects.get_for_model(Beneficiary)
+                claimant_type = "beneficiary"
 
         product = policy.product
         provider = product.provider
@@ -162,7 +228,9 @@ class ClaimService(IClaim):
             amount=claim_details.get("claim_amount", 0.0),
             estimated_loss=claim_details.get("claim_amount", 0.0),
             policy=policy,
-            customer=customer,
+            claimant_type=claimant_type,
+            claimant_content_type=claimant_content_type,
+            claimant_object_id=claimant.id,
             provider=provider,
             product=product,
             status="pending",
@@ -180,9 +248,9 @@ class ClaimService(IClaim):
         # we want to use this transaction date when notifying the merchant
         transaction_date = claim.created_at.strftime("%Y-%m-%d %H:%M:%S")
         customer = {
-            "first_name": customer.first_name,
-            "last_name": customer.last_name,
-            "customer_email": customer.email,
+            "first_name": claimant.first_name,
+            "last_name": claimant.last_name,
+            "customer_email": claimant.email,
         }
         PolicyNotificationService.notify_merchant(
             action="claim_policy",
