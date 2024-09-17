@@ -162,7 +162,12 @@ class Command(BaseCommand):
 
         # handle product creation
         product, product_created = Product.objects.get_or_create(
-            provider=provider, name=product_name, defaults={}
+            provider=provider,
+            name=product_name,
+            defaults={
+                "description": product_description,
+                "product_type": product_type,
+            },
         )
 
         if product_created:
