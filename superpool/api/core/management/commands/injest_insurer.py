@@ -58,7 +58,6 @@ class Command(BaseCommand):
             "--path",
             type=Path,
             help="File path (in json) containing the insurers information to be injested",
-            required=True,
         )
         parser.add_argument(
             "--url",
@@ -143,8 +142,8 @@ class Command(BaseCommand):
 
         # extract out the insurer information
         insurer_name = insurer_data["insurer"]["name"]
-        insurer_email = insurer_data["insurer"]["contact_info"]["support_email"]
-        insurer_phone = insurer_data["insurer"]["contact_info"]["support_phone"]
+        insurer_email = insurer_data["insurer"]["contact_info"]["email"]
+        insurer_phone = insurer_data["insurer"]["contact_info"]["phone"]
 
         if not insurer_name or not insurer_email:
             raise CommandError(
