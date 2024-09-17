@@ -40,7 +40,11 @@ class ProductTier(models.Model):
         related_query_name="tier",
     )
     tier_name = models.CharField(
-        max_length=255, help_text="Name of the product tier", choices=TierType.choices
+        max_length=255,
+        help_text="Name of the product tier",
+    )
+    tier_type = models.CharField(
+        max_length=255, choices=TierType.choices, blank=True, null=True
     )
     description = models.TextField(
         help_text="Optional - description of the product tier", null=True, blank=True
@@ -101,6 +105,9 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         HOME = "Home", "Home Insurance"
         STUDENT_PROTECTION = "Student_Protection", "Student Protection"
         PERSONAL_ACCIDENT = "Personal_Accident", "Personal Accident Insurance"
+        CREDIT_LIFE = "CreditLife", "Credit Life Insurance"
+        PET_INSURANCE = "PetCare", "PetCare Insurance"
+        OTHER = "Other", "Other"
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True,
