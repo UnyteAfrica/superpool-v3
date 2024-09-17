@@ -100,9 +100,12 @@ class Command(BaseCommand):
         """
         Fetch the JSON data from a URL.
         """
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Ensure we raise an error for bad responses
-        return response.json()
+        try:
+            response = requests.get(url, stream=True, timeout=10)
+            response.raise_for_status()  # raise exception is we have errors
+            return response.json()
+        except requests.RequestException as netioerr:
+            return CommandError("Failed to fetch data from {url}: {netioerr}")
 
     def handle(self, *args: Any, **options: Any) -> str | None:
         json_file_path = options.get("path")
