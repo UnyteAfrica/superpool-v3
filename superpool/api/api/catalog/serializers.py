@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from typing import Union
 from django.db import transaction
 from django.db import models
+from decimal import Decimal
 
 from api.catalog.services import PolicyService
 from api.notifications.services import PolicyNotificationService
@@ -224,18 +225,12 @@ class QuoteSerializer(serializers.ModelSerializer):
 
 class CustomerDetailsSerializer(serializers.Serializer):
     """
-    Validate customer-specific information in incoming requests
-
-    Information could vary based on the type of insurance
-
-    TODO: maybe use composition/inheritance for child serializers for
-          the product-specific customer information:
-
-     - AutoInsuranceDetailsSerializer
-     - HealthInsuranceDetailsSerializer
-     - PersonalAccidentInsuranceDetailsSerializer
-     - TravelInsuranceDetailsSerializer
+    Captures essential personal information about the applicant
     """
+
+    class CustomerGenderChoices(models.TextChoices):
+        MALE = "M", "Male"
+        FEMALE = "F", "Female"
 
     first_name = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
@@ -246,12 +241,14 @@ class CustomerDetailsSerializer(serializers.Serializer):
         input_formats=["%Y-%m-%d"], required=False
     )
     customer_gender = serializers.ChoiceField(
-        choices=[("M", "Male"), ("F", "Female")], required=False
+        choices=CustomerGenderChoices.choices,
+        required=False,
+        help_text="Biological inclination; Male (M) or Female (F)",
     )
 
     def validate_customer_date_of_birth(self, value):
         """Ensures that the date of birth is valid (not in the future)"""
-        today = datetime.now().date()
+        today = timezone.now().date()
 
         if value >= today:
             raise ValidationError("Date of birth must be in the past.")
@@ -1102,7 +1099,8 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
         trim_whitespace=True,
     )
     additional_information = serializers.JSONField(
-        help_text="An object that will hold additional details based on the selected product type."
+        help_text="An object that will hold additional details based on the selected product type.",
+        required=False,
     )
 
     class Meta:
@@ -1129,10 +1127,12 @@ class CoveragePreferencesSerializer(serializers.Serializer):
         max_digits=10,
         min_value=Decimal(0),
         help_text="The amount of coverage the applicant is seeking",
+        required=False,
     )
     additional_coverages = serializers.ListField(
         child=serializers.CharField(),
         help_text="Any extra coverages the applicant may want (e.g., Critical Illness for Health Insurance)",
+        required=False,
     )
 
 
@@ -1147,38 +1147,10 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     insurance_details = ProductDetailsSerializer(
         help_text="Identifies the type of insurance product being requested"
     )
-    coverage_preferences = CoveragePreferencesSerializer()
+    coverage_preferences = CoveragePreferencesSerializer(default=False)
 
     def validate(self, attrs):
-        product_id = attrs.get("product_id")
-        product_type = attrs.get("product_type")
-        product_name = attrs.get("product_name")
-        product_tier = attrs.get("product_tier")
-
-        if not product_id and not (product_type and product_name):
-            raise serializers.ValidationError(
-                "Either 'product_id' or 'product_type' and 'product_name' must be provided."
-            )
-
         return attrs
-
-    def get_product(self):
-        """
-        Retrieve product based on product ID or product type/name combination.
-        """
-        product_id = self.validated_data.get("product_id")
-        product_type = self.validated_data.get("product_type")
-        product_name = self.validated_data.get("product_name")
-
-        if product_id:
-            return Product.objects.get(id=product_id)
-
-        if product_type and product_name:
-            return Product.objects.filter(
-                product_type=product_type, name__icontains=product_name
-            ).first()
-
-        raise serializers.ValidationError("Product not found.")
 
 
 class QuoteCoverageSerializer(serializers.Serializer):
