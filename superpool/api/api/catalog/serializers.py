@@ -6,7 +6,7 @@ from django.db import models
 
 from api.catalog.services import PolicyService
 from api.notifications.services import PolicyNotificationService
-from core.catalog.models import Policy, Price, Product, Quote
+from core.catalog.models import Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
 from core.providers.models import Provider as Partner
@@ -1083,3 +1083,152 @@ class PolicyUpdateSerializer(serializers.ModelSerializer):
                     customer.dob = policy_holder_data["dob"]
                 customer.save()
             return instance
+
+
+class QuoteRequestSerializerV2(serializers.Serializer):
+    """
+    Quotes 2.0
+
+    Revised serializer for handling quote requests for different product tiers and insurance details.
+    """
+
+    product_id = serializers.UUIDField(required=False)
+    product_type = serializers.CharField(required=False)
+    product_name = serializers.CharField(required=False)
+    product_tier = serializers.CharField(required=False)
+    product_tier_category = serializers.ChoiceField(
+        required=False, choices=ProductTier.TierType.choices
+    )
+    insurance_details = serializers.JSONField()
+
+    def validate(self, attrs):
+        product_id = attrs.get("product_id")
+        product_type = attrs.get("product_type")
+        product_name = attrs.get("product_name")
+        product_tier = attrs.get("product_tier")
+
+        if not product_id and not (product_type and product_name):
+            raise serializers.ValidationError(
+                "Either 'product_id' or 'product_type' and 'product_name' must be provided."
+            )
+
+        return attrs
+
+    def get_product(self):
+        """
+        Retrieve product based on product ID or product type/name combination.
+        """
+        product_id = self.validated_data.get("product_id")
+        product_type = self.validated_data.get("product_type")
+        product_name = self.validated_data.get("product_name")
+
+        if product_id:
+            return Product.objects.get(id=product_id)
+
+        if product_type and product_name:
+            return Product.objects.filter(
+                product_type=product_type, name__icontains=product_name
+            ).first()
+
+        raise serializers.ValidationError("Product not found.")
+
+
+class QuoteCoverageSerializer(serializers.Serializer):
+    """
+    Quote 2.0
+
+    Revised Serializer to format the quote response.
+    """
+
+    coverage_type = serializers.CharField(
+        help_text="Type of coverage, e.g., Health, Accident"
+    )
+    coverage_limit = serializers.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
+    )
+    currency = serializers.CharField(
+        max_length=10, help_text="Currency for the coverage limit"
+    )
+
+
+class QuoteTermsSerializer(serializers.Serializer):
+    """
+    Serializer for the terms of the insurance policy related to a quote.
+    """
+
+    duration = serializers.CharField(
+        help_text="Duration of the policy, e.g., 12 months"
+    )
+    renewal_option = serializers.CharField(
+        help_text="Renewal option for the policy, e.g., Auto-renew"
+    )
+
+
+class QuoteProviderSerializer(serializers.Serializer):
+    provider_name = serializers.CharField(help_text="Name of the insurance provider")
+    provider_id = serializers.CharField(
+        help_text="Unique identifier for the insurance provider"
+    )
+
+
+class QuotePricingSerializer(serializers.Serializer):
+    """
+    Serializer for the pricing information of a quotation about an insurance product
+    """
+
+    base_premium = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Base premium for the product tier"
+    )
+    total_amount_for_quotation = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Total premium after adjustments"
+    )
+    currency = serializers.CharField(
+        max_length=10, help_text="Currency for the premium"
+    )
+    discount_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Discount applied to the premium"
+    )
+
+
+class QuoteResponseSerializer(serializers.Serializer):
+    """
+    Serializer to format the quote response in a structured, unified way.
+    """
+
+    provider = QuoteProviderSerializer(help_text="Provider offering the quote")
+    pricing = QuotePricingSerializer(help_text="Pricing details for the quote")
+    coverages = QuoteCoverageSerializer(
+        many=True, help_text="List of coverages offered in the quote"
+    )
+    exclusions = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of exclusions for the insurance product",
+    )
+    coverage = QuoteCoverageSerializer(help_text="Coverage details for the product")
+    benefits = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of benefits included in the insurance product",
+    )
+    policy_terms = QuoteTermsSerializer(
+        help_text="Terms and conditions of the insurance policy"
+    )
+    quote_code = serializers.CharField(help_text="Unique identifier for the quote")
+    purchase_id = serializers.CharField(
+        help_text="Purchase ID for completing the transaction"
+    )
+    purchase_id_description = serializers.CharField(
+        help_text="Instructions for using the purchase ID with external payment processor"
+    )
+
+    class Meta:
+        fields = [
+            "provider",
+            "pricing",
+            "coverage",
+            "exclusions",
+            "benefits",
+            "policy_terms",
+            "quote_code",
+            "purchase_id",
+            "purchase_id_description",
+        ]
