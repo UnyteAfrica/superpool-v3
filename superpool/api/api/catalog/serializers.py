@@ -1143,14 +1143,11 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     Revised serializer for handling incoming quote requests for different product tiers and insurance details.
     """
 
-    product_id = serializers.UUIDField(required=False)
-    product_type = serializers.CharField(required=False)
-    product_name = serializers.CharField(required=False)
-    product_tier = serializers.CharField(required=False)
-    product_tier_category = serializers.ChoiceField(
-        required=False, choices=ProductTier.TierType.choices
+    customer_metadata = CustomerDetailsSerializer(default=False)
+    insurance_details = ProductDetailsSerializer(
+        help_text="Identifies the type of insurance product being requested"
     )
-    insurance_details = serializers.JSONField()
+    coverage_preferences = CoveragePreferencesSerializer()
 
     def validate(self, attrs):
         product_id = attrs.get("product_id")
