@@ -1238,6 +1238,9 @@ class QuoteResponseSerializer(serializers.Serializer):
     policy_terms = QuoteTermsSerializer(
         help_text="Terms and conditions of the insurance policy"
     )
+    additional_metadata = QuoteAdditionalMetadataSerializer(
+        help_text="Additional information about the product and product tier"
+    )
     quote_code = serializers.CharField(help_text="Unique identifier for the quote")
     purchase_id = serializers.CharField(
         help_text="Purchase ID for completing the transaction"
