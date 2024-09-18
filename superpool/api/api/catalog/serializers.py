@@ -1149,9 +1149,6 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     )
     coverage_preferences = CoveragePreferencesSerializer(default=False)
 
-    def validate(self, attrs):
-        return attrs
-
 
 class QuoteCoverageSerializer(serializers.Serializer):
     """
