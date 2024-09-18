@@ -1193,6 +1193,24 @@ class QuotePricingSerializer(serializers.Serializer):
     )
 
 
+class QuoteAdditionalMetadataSerializer(serializers.Serializer):
+    """
+    Serializer for additional metadata (mostly product information) related to the product tier.
+    """
+
+    product_type = serializers.CharField(
+        help_text="Type of product, e.g., Health Insurance"
+    )
+    tier = serializers.CharField(help_text="Tier of the product, e.g., Standard")
+    available_addons = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of available add-ons for the product",
+    )
+    last_updated = serializers.DateTimeField(
+        help_text="Timestamp of the last update in ISO 8601 format"
+    )
+
+
 class QuoteResponseSerializer(serializers.Serializer):
     """
     Serializer to format the quote response in a structured, unified way.
