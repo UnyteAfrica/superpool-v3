@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, date, timedelta
 from typing import Union
 from django.db import transaction
+from django.db import models
 
 from api.catalog.services import PolicyService
 from api.notifications.services import PolicyNotificationService
@@ -271,22 +272,25 @@ class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
 
     """
 
+    class TravelPurposeChoices(models.TextChoices):
+        BUSINESS = "business", "Business"
+        LEISURE = "leisure", "Leisure"
+        EDUCATION = "education", "Education"
+        RELIGIOUS = "religious", "Religious"
+        MEDICAL = "medical", "Medical"
+
+    class TravelTripTypeChoices(models.TextChoices):
+        ONE_WAY = "one_way", "One Way"
+        ROUND_TRIP = "round_trip", "Round Trip"
+
     destination = serializers.CharField(max_length=255)
     departure_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     return_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     number_of_travellers = serializers.IntegerField(min_value=1, max_value=10)
     trip_duration = serializers.IntegerField(min_value=1, max_value=365, required=False)
-    trip_type = serializers.ChoiceField(
-        choices=[("one_way", "One Way"), ("round_trip", "Round Trip")]
-    )
+    trip_type = serializers.ChoiceField(choices=TravelTripTypeChoices.choices)
     trip_type_details = serializers.ChoiceField(
-        choices=[
-            ("business", "Business"),
-            ("leisure", "Leisure"),
-            ("education", "Education"),
-            ("religious", "Religious"),
-            ("medical", "Medical"),
-        ],
+        TravelPurposeChoices.choices,
         required=False,
     )
 
@@ -297,22 +301,20 @@ class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
 
     """
 
-    health_condition = serializers.ChoiceField(
-        choices=[
-            ("good", "Good"),
-            ("fair", "Fair"),
-            ("poor", "Poor"),
-            ("critical", "Critical"),
-        ]
-    )
+    class CoverageTypeChoices(models.TextChoices):
+        BASIC = "basic", "Basic"
+        STANDARD = "standard", "Standard"
+        PREMIUM = "premium", "Premium"
+
+    class HealthConditionChoices(models.TextChoices):
+        GOOD = "good", "Good"
+        FAIR = "fair", "Fair"
+        POOR = "poor", "Poor"
+        CRITICAL = "critical", "Critical"
+
+    health_condition = serializers.ChoiceField(choices=HealthConditionChoices.choices)
     age = serializers.IntegerField(min_value=1, max_value=100)
-    coverage_type = serializers.ChoiceField(
-        choices=[
-            ("basic", "Basic"),
-            ("standard", "Standard"),
-            ("premium", "Premium"),
-        ],
-    )
+    coverage_type = serializers.ChoiceField(choices=CoverageTypeChoices.choices)
     coverage_type_details = serializers.ChoiceField(
         choices=[
             ("individual", "Individual"),
@@ -329,12 +331,25 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
 
     """
 
-    vehicle_type = serializers.ChoiceField(
-        choices=[
-            ("car", "Car"),
-            ("bike", "Bike"),
-        ]
-    )
+    class VehicleUsageChoices(models.TextChoices):
+        PERSONAL = "personal", "Personal"
+        COMMERCIAL = "commercial", "Commercial"
+        RIDESHARE = "rideshare", "Ride Share"
+
+    class VehicleUsageMetadata(models.TextChoices):
+        PRIVATE = "private", "Private"
+        PUBLIC = "public", "Public"
+        COMMERCIAL = "commercial", "Commercial"
+
+    class VehicleTypeChoices(models.TextChoices):
+        CAR = "car", "Car"
+        BIKE = "bike", "Bike"
+
+    class VehiclePurposeChoices(models.TextChoices):
+        BUSINESS = "business", "Business"
+        COMMUTE = "commute", "Commute"
+
+    vehicle_type = serializers.ChoiceField(choices=VehicleTypeChoices.choices)
     vehicle_make = serializers.CharField(max_length=100, required=False)
     vehicle_model = serializers.CharField(max_length=100, required=False)
     vehicle_year = serializers.IntegerField(
@@ -344,19 +359,9 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
     vehicle_value = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False
     )
-    vehicle_usage = serializers.ChoiceField(
-        choices=[
-            ("personal", "Personal"),
-            ("commercial", "Commercial"),
-            ("rideshare", "Ride Share"),
-        ]
-    )
+    vehicle_usage = serializers.ChoiceField(choices=VehicleUsageChoices.choices)
     vehicle_usage_details = serializers.ChoiceField(
-        choices=[
-            ("private", "Private"),
-            ("public", "Public"),
-            ("commercial", "Commercial"),
-        ],
+        choices=VehicleUsageMetadata.choices,
         required=False,
     )
     vehicle_mileage = serializers.IntegerField(min_value=1, max_value=100000)
@@ -376,16 +381,10 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
         required=False,
     )
     vehicle_purpose = serializers.ChoiceField(
-        choices=[
-            ("personal", "Personal"),
-            ("commercial", "Commercial"),
-        ]
+        choices=VehicleUsageMetadata.choices,
     )
     vehicle_purpose_details = serializers.ChoiceField(
-        choices=[
-            ("business", "Business"),
-            ("commute", "Commute"),
-        ],
+        choices=VehiclePurposeChoices.choices,
         required=False,
     )
 
