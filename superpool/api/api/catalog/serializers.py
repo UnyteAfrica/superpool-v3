@@ -1212,7 +1212,7 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
         help_text="List of available add-ons for the product",
     )
     last_updated = serializers.DateTimeField(
-        help_text="Timestamp of the last update in ISO 8601 format"
+        help_text="Timestamp of the last update to this quote in ISO 8601 format"
     )
 
 
