@@ -1176,17 +1176,17 @@ class QuotePricingSerializer(serializers.Serializer):
     Serializer for the pricing information of a quotation about an insurance product
     """
 
-    base_premium = serializers.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Base premium for the product tier"
-    )
-    total_amount_for_quotation = serializers.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Total premium after adjustments"
-    )
     currency = serializers.CharField(
         max_length=10, help_text="Currency for the premium"
     )
+    base_premium = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Base premium for the product tier"
+    )
     discount_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, help_text="Discount applied to the premium"
+    )
+    total_amount_for_quotation = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Total premium after adjustments"
     )
 
 
