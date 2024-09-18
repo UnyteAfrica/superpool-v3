@@ -424,7 +424,12 @@ class Quote(models.Model):
     additional_metadata = models.JSONField(
         null=True, blank=True, help_text="Additional information about the quote"
     )
-    purchase_id = models.CharField(max_length=100, blank=True, null=True, help_text='Unique identifier provided to payment processors to identify a quote purchase')
+    purchase_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Unique identifier provided to payment processors to identify a quote purchase",
+    )
     purchase_id_created_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -447,9 +452,9 @@ class Quote(models.Model):
         Generate a unique time-based purchase ID for this quote
         This ID is valid for 45 minutes from the time it's generated.
         """
-        now = timezone.now().strftime("%Y%m%d_%H%M%S")
+        now = timezone.now()
         truncated_quote_code = self.truncate_quote_code()
-        purchase_id = f"purchase_{truncated_quote_code}_{now}"_
+        purchase_id = f"purchase_{truncated_quote_code}_{now.strftime('%Y%m%d%H%M%S')}"
 
         # store our new purchase quote that would be provided to external payment processors
         self.purchase_id = purchase_id
@@ -473,7 +478,6 @@ class Quote(models.Model):
         if not self.purchase_id_isvalid():
             return self.generate_purchase_id()
         return self.purchase_id
-
 
     def save(self, *args, **kwargs):
         if not self.quote_code:
