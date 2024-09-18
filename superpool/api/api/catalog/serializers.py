@@ -1085,6 +1085,57 @@ class PolicyUpdateSerializer(serializers.ModelSerializer):
             return instance
 
 
+class ProductDetailsSerializer(serializers.ModelSerializer):
+    """
+    Quotes 2.0
+
+    Identifies the type of insurance being requested and holds product-specific details.
+    """
+
+    product_type = serializers.ChoiceField(
+        choices=Product.ProductType.choices,
+        help_text="Specifies the type of insurance (e.g Life, Health, Home, Travel, etc)",
+    )
+    product_name = serializers.CharField(
+        required=False,
+        help_text="Name of insurance product e.g Driver Pass Insurance",
+        trim_whitespace=True,
+    )
+    additional_information = serializers.JSONField(
+        help_text="An object that will hold additional details based on the selected product type."
+    )
+
+    class Meta:
+        model = Product
+        fields = ["product_type", "product_name", "additional_information"]
+
+
+class CoveragePreferencesSerializer(serializers.Serializer):
+    """
+    Captures the applicant's desired coverage options
+
+    It captures what type of coverage the applicant is interested in (e.g., comprehensive or liability)
+    and their preferred deductible amount. Additional coverages can also be specified here.
+    """
+
+    coverage_type = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=Coverage.CoverageType.choices,
+        ),
+        help_text="An array specifying the type of coverage (e.g., Comprehensive, Basic, ThirdParty, etc.",
+    )
+    coverage_amount = serializers.DecimalField(
+        decimal_places=2,
+        max_digits=10,
+        min_value=Decimal(0),
+        help_text="The amount of coverage the applicant is seeking",
+    )
+    additional_coverages = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="Any extra coverages the applicant may want (e.g., Critical Illness for Health Insurance)",
+    )
+
+
 class QuoteRequestSerializerV2(serializers.Serializer):
     """
     Quotes 2.0
