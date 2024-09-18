@@ -841,18 +841,18 @@ class RequestQuoteView(views.APIView):
         tags=["Quotes"],
         request=OpenApiRequest(
             QuoteRequestSerializer,
-            examples=[
-                travel_insurance_example,
-                travel_insurance_with_product_id_example,
-                health_insurance_example,
-                health_insurance_with_product_id_example,
-                home_insurance_example,
-                home_insurance_with_product_id_example,
-                gadget_insurance_example,
-                gadget_insurance_with_product_id_example,
-                auto_insurance_example,
-                auto_insurance_with_product_id_example,
-            ],
+            # examples=[
+            #     travel_insurance_example,
+            #     travel_insurance_with_product_id_example,
+            #     health_insurance_example,
+            #     health_insurance_with_product_id_example,
+            #     home_insurance_example,
+            #     home_insurance_with_product_id_example,
+            #     gadget_insurance_example,
+            #     gadget_insurance_with_product_id_example,
+            #     auto_insurance_example,
+            #     auto_insurance_with_product_id_example,
+            # ],
         ),
         responses={
             200: OpenApiResponse(
@@ -912,11 +912,11 @@ class RequestQuoteView(views.APIView):
                 ],
             ),
         },
-        examples=[
-            travel_insurance_example,
-            health_insurance_example,
-            auto_insurance_example,
-        ],
+        # examples=[
+        #     travel_insurance_example,
+        #     health_insurance_example,
+        #     auto_insurance_example,
+        # ],
     )
     def post(self, request):
         # validate incoming data conforms to some predefined values

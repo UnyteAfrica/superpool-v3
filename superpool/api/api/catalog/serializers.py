@@ -1089,7 +1089,7 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     """
     Quotes 2.0
 
-    Revised serializer for handling quote requests for different product tiers and insurance details.
+    Revised serializer for handling incoming quote requests for different product tiers and insurance details.
     """
 
     product_id = serializers.UUIDField(required=False)
