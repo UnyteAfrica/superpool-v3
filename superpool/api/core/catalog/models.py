@@ -16,11 +16,17 @@ from django.utils import timezone
 class ProductTier(models.Model):
     """
     Represents the tier of a insurance product
+
+    A product tier defines different levels of insurance products (e.g., Basic, Premium)
+    and can offer varying coverages, pricing, exclusions, and benefits.
     """
 
     class TierType(models.TextChoices):
         """
-        Choices for the type of insurance package
+        Types of insurance tiers for a product.
+
+        These represent the different levels of the insurance package, e.g.,
+        Basic, Premium, Silver, Bronze, etc.
         """
 
         BASIC = "Basic", "Basic Insurance"
@@ -44,25 +50,33 @@ class ProductTier(models.Model):
         help_text="Name of the product tier",
     )
     tier_type = models.CharField(
-        max_length=255, choices=TierType.choices, blank=True, null=True
+        max_length=255,
+        choices=TierType.choices,
+        blank=True,
+        null=True,
+        help_text="Type of tier. Choose from predefined options such as Basic, Premium, Silver, Corporate, Comprehensive, etc. An optional classification that further categorizes the tier",
     )
     description = models.TextField(
-        help_text="Optional - description of the product tier", null=True, blank=True
+        help_text="Optional description of what the tier offers, such as specific benefits or target audience",
+        null=True,
+        blank=True,
     )
     base_preimum = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Base price for the product tier"
+        max_digits=10,
+        decimal_places=2,
+        help_text="The base premium price for this tier before any adjustments or discounts",
     )
     pricing = models.ForeignKey(
         "Price",
         on_delete=models.SET_NULL,
-        help_text="Pricing for the product tier",
+        help_text="Pricing details for this tier, including surcharges or discounts",
         null=True,
         blank=True,
     )
     coverages = models.ManyToManyField(
         "core.Coverage",
         blank=True,
-        help_text="Detailed breakdown of what's covered",
+        help_text="Detailed breakdown of coverages provided in this tier. Example: Health, Accident, etc.",
     )
 
     benefits = models.TextField(
@@ -410,10 +424,56 @@ class Quote(models.Model):
     additional_metadata = models.JSONField(
         null=True, blank=True, help_text="Additional information about the quote"
     )
+    purchase_id = models.CharField(max_length=100, blank=True, null=True, help_text='Unique identifier provided to payment processors to identify a quote purchase')
+    purchase_id_created_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "quote"
         verbose_name_plural = "quotes"
+
+    def truncate_quote_code(self) -> str:
+        """
+        Truncate the quote code by removing underscores
+        and cutting off the first three characters.
+
+        Technically, 'Quo'_this_that_me_you
+
+        into, 'thisthatmeyou'
+        """
+        return self.quote_code[3:].replace("_", "")
+
+    def generate_purchase_id(self) -> str:
+        """
+        Generate a unique time-based purchase ID for this quote
+        This ID is valid for 45 minutes from the time it's generated.
+        """
+        now = timezone.now().strftime("%Y%m%d_%H%M%S")
+        truncated_quote_code = self.truncate_quote_code()
+        purchase_id = f"purchase_{truncated_quote_code}_{now}"_
+
+        # store our new purchase quote that would be provided to external payment processors
+        self.purchase_id = purchase_id
+        self.purchase_id_created_at = now
+        self.save()
+        return purchase_id
+
+    def purchase_id_isvalid(self) -> bool:
+        """
+        Check if the purchase ID is still valid (i.e., not older than 45 minutes).
+        """
+        if self.purchase_id_created_at:
+            return timezone.now() <= self.purchase_id_created_at + timedelta(minutes=45)
+        # if we don't have a creation time, the ID is therefore invalid
+        return False
+
+    def regenerate_purchase_id(self):
+        """
+        Regenerate the purchase ID if it's no longer valid.
+        """
+        if not self.purchase_id_isvalid():
+            return self.generate_purchase_id()
+        return self.purchase_id
+
 
     def save(self, *args, **kwargs):
         if not self.quote_code:
