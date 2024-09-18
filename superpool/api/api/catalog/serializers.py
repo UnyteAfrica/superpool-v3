@@ -1257,6 +1257,7 @@ class QuoteResponseSerializer(serializers.Serializer):
             "exclusions",
             "benefits",
             "policy_terms",
+            "additional_metadata",
             "quote_code",
             "purchase_id",
             "purchase_id_description",
