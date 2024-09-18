@@ -1146,8 +1146,13 @@ class QuoteCoverageSerializer(serializers.Serializer):
     coverage_limit = serializers.DecimalField(
         max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
     )
-    currency = serializers.CharField(
-        max_length=10, help_text="Currency for the coverage limit"
+    exclusions = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of exclusions for this coverage type",
+    )
+    benefits = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="List of benefits for this coverage type",
     )
 
 
