@@ -866,34 +866,3 @@ class QuoteService(IQuote):
             )
         else:
             raise ValueError("Either product, or quote_code must be provided.")
-
-    def update_quote(self, quote_code, data):
-        """
-        Updates the information and metadata of an existing quote
-        """
-        from api.catalog.serializers import QuoteSerializer
-
-        try:
-            # get the quote from the database and update it with new
-            # information
-            quote = Quote.objects.get(quote_code=quote_code)
-            serializer = QuoteSerializer(quote, data=data, partial=True)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                return serializer.data
-        except Quote.DoesNotExist:
-            raise QuoteNotFoundError("Quote not found.")
-
-    def accept_quote(self, quote):
-        if quote:
-            customer_metadata = getattr(quote, "customer_metadata", {})
-            # Create a corresponding Policy object with the information on the quote
-            policy_payload = {
-                "product": quote.product,
-                "customer": customer_metadata,
-                "provider_name": quote.provider.name,
-                "provider_id": quote.provider.name,
-                "premium": quote.premium,
-            }
-            policy_id, policy = Policy.objects.create(**policy_payload)
-            return policy_id, policy
