@@ -1280,3 +1280,55 @@ class QuoteResponseSerializer(serializers.Serializer):
             "purchase_id",
             "purchase_id_description",
         ]
+
+    def to_representation(self, instance):
+        """
+        Format the complex relationships in the response.
+        `instance` will be a `Quote` object.
+        """
+
+        provider_data = {
+            "provider_name": instance.product.provider.name,
+            "provider_id": instance.product.provider.id,
+        }
+        pricing_data = {
+            "currency": instance.premium.currency,
+            "base_premium": instance.base_price,
+            "discount_amount": instance.premium.discount_amount,
+            "total_amount_for_quotation": instance.premium.amount,
+        }
+        coverages = [
+            {
+                "coverage_type": coverage.coverage_type,
+                "coverage_limit": coverage.coverage_limit,
+                "exclusions": instance.product.tiers.first().exclusions.split("\n"),
+                "benefits": instance.product.tiers.first().benefits.split("\n"),
+            }
+            for coverage in instance.product.tiers.first().coverages.all()
+        ]
+        exclusions = instance.product.tiers.first().exclusions.split("\n")
+        benefits = instance.product.tiers.first().benefits.split("\n")
+        policy_terms_data = {
+            "duration": instance.product.tiers.first().pricing_model,
+            # "renewal_options": instance.product.tiers.first().renewal_options,
+            "cancellation_policy": "30 days notice required for cancellation without penalty",
+        }
+        additional_metadata = {
+            "product_type": instance.product.product_type,
+            "tier": instance.product.tiers.first().tier_name,
+            "available_addons": [],
+            "last_updated": instance.updated_at.isoformat(),
+        }
+        response = {
+            "provider": provider_data,
+            "pricing": pricing_data,
+            "coverages": coverages,
+            "exclusions": exclusions,
+            "benefits": benefits,
+            "policy_terms": policy_terms_data,
+            "additional_metadata": additional_metadata,
+            "quote_code": instance.quote_code,
+            "purchase_id": instance.purchase_id,
+            "purchase_id_description": "Provide this ID to the external payment processor.",
+        }
+        return response

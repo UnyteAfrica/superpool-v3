@@ -1,4 +1,3 @@
-import typing
 import uuid
 from datetime import datetime, timedelta
 
@@ -8,9 +7,8 @@ from core.providers.models import Provider as Partner
 from core.user.models import Customer
 from core.utils import generate_id
 from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django_stubs_ext.db.models import TypedModelMeta
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class ProductTier(models.Model):
@@ -35,6 +33,8 @@ class ProductTier(models.Model):
         PREMIUM = "Premium", "Premium"
         BRONZE = "Bronze", "Bronze"
         SILVER = "Silver", "Silver"
+        COMPREHENSIVE = "Comprehensive", "Comprehensive"
+        THIRDPARTY = "ThirdParty", "ThirdParty"
         OTHER = "Other", "Other"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -61,7 +61,7 @@ class ProductTier(models.Model):
         null=True,
         blank=True,
     )
-    base_preimum = models.DecimalField(
+    base_premium = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         help_text="The base premium price for this tier before any adjustments or discounts",
