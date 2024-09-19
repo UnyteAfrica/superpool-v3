@@ -1,13 +1,14 @@
 from typing import Any, ClassVar, NewType  # noqa
 
-from django.db.models import Model
-from rest_framework import serializers
-from core.providers.models import Provider
-from core.merchants.models import Merchant
-from core.catalog.models import Product
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db.models import Model
+from rest_framework import serializers
+
+from core.catalog.models import Product
+from core.merchants.models import Merchant
+from core.providers.models import Provider
 
 User = get_user_model()
 

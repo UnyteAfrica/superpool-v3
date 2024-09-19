@@ -1,21 +1,18 @@
 import logging
-import pdb
 from abc import ABC, abstractmethod
-from typing import Any, List, Union
+from typing import Any, Union
 
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.db.models import Q, QuerySet
+from django.db.utils import IntegrityError
+from django.shortcuts import get_object_or_404
 from rest_framework.serializers import ValidationError
 
-from core.catalog.models import Beneficiary, Policy
-from core.claims.models import Claim
-from django.db import transaction
-from django.db.models import F, Q, QuerySet
-from django.shortcuts import get_object_or_404
-from django.contrib.contenttypes.models import ContentType
-
-from core.user.models import Customer
-from core.claims.models import StatusTimeline, ClaimDocument, Claim
 from api.notifications.services import PolicyNotificationService
-from django.db.utils import IntegrityError
+from core.catalog.models import Beneficiary, Policy
+from core.claims.models import Claim, ClaimDocument, StatusTimeline
+from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
 

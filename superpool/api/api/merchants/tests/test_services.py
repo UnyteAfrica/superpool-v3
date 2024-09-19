@@ -1,4 +1,5 @@
 import pytest
+
 from api.merchants.services import MerchantService
 from core.merchants.errors import MerchantAlreadyExists as MerchantAlreadyExistError
 

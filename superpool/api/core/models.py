@@ -3,14 +3,15 @@
 import hashlib
 import uuid
 
-from core.catalog.models import Product  # noqa: F401
-from core.merchants.models import Merchant  # noqa: F401
-from core.providers.models import Provider as Partner  # noqa: F401
-from core.user.models import User  # noqa: F401
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+
+from core.catalog.models import Product  # noqa: F401
+from core.merchants.models import Merchant  # noqa: F401
+from core.providers.models import Provider as Partner  # noqa: F401
+from core.user.models import User  # noqa: F401
 
 
 class Operation:

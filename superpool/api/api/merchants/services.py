@@ -1,6 +1,8 @@
 import abc
-from collections.abc import Callable, Mapping, MutableMapping
+from collections.abc import MutableMapping
 from typing import Optional
+
+from rest_framework.serializers import ValidationError
 
 from api.merchants.serializers import CreateMerchantSerializer, MerchantSerializer
 from core.merchants.errors import (
@@ -9,7 +11,6 @@ from core.merchants.errors import (
     MerchantUpdateError,
 )
 from core.merchants.models import Merchant
-from rest_framework.serializers import Serializer, ValidationError
 
 
 class IMerchantRegistry(abc.ABC):

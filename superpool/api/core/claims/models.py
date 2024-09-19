@@ -1,13 +1,13 @@
 import uuid
 
-from core.catalog.models import Policy, Product
-from core.mixins import TimestampMixin, TrashableModelMixin
-from core.providers.models import Provider
-from core.user.models import Customer
-from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+from core.catalog.models import Policy, Product
+from core.mixins import TimestampMixin
+from core.providers.models import Provider
 
 
 class Claim(TimestampMixin, models.Model):

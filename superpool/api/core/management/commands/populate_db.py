@@ -6,17 +6,14 @@ With this, we can have some data to work with when we start the application.
 Therefore, having actual testing experience
 """
 
-import uuid
 from pprint import pprint
 
-from core.catalog.models import Policy, Product, Quote
-from core.management.fixtures.providers import InsuranceProductProvider
-from core.merchants.models import Merchant
-from core.models import Address, Coverage
-from core.providers.models import Provider as Partner
-from core.user.models import Customer, User
 from django.core.management.base import BaseCommand
 from faker import Faker
+
+from core.catalog.models import Product
+from core.management.fixtures.providers import InsuranceProductProvider
+from core.providers.models import Provider as Partner
 
 
 class Command(BaseCommand):

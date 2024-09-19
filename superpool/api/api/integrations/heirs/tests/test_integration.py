@@ -1,13 +1,21 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.conf import settings
+
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.providers.integrations.heirs.registry import (
-    DevicePolicy, DevicePolicyRequest, DeviceQuoteParams, MotorPolicy,
-    MotorPolicyRequest, MotorQuoteParams, PersonalAccidentPolicy,
-    PersonalAccidentPolicyRequest, TravelPolicyClass, TravelPolicyRequest)
-from django.conf import settings
+    DevicePolicy,
+    DevicePolicyRequest,
+    DeviceQuoteParams,
+    MotorPolicy,
+    MotorPolicyRequest,
+    PersonalAccidentPolicy,
+    PersonalAccidentPolicyRequest,
+    TravelPolicyClass,
+    TravelPolicyRequest,
+)
 
 
 @pytest.fixture

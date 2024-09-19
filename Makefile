@@ -44,4 +44,3 @@ mypy:
 
 test:
 	python superpool/api/manage.py test
-

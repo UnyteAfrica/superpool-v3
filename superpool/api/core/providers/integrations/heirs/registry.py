@@ -1,7 +1,6 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from enum import StrEnum
 from typing import List, Optional, Required, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient

@@ -1,5 +1,7 @@
 import logging
+
 from django.contrib.auth import authenticate, get_user_model, login
+from django.db import IntegrityError
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiRequest,
@@ -9,14 +11,11 @@ from drf_spectacular.utils import (
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework.serializers import ValidationError
-from django.db import IntegrityError
-from core.user.models import CustomerSupport, Admin
+
 from core.merchants.models import Merchant
-from api.user.serializers import CustomerSupportSerializer, AdminSerializer
 
 from .serializers import (
     MerchantAuthSerializer,

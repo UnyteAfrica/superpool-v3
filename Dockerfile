@@ -48,4 +48,3 @@ COPY . /app
 EXPOSE 8080
 
 CMD ["gunicorn", "--chdir", "/app/superpool/api", "--workers", "3", "--bind", ":8080", "config.wsgi:application"]
-
