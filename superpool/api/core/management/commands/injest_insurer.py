@@ -6,22 +6,20 @@ Created: 2024-09-17 10:00:00
 Maintainer: Eri A. (@50-Course)
 """
 
-import os
 import json
-import requests
 import sys
+from decimal import Decimal
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
-from decimal import Decimal
-from django.core.management import BaseCommand
-from django.core.management.base import CommandParser, CommandError
-from django.db import transaction
-
+import requests
 from core.catalog.models import Product, ProductTier
 from core.models import Coverage
 from core.providers.models import Provider
+from django.core.management import BaseCommand
+from django.core.management.base import CommandError, CommandParser
+from django.db import transaction
 
 
 class Command(BaseCommand):
@@ -190,6 +188,8 @@ class Command(BaseCommand):
                 f"Created new insurer: {insurer_name} with email {insurer_email}."
             )
 
+        self.stdout.write(f"Detected provider: {provider.name}")
+
         with transaction.atomic():
             # Process each product and product tiers
             for product_data in insurer_data["products"]:
@@ -237,7 +237,6 @@ class Command(BaseCommand):
         """
         Create or update a product tier for the given product.
         """
-
         tier_name = tier_data["tier_name"]
         tier_pricing = tier_data["pricing"]
         base_premium = Decimal(tier_pricing["base_premium"])
@@ -245,12 +244,11 @@ class Command(BaseCommand):
 
         tier_type = self._map_tier_type(_tier_type)
 
-        # Create or update the product tier
         tier, tier_created = ProductTier.objects.get_or_create(
             product=product,
             tier_name=tier_name,
             defaults={
-                "base_preimum": base_premium,
+                "base_premium": base_premium,
                 "description": tier_data.get("description", ""),
                 "tier_type": tier_type,
             },
@@ -262,27 +260,71 @@ class Command(BaseCommand):
                     f"Created tier '{tier_name}' for product '{product.name}'."
                 )
             )
+        else:
+            self.stdout.write(
+                self.style.NOTICE(
+                    f"Tier '{tier_name}' already exists for product '{product.name}'."
+                )
+            )
+
+        tier_modified = False
 
         for coverage_data in tier_data["coverage"]:
-            coverage_type = coverage_data["coverage_type"]
+            coverage_type_input = coverage_data.get("coverage_type")
+            _coverage_type = coverage_type_input
+            coverage_type = (
+                coverage_type_input
+                if coverage_type_input in Coverage.CoverageType.values
+                else Coverage.CoverageType.OTHER
+            )
+
+            coverage_name = coverage_data.get("coverage_name", _coverage_type)
             coverage_limit = Decimal(coverage_data["coverage_limit"])
 
             coverage, coverage_created = Coverage.objects.get_or_create(
-                coverage_name=coverage_type,
+                coverage_name=coverage_name,
                 defaults={
                     "coverage_limit": coverage_limit,
                     "currency": coverage_data["currency"],
                     "coverage_type": coverage_type,
+                    "description": coverage_data.get("description", ""),
                 },
             )
-            exclusions_list = tier_data.get("exclusions", [])
-            benefits_list = tier_data.get("benefits", [])
-            tier.exclusions = "\n".join(exclusions_list)
-            tier.benefits = "\n".join(benefits_list)
-            tier.coverages.add(coverage)
 
+            if coverage_created:
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Created new coverage: {coverage_name} with type: {coverage_type} for tier: {tier_name}"
+                    )
+                )
+                tier_modified = True
+            else:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Coverage {coverage_name} already exists with type: {coverage.coverage_type} for tier: {tier_name}"
+                    )
+                )
+
+            if coverage not in tier.coverages.all():
+                tier.coverages.add(coverage)
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Added coverage '{coverage_name}' to tier '{tier_name}'."
+                    )
+                )
+                tier_modified = True
+
+        # Update exclusions and benefits only if they have changed
         exclusions_list = tier_data.get("exclusions", [])
         benefits_list = tier_data.get("benefits", [])
-        tier.exclusions = "\n".join(exclusions_list)
-        tier.benefits = "\n".join(benefits_list)
-        tier.save()
+
+        if tier.exclusions != "\n".join(exclusions_list) or tier.benefits != "\n".join(
+            benefits_list
+        ):
+            tier.exclusions = "\n".join(exclusions_list)
+            tier.benefits = "\n".join(benefits_list)
+            tier_modified = True
+
+        # Save tier only if modified
+        if tier_modified:
+            tier.save()
