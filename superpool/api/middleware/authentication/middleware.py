@@ -7,8 +7,8 @@ middleware
 
 import logging
 
-from core.models import Application
 from core.merchants.models import Merchant
+from core.models import Application
 
 logger = logging.getLogger(__name__)
 

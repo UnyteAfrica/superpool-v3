@@ -3,55 +3,50 @@ This module will contain the shared views (endpoints) for the application.
 """
 
 import logging
-from os import stat
 import uuid
-from django.core.exceptions import MultipleObjectsReturned, ValidationError
-from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
+
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import MultipleObjectsReturned
+from django.core.mail import send_mail
 from django.db import transaction
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext as _
-from drf_spectacular.types import OpenApiTypes
-from rest_framework import status
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
+from rest_framework import generics, status
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from core.permissions import IsAdminUser
-from core.providers.models import Provider
-from api.serializers import ProviderSerializer
-from drf_spectacular.utils import (
-    OpenApiExample,
-    OpenApiParameter,
-    OpenApiRequest,
-    extend_schema,
-)
-from drf_spectacular.utils import OpenApiResponse
-from rest_framework import generics
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.exceptions import NotFound
-from django.conf import settings
-from django.db.models import Q
 
+from api.serializers import ProviderSerializer
 from core.emails import (
     OnboardingEmail,
-    send_password_reset_email,
     send_password_reset_confirm_email,
+    send_password_reset_email,
 )
 from core.merchants.models import Merchant
-from django.utils import timezone
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str, force_str
+from core.providers.models import Provider
+
 from .openapi import (
     BASE_URL,
-    insurance_provider_search_example,
     insurance_provider_list_example,
+    insurance_provider_search_example,
 )
 from .serializers import (
     CompleteRegistrationSerializer,
-    PasswordResetSerializer,
-    PasswordResetConfirmSerializer,
     MerchantForgotCredentialSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
 )
 
 logger = logging.getLogger(__name__)

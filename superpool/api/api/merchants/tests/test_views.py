@@ -1,16 +1,15 @@
 import uuid
-from typing import NewType
 from unittest.mock import patch
 
 import pytest
-from api.merchants.tests.factories import MerchantFactory
-from core.merchants.models import Merchant
+from django.test import override_settings
 from django.urls import reverse
 from faker import Faker
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from django.test import TestCase, override_settings
+from api.merchants.tests.factories import MerchantFactory
+from core.merchants.models import Merchant
 
 fake = Faker()
 client = APIClient()

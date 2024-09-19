@@ -1,10 +1,11 @@
-from abc import abstractmethod, ABC
-from api.notifications.base import INotification
-from django.conf import settings
-from django.core.mail import EmailMultiAlternatives, send_mail
-from typing import Any, Dict
-from django.template.loader import render_to_string
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict
+
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
 from .constants import ACTION_REGISTRY
 
 logger = logging.getLogger(__name__)

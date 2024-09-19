@@ -1,12 +1,9 @@
-import unittest.mock as mock
-
 import pytest
-from api.catalog.views import PolicyByProductTypeView, PolicyListView, ProductListView
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APIClient
 
-from .factories import PolicyFactory, ProductFactory
+from .factories import PolicyFactory
 
 
 @pytest.fixture

@@ -1,7 +1,6 @@
 import uuid  # noqa: F401
 
 from core.models import Application  # noqa: F401
-from core.models import APIKey
 
 
 class ApplicationRegistry:

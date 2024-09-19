@@ -1,9 +1,10 @@
-from django.dispatch import receiver
+from django.db import transaction
 from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from core.merchants.models import Merchant
 from core.permissions import assign_user_to_group
 from core.user.models import Admin, CustomerSupport
-from core.merchants.models import Merchant
-from django.db import transaction
 
 
 @receiver(post_save, sender=Admin)

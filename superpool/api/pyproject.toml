@@ -68,8 +68,11 @@ follow_imports = "silent" # report missing imports, but don't fail
 django_settings_module = "config.settings"
 strict_settings = true
 
+[tool.isort]
+profile = "black"
+
 [tool.ruff]
-lint.ignore = ["F841", "F402"]
+lint.ignore = ["F402", "E501", "F841", 'F403', 'F821', 'F405']
 
 [build-system]
 requires = ["poetry-core"]

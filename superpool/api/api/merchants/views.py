@@ -2,9 +2,16 @@ import logging
 from typing import Any
 
 from django.core.exceptions import MultipleObjectsReturned
-from drf_spectacular.types import OpenApiTypes
+from django.http.response import Http404
+from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
+from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import generics
+from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
@@ -12,9 +19,9 @@ from api.merchants.serializers import (
     CreateMerchantSerializer,
     MerchantSerializer,
     MerchantSerializerV2,
-    MerchantWriteSerializerV2,
-    MerchantUpdateSerializer,
     MerchantUpdateResponseSerializer,
+    MerchantUpdateSerializer,
+    MerchantWriteSerializerV2,
 )
 from api.merchants.services import MerchantService
 from core.merchants.errors import (
@@ -23,25 +30,6 @@ from core.merchants.errors import (
     MerchantUpdateError,
 )
 from core.merchants.models import Merchant
-from django.http.response import Http404
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiRequest,
-    OpenApiResponse,
-    extend_schema,
-)
-from rest_framework import mixins, permissions, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
-
-from core.permissions import IsCustomerSupport
-from rest_framework.permissions import IsAuthenticated
-
-from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
 

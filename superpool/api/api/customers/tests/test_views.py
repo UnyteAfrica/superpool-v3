@@ -1,11 +1,9 @@
-from _pytest.config import argparsing
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework import status
 from rest_framework.test import APIClient
-import api
-from api.merchants.tests.factories import MerchantFactory, CustomerFactory
+
+from api.merchants.tests.factories import MerchantFactory
 
 User = get_user_model()
 

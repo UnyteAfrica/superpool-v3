@@ -1,17 +1,14 @@
 import random
+
 import pytest
 from django.urls import reverse
-from api.catalog.services import PolicyService
 from rest_framework import status
 from rest_framework.test import APIClient
-from rest_framework.test import APITestCase
+
+from api.catalog.services import PolicyService
 from api.merchants.tests.factories import MerchantFactory
-from .factories import (
-    CustomerFactory,
-    PartnerFactory,
-    ProductFactory,
-    QuoteFactory,
-)
+
+from .factories import CustomerFactory, PartnerFactory, ProductFactory, QuoteFactory
 
 
 @pytest.fixture

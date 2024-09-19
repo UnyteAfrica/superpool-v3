@@ -1,14 +1,15 @@
 import uuid
 from datetime import datetime, timedelta
 
+from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
 from core.merchants.models import Merchant
 from core.mixins import TimestampMixin, TrashableModelMixin
 from core.providers.models import Provider as Partner
 from core.user.models import Customer
 from core.utils import generate_id
-from django.db import models
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 
 
 class ProductTier(models.Model):

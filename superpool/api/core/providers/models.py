@@ -1,10 +1,9 @@
 import uuid
 
-from core.mixins import TimestampMixin
+from django.apps import apps
 from django.db import models  # type: ignore
 from django.utils.translation import gettext_lazy as _  # type: ignore
 from django_stubs_ext.db.models import TypedModelMeta
-from django.apps import apps
 
 
 class Provider(models.Model):

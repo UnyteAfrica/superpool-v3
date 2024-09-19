@@ -1,8 +1,10 @@
 from uuid import uuid4
+
 import factory
+from faker import Faker
+
 from core.merchants.models import Merchant
 from core.user.models import Customer
-from faker import Faker
 
 fake = Faker()
 

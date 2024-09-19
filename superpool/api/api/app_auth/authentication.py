@@ -1,11 +1,9 @@
-from core.merchants.models import Merchant
-from core.models import Application
+from django.conf import settings
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
 
 # from rest_framework_api_key.models import APIKey
 from core.models import APIKey as APIKeyModel
-from django.conf import settings
 
 User = settings.AUTH_USER_MODEL
 

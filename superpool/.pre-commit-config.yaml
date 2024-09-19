@@ -36,11 +36,14 @@ repos:
     rev: v0.41.0
     hooks:
       - id: markdownlint
+        name: markdownlint
+        entry: markdownlint
+        language: node
+        files: \.md$
   - repo: local
     hooks:
       - id: prettier
         name: Prettier
-        language: system
+        language: node
         entry: npx prettier --write
         files: \.(md|html|json)$
-        types: [text]

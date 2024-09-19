@@ -1,15 +1,11 @@
-from datetime import timezone
 from typing import Union
-from decimal import Decimal
-from django.db import transaction
 
-from api.serializers import LimitedScopeSerializer
-from core.claims.models import Claim
-from core.catalog.models import Policy
-from core.merchants.models import Merchant
-from core.user.models import Customer
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
+from api.serializers import LimitedScopeSerializer
+from core.merchants.models import Merchant
 
 
 class MerchantSerializer(serializers.ModelSerializer):

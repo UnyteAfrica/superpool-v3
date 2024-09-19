@@ -1,11 +1,10 @@
 from typing import Any
-from django.db.models import QuerySet
-from django.db.models import Q
+
+from django.db.models import Q, QuerySet
 from django_filters import rest_framework as filters
-from rest_framework.filters import BaseFilterBackend
-from core.user.models import Customer
+
 from core.catalog.models import Policy
-from core.claims.models import Claim
+from core.user.models import Customer
 
 
 class CustomerFilter(filters.FilterSet):

@@ -1,9 +1,10 @@
+from decimal import Decimal
+
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+
 from core.catalog.models import Policy
 from core.claims.models import Claim
 from core.user.models import Customer
-from decimal import Decimal
 
 
 class CustomerInformationSerializer(serializers.ModelSerializer):

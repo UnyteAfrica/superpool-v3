@@ -1,5 +1,6 @@
-from api.integrations.base import BaseClient
 from django.conf import settings
+
+from api.integrations.base import BaseClient
 
 
 class HeirsLifeAssuranceClient(BaseClient):

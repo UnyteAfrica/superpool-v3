@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import uuid
 from abc import ABC, abstractmethod
-from typing import Optional, Protocol
 
 from core.providers.exceptions import ProviderNotFound
 
@@ -55,7 +53,7 @@ class BaseProvider(Provider):
     """
 
     @abstractmethod
-    def get_provider(self, provider_id: str) -> Optional[Provider]:
+    def get_provider(self, provider_id: str) -> Provider | None:
         """
         Retrieve a provider by its unique identifier
 
@@ -68,7 +66,7 @@ class BaseProvider(Provider):
         pass
 
     @abstractmethod
-    def get_provider_by_short_code(self, short_code: str) -> Optional[Provider]:
+    def get_provider_by_short_code(self, short_code: str) -> Provider | None:
         """
         Retrieve a provider by its short code
 
@@ -81,7 +79,7 @@ class BaseProvider(Provider):
         pass
 
     @abstractmethod
-    def get_provider_by_name(self, name: str) -> Optional[Provider] | ProviderNotFound:
+    def get_provider_by_name(self, name: str) -> Provider | None | ProviderNotFound:
         """
         Retrieve a provider by its name
 

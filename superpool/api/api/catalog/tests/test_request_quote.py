@@ -1,12 +1,14 @@
+from datetime import timedelta
+
 import pytest
-from rest_framework.test import APIClient
-from core.catalog.models import Product, Quote, Price
-from core.providers.models import Provider as InsuranceProvider
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
 from rest_framework import status
-from django.test.utils import override_settings
+from rest_framework.test import APIClient
+
+from core.catalog.models import Price, Product, Quote
+from core.providers.models import Provider as InsuranceProvider
 
 
 @pytest.fixture
@@ -256,4 +258,3 @@ def test_request_quote_with_missing_required_fields_unsuccessful(api_client, quo
     }
     response = api_client.post(reverse("request-quote"), data=data, format="json")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-

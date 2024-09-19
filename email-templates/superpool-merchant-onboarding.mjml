@@ -19,11 +19,11 @@
         <mj-text>As you begin, here are your unique account details:</mj-text>
        <mj-text font-weight="600">Tenant ID: [Tenant ID]</mj-text>
         <mj-text font-weight="600">Merchant Short Code: [Merchant Short Code]</mj-text>
-        
+
         <mj-text>
         	We’re here to ensure your experience is seamless and successful. Thank you for choosing Unyte - together, we’ll make insurance processes easier and more efficient for everyone.
         </mj-text>
-        
+
         <mj-text> If you have any questions or need assistance, feel free to reach out to our support team at <a href="mailto:tech@unyte.africa">tech@unyte.africa</a>. </mj-text>
         <mj-text>
           If you did not sign up for this account, please ignore this email.

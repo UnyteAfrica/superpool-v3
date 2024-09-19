@@ -1,11 +1,12 @@
-import factory
 from decimal import Decimal
+
+import factory
+from faker import Faker
+
 from api.merchants.tests.factories import MerchantFactory
-from core.catalog.models import Policy, Product, Quote, Price
-from core.merchants.models import Merchant
+from core.catalog.models import Policy, Price, Product, Quote
 from core.providers.models import Provider as Partner
 from core.user.models import Customer
-from faker import Faker
 
 fake = Faker()
 

@@ -9,12 +9,9 @@ Date created: 2024-07-28 12:32
 
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Union
-
 import logging
-
-from core.catalog.models import Policy
+from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

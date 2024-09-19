@@ -1,13 +1,11 @@
-from django.contrib.auth import get_user_model
 import pytest
-from rest_framework import status
+from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from rest_framework import status
 from rest_framework.test import APIClient
-from django.core import mail
 
-from core.merchants.models import Merchant
 from api.merchants.tests.factories import MerchantFactory
+from core.merchants.models import Merchant
 
 User = get_user_model()
 

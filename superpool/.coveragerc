@@ -16,4 +16,3 @@ show_missing = True
 
 [html]
 directory = coverage_report
-

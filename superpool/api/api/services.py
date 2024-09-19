@@ -1,8 +1,9 @@
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+
 from core.merchants.models import Merchant
 from core.models import Application
 from core.registries import ApplicationRegistry
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 
 from .exceptions import ApplicationCreationError
 

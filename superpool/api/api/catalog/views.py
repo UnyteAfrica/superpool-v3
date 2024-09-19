@@ -1,31 +1,8 @@
 import logging
-from uuid import uuid4
-import uuid
+from datetime import timedelta
 
 from django.core.exceptions import MultipleObjectsReturned
-from django_stubs_ext import types
-from rest_framework.pagination import LimitOffsetPagination
-
-from api.catalog.permissions import AdminOnlyInsurerFilterPermission
-from core.models import Coverage
-from .openapi import products_response_example
-from datetime import datetime, timedelta
-from core.permissions import (
-    IsAdminUser,
-    IsMerchant,
-    IsCustomerSupport,
-    IsMerchantOrSupport,
-)
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-
-from api.app_auth.authentication import APIKeyAuthentication
-from api.catalog.exceptions import QuoteNotFoundError
-from api.catalog.filters import QSearchFilter
-from api.catalog.serializers import PolicyPurchaseResponseSerializer
-from core.catalog.models import Policy, Product, Quote
-from core.user.models import Customer
-from django.db.models import QuerySet
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q, QuerySet
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -35,48 +12,43 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
-from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.db.models import Q
-from rest_framework import filters
+
+from api.catalog.exceptions import QuoteNotFoundError
+from api.catalog.permissions import AdminOnlyInsurerFilterPermission
+from api.catalog.serializers import PolicyPurchaseResponseSerializer
+from core.catalog.models import Policy, Product, Quote
+from core.models import Coverage
+
+from .exceptions import ProductNotFoundError
 from .openapi import (
-    travel_insurance_example,
-    travel_insurance_with_product_id_example,
-    health_insurance_example,
-    health_insurance_with_product_id_example,
-    home_insurance_example,
-    home_insurance_with_product_id_example,
-    gadget_insurance_example,
-    gadget_insurance_with_product_id_example,
-    auto_insurance_example,
-    auto_insurance_with_product_id_example,
+    full_policy_renewal_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
     limited_policy_renewal_example,
-    full_policy_renewal_example,
     policy_cancellation_request_example,
     policy_cancellation_request_example_2,
+    products_response_example,
 )
-
-from .exceptions import ProductNotFoundError
 from .serializers import (
     CoverageSerializer,
     FullCoverageSerializer,
     PolicyCancellationRequestSerializer,
-    PolicyCancellationResponseSerializer,
-    PolicyCancellationSerializer,
     PolicyPurchaseSerializer,
+    PolicyRenewalRequestSerializer,
     PolicyRenewalSerializer,
     PolicySerializer,
+    PolicyUpdateSerializer,
     ProductSerializer,
     QuoteRequestSerializer,
+    QuoteRequestSerializerV2,
+    QuoteResponseSerializer,
     QuoteSerializer,
-    PolicyRenewalRequestSerializer,
-    PolicyUpdateSerializer,
 )
 from .services import PolicyService, ProductService, QuoteService
 
@@ -907,6 +879,31 @@ class RequestQuoteView(views.APIView):
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         logger.error(f"Request data is invalid: {req_serializer.errors}")
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class QuoteRequestView(views.APIView):
+    """
+    View to handle insurance quote requests and return aggregated quotes.
+    """
+
+    def post(self, request):
+        serializer = QuoteRequestSerializerV2(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        validated_data = serializer.validated_data
+
+        service = QuoteService()
+        try:
+            quotes = service.request_quote(validated_data)
+
+            print(f"Quotes: {quotes}")
+            response_serializer = QuoteResponseSerializer(quotes, many=True)
+        except Exception as exc:
+            logger.error(f"Error occured: {exc}")
+            return Response({"error": str(exc)})
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class PolicyPurchaseView(generics.GenericAPIView):
