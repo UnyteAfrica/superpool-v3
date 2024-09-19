@@ -1,5 +1,6 @@
-from core.claims.models import Claim
 from django.contrib import admin
+
+from core.claims.models import Claim
 
 
 @admin.register(Claim)

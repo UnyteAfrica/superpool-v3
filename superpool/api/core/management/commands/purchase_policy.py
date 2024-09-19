@@ -1,14 +1,13 @@
-from django.core.management import BaseCommand
-from django.core.exceptions import ValidationError
-from django.utils.dateparse import parse_date
 import sys
 from decimal import Decimal
 
-from rest_framework.generics import RetrieveUpdateAPIView
+from django.core.exceptions import ValidationError
+from django.core.management import BaseCommand
+from django.utils.dateparse import parse_date
 
-from core.catalog.models import Quote, Policy
-from core.merchants.models import Merchant
 from api.catalog.services import PolicyService
+from core.catalog.models import Quote
+from core.merchants.models import Merchant
 
 
 class Command(BaseCommand):

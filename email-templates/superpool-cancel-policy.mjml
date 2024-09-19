@@ -21,7 +21,7 @@
         <mj-text font-weight="600">Cancellation Date: [Transaction Date]</mj-text>
 
         <mj-text> Please check your dashboard for more details and manage any follow-up actions from there.</mj-text>
-          
+
           <mj-text>If you have any questions or need assistance, feel free to reach out to our support team at <a href="mailto:tech@unyte.africa">tech@unyte.africa</a>. </mj-text>
         <mj-text> Thank you for choosing Unyte. We look forward to supporting you in your management journey. </mj-text>
         <mj-text padding-top="20px" padding-bottom="0px" font-weight="600"> Unyte Africa, </mj-text>

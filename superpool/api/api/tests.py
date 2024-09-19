@@ -1,9 +1,9 @@
-from django.test import TestCase
 import pytest
-from rest_framework.test import APIClient, APITestCase
-from api.merchants.tests.factories import MerchantFactory
-from rest_framework import status
 from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
+from api.merchants.tests.factories import MerchantFactory
 from core.providers.models import Provider
 
 # WE WOULD BE TESTING OUR MIDDLEWARE SINCE ITS MEANT TO INTERACT WITH

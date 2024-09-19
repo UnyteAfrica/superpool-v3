@@ -1,7 +1,7 @@
-from rest_framework.permissions import BasePermission
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth import get_user_model
+from rest_framework.permissions import BasePermission
 
 User = get_user_model()
 

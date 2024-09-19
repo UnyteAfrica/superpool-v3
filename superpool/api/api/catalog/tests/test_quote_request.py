@@ -1,9 +1,9 @@
 import pytest
-from rest_framework.test import APIClient
-from core.catalog.models import Product, Quote
-from core.catalog.models import Price
-from core.providers.models import Provider as InsuranceProvider
 from django.urls import reverse
+from rest_framework.test import APIClient
+
+from core.catalog.models import Price, Product, Quote
+from core.providers.models import Provider as InsuranceProvider
 
 
 @pytest.fixture

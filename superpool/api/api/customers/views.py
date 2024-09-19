@@ -1,28 +1,22 @@
-from django.views.generic import ListView
-from rest_framework import status, viewsets
-from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
-from rest_framework.request import Request
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.views import APIView
-from core.permissions import IsAdminUser as IsAdmin, IsCustomerSupport, IsMerchant
-from core.merchants.models import Merchant
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.pagination import LimitOffsetPagination
+from drf_spectacular.utils import extend_schema
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from .services import CustomerService
-from .filters import CustomerFilter
+from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 
+from core.merchants.models import Merchant
 from core.user.models import Customer
 
-from drf_spectacular.utils import OpenApiRequest, OpenApiResponse
-from drf_spectacular.utils import extend_schema
+from .filters import CustomerFilter
 from .serializers import (
-    CustomerInformationSerializer,
-    CustomerSummarySerializer,
-    CustomerPolicySerializer,
     CustomerClaimSerializer,
+    CustomerInformationSerializer,
+    CustomerPolicySerializer,
+    CustomerSummarySerializer,
 )
+from .services import CustomerService
 
 
 @extend_schema(

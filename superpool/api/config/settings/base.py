@@ -6,11 +6,9 @@ For more information, see https://docs.djangoproject.com/en/5.0/ref/settings
 
 import datetime
 import os
-import pdb
-import pprint
 from pathlib import Path
 
-from environ import ImproperlyConfigured, sys  # type: ignore
+from environ import ImproperlyConfigured  # type: ignore
 
 from .environment import env
 

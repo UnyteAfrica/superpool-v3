@@ -7,14 +7,13 @@ from .views import (
     PolicyAPIViewSet,
     PolicyCancellationView,
     PolicyPurchaseView,
-    ProductListView,
-    ProductRetrieveView,
-    QuoteDetailView,
-    QuoteListView,
-    RequestQuoteView,
     ProductCoverageListView,
     ProductCoverageRetrieveView,
     ProductCoverageSearchView,
+    ProductListView,
+    ProductRetrieveView,
+    QuoteDetailView,
+    QuoteRequestView,
 )
 
 router = DefaultRouter()
@@ -53,7 +52,7 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     ),
     path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
     path("policies/cancel", PolicyCancellationView.as_view(), name="policy-cancel"),
-    path("quotes", RequestQuoteView.as_view(), name="request-quote"),
+    path("quotes", QuoteRequestView.as_view(), name="request-quote"),
     path("quotes/<str:quote_code>/", QuoteDetailView.as_view(), name="quote-detail"),
 ]
 

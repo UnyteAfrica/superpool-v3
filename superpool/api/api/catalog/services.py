@@ -5,19 +5,20 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Union
 
-from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
-from api.catalog.serializers import QuoteResponseSerializer, QuoteSerializer
-from core.catalog.models import Policy, Price, Product, Quote
-from core.merchants.models import Merchant
-from core.models import Coverage
-from core.providers.models import Provider as InsurancePartner
-from core.user.models import Customer
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from rest_framework.generics import get_object_or_404
 from rest_framework.serializers import ValidationError
+
+from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
+from api.catalog.serializers import QuoteSerializer
+from core.catalog.models import Policy, Price, Product, ProductTier, Quote
+from core.merchants.models import Merchant
+from core.models import Coverage
+from core.providers.models import Provider as InsurancePartner
+from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class ProductService:
         return Product.objects.filter(name__iexact=product_name)
 
     @staticmethod
-    def get_product_by_id(product_id: int) -> Product:
+    def get_product_by_id(product_id: Any) -> Product:
         """
         Returns a product by id
         """
@@ -227,8 +228,9 @@ class PolicyService:
         Policy cancellation can be initiated either using the policy reference number or the assigned
         policy ID.
         """
-        from api.notifications.services import PolicyNotificationService
         from django.db import transaction
+
+        from api.notifications.services import PolicyNotificationService
 
         policy = Policy.objects.get(policy_id=policy_id)
 
@@ -759,10 +761,6 @@ class QuoteService(IQuote):
             product_type = product_type or kwargs.get("product_type")
             product_name = product_name or kwargs.get("insurance_name")
 
-            # if product_type not in PRODUCT_TYPES:
-            #     raise ValueError(
-            #         f"Invalid product type. Expected one of {PRODUCT_TYPES}."
-            #     )
             product = Product.objects.filter(
                 product_type=product_type, name__iexact=product_name
             ).first()
@@ -863,6 +861,73 @@ class QuoteService(IQuote):
         else:
             raise ValueError("Either product, or quote_code must be provided.")
 
+    def _calculate_premium(self, tier, **kwargs):
+        """
+        Calculate the base price and premium for the quote based on the tier and coverage amount.
+        """
+        base_price = tier.base_preimum
+        risk_adjustments = kwargs.get("risk_adjustments", [])
+
+        # perform risk adjustments to the base price (if any)
+
+        # for coverage in tier.coverages.all():
+        #     coverage_limit = coverage.coverage_limit
+        #     if coverage_limit:
+        #         total_premium = base_price
+
+        total_premium = base_price
+
+        premium = Price.objects.create(
+            amount=total_premium,
+            description=f"Premium for {tier.tier_name}",
+        )
+
+        return base_price, premium
+
+    @transaction.atomic
+    def create_quote(
+        self,
+        product_id=None,
+        product_type=None,
+        product_name=None,
+        insurance_details=None,
+        coverage_type=None,
+        coverage_amount=None,
+        **kwargs,
+    ):
+        """
+        Create a new insurance quote based on product and coverage information.
+
+        Arguments:
+            - product_id: The unique identifier of the product.
+            - product_type: The type of insurance product (e.g., 'Auto', 'Health').
+            - product_name: Optional name of the insurance product.
+            - insurance_details: A dictionary of additional details (coverage, etc.).
+            - coverage_type: Type of coverage requested (e.g., 'Comprehensive', 'Basic').
+            - coverage_amount: Desired coverage amount.
+        """
+        if product_id:
+            product = get_object_or_404(Product, id=id)
+        elif product_type and product_name:
+            product = Product.objects.get(
+                product_type=product_type, product_name=product_name
+            )
+        else:
+            raise ValueError(
+                "Either product_id or (product_type and product_name) must be provided."
+            )
+
+        tier = self._get_tier_by_coverage_type(product, coverage_type)
+        base_price, premium = self._calculate_premium(tier, **kwargs)
+
+        quote = Quote.objects.create(
+            base_price=base_price,
+            premium=premium,
+            product=product,
+            additional_metadata=insurance_details,
+        )
+        return quote
+
     def request_quote(self, validated_data: dict):
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
@@ -875,7 +940,25 @@ class QuoteService(IQuote):
         internal_quotes = self._retrieve_quotes_from_internal_providers(
             providers, validated_data
         )
-        return QuoteResponseSerializer(internal_quotes, many=True)
+        return internal_quotes
+
+    def _get_tier_by_coverage_type(self, product, coverage_type):
+        """
+        Retrieve the appropriate product tier based on coverage type and product.
+        """
+        try:
+            tier = ProductTier.objects.filter(
+                product=product, coverages__coverage_type=coverage_type
+            ).first()
+            if not tier:
+                raise ValueError(
+                    f"Tier with coverage type '{coverage_type}' not found for product '{product.name}'."
+                )
+            return tier
+        except ProductTier.DoesNotExist:
+            raise ValueError(
+                f"Tier with coverage type '{coverage_type}' not found for product '{product.name}'."
+            )
 
     def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
         """

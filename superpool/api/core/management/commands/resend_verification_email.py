@@ -1,8 +1,10 @@
 import uuid
-from django.core.management import BaseCommand
-from core.utils import send_verification_email
-from core.models import Merchant
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.management import BaseCommand
+
+from core.models import Merchant
+from core.utils import send_verification_email
 
 
 class Command(BaseCommand):

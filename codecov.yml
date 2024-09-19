@@ -13,6 +13,9 @@ coverage:
       default:
         target: auto
         threshold: 1%
+  precision: 2
+  round: down
+  range: "70...100"
 
 ignore:
   - "tests/"
@@ -33,11 +36,6 @@ codecov:
   notify:
     after_n_builds: 1
 
-coverage:
-  precision: 2
-  round: down
-  range: "70...100"
-
 yaml:
   # paths to include or exclude for the coverage report
   whitelist:
@@ -50,4 +48,3 @@ yaml:
     - "superpool/api/migrations/"
     - "superpool/api/tests/"
     - "tests/"
-

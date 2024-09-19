@@ -1,26 +1,20 @@
-from django.urls import URLPattern, URLResolver, include, path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .applications.views import (
-    ApplicationView,
-    create_application_view,
-    ApplicationViewSetV2,
-)
-from .merchants.views import MerchantViewList, MerchantViewSet
+from .applications.views import ApplicationViewSetV2
+from .merchants.views import MerchantViewList
 from .user import urls as user_route
 from .user.views import MerchantLoginView
 from .views import (
-    MerchantForgotTenantIDView,
-    MerchantSetPasswordView,
-    VerificationAPIView,
-    InsurerAPIView,
     InsuranceProviderDetailView,
     InsuranceProviderSearchView,
-    PasswordResetView,
+    InsurerAPIView,
+    MerchantForgotTenantIDView,
+    MerchantSetPasswordView,
     PasswordResetConfirmView,
+    PasswordResetView,
+    VerificationAPIView,
 )
-
-from .customers.urls import router as customer_router, urlpatterns as customer_route
 
 router = DefaultRouter()
 router.register(r"sandbox", ApplicationViewSetV2, basename="application")

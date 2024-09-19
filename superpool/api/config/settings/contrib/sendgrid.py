@@ -1,10 +1,9 @@
-import os
+import logging
+import smtplib
 
 from django.conf import settings
 
 from ..environment import env
-import smtplib
-import logging
 
 MAILGUN_ENABLED = env.bool("MAILGUN_ENABLED", default=False)
 SENDGRID_ENABLED = env.bool("SENDGRID_ENABLED", default=False)

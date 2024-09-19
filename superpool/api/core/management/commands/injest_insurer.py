@@ -14,12 +14,13 @@ from textwrap import dedent
 from typing import Any
 
 import requests
-from core.catalog.models import Product, ProductTier
-from core.models import Coverage
-from core.providers.models import Provider
 from django.core.management import BaseCommand
 from django.core.management.base import CommandError, CommandParser
 from django.db import transaction
+
+from core.catalog.models import Product, ProductTier
+from core.models import Coverage
+from core.providers.models import Provider
 
 
 class Command(BaseCommand):

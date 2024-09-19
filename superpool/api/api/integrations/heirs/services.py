@@ -1,22 +1,23 @@
-import json
-import uuid
-from typing import List, TypedDict, Union
+from typing import List, Union
+
+from django.conf import settings
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
-from core.providers.integrations.heirs.registry import (APIErrorResponse,
-                                                        AutoPolicy,
-                                                        BikerPolicy,
-                                                        CustomerInfo,
-                                                        DevicePolicy,
-                                                        InsuranceProduct,
-                                                        MotorPolicy,
-                                                        PersonalAccidentPolicy,
-                                                        Policy, PolicyInfo,
-                                                        Product,
-                                                        QuoteAPIResponse,
-                                                        QuoteDefinition,
-                                                        TravelPolicyClass)
-from django.conf import settings
+from core.providers.integrations.heirs.registry import (
+    APIErrorResponse,
+    AutoPolicy,
+    BikerPolicy,
+    CustomerInfo,
+    DevicePolicy,
+    InsuranceProduct,
+    MotorPolicy,
+    PersonalAccidentPolicy,
+    PolicyInfo,
+    Product,
+    QuoteAPIResponse,
+    QuoteDefinition,
+    TravelPolicyClass,
+)
 
 
 class HeirsAssuranceService:

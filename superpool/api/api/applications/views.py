@@ -1,21 +1,15 @@
-from api.exceptions import ApplicationCreationError
-from api.services import ApplicationService
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
-from rest_framework import viewsets
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from rest_framework import status, viewsets
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from core.models import Application
-from rest_framework.exceptions import ValidationError
-from rest_framework.exceptions import NotAuthenticated
 
+from api.exceptions import ApplicationCreationError
+from api.services import ApplicationService
+from core.models import Application
 
 from .serializers import ApplicationSerializer, CreateApplicationSerializer
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse
 
 
 def create_application_view(request: Request, *args: dict, **kwargs: dict) -> Response:

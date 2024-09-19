@@ -3,16 +3,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Union
 
-from core.catalog.models import Beneficiary, Policy, Price, Product, Quote
-from core.merchants.models import Merchant
-from core.models import Coverage
-from core.providers.models import Provider
-from core.user.models import Customer
 from django.db import models, transaction
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
+
+from core.catalog.models import Beneficiary, Policy, Price, Product, Quote
+from core.merchants.models import Merchant
+from core.models import Coverage
+from core.providers.models import Provider
+from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
 

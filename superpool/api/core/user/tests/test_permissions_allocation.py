@@ -1,8 +1,10 @@
 import pytest
 from django.contrib.auth.models import Group
-from .factories import UserFactory
-from core.user.models import CustomerSupport, Admin
+
 from core.merchants.models import Merchant
+from core.user.models import Admin, CustomerSupport
+
+from .factories import UserFactory
 
 
 @pytest.fixture

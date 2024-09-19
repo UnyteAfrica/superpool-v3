@@ -1,11 +1,11 @@
+import hashlib
 import random
 import string
 import uuid
-from .emails import PendingVerificationEmail
-from django.conf import settings
-import hashlib
 
-from core.merchants.models import Merchant
+from django.conf import settings
+
+from .emails import PendingVerificationEmail
 
 DEFAULT_FROM_EMAIL = settings.DEFAULT_FROM_EMAIL
 BASE_URL = settings.BASE_URL
