@@ -69,7 +69,7 @@ django_settings_module = "config.settings"
 strict_settings = true
 
 [tool.ruff]
-ignore = ["F841", "F402"]
+lint.ignore = ["F841", "F402"]
 
 [build-system]
 requires = ["poetry-core"]
