@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Union
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
-from api.catalog.serializers import QuoteSerializer
+from api.catalog.serializers import QuoteResponseSerializer, QuoteSerializer
 from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
@@ -646,7 +646,6 @@ class QuoteService(IQuote):
         Returns:
             A list of quotes.
         """
-        from api.catalog.serializers import QuoteSerializer
 
         try:
             if product_id:
@@ -686,8 +685,6 @@ class QuoteService(IQuote):
             raise ProductNotFoundError("Product not found.")
 
     def _get_quote_by_code(self, quote_code):
-        from api.catalog.serializers import QuoteSerializer
-
         try:
             quote = Quote.objects.get(quote_code=quote_code)
             serializer = QuoteSerializer(quote)
@@ -878,9 +875,7 @@ class QuoteService(IQuote):
         internal_quotes = self._retrieve_quotes_from_internal_providers(
             providers, validated_data
         )
-
-        aggregated_quotes = models.Aggregate()
-        return QuoteSerializer(aggregated_quotes, many=True)
+        return QuoteResponseSerializer(internal_quotes, many=True)
 
     def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
         """
