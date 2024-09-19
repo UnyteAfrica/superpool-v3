@@ -9,7 +9,6 @@ from .views import (
     PolicyPurchaseView,
     ProductListView,
     ProductRetrieveView,
-    QuoteAPIViewSet,
     QuoteDetailView,
     QuoteListView,
     RequestQuoteView,
