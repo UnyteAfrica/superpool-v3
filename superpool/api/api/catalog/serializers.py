@@ -1,24 +1,18 @@
 import logging
-from datetime import datetime, date, timedelta
-from typing import Union
-from django.db import transaction
-from django.db import models
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Union
 
-from api.catalog.services import PolicyService
-from api.notifications.services import PolicyNotificationService
-from core.catalog.models import Policy, Price, Product, ProductTier, Quote
+from core.catalog.models import Beneficiary, Policy, Price, Product, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
-from core.providers.models import Provider as Partner
 from core.providers.models import Provider
-from django.db.models import Q
 from core.user.models import Customer
-from rest_framework import serializers
-from rest_framework.serializers import ModelSerializer, ValidationError
-from core.catalog.models import Beneficiary
+from django.db import models, transaction
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -283,11 +277,18 @@ class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
     destination = serializers.CharField(max_length=255)
     departure_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     return_date = serializers.DateField(input_formats=["%Y-%m-%d"])
-    number_of_travellers = serializers.IntegerField(min_value=1, max_value=10)
+    number_of_travellers = serializers.IntegerField(
+        min_value=1, max_value=10, default=1
+    )
     trip_duration = serializers.IntegerField(min_value=1, max_value=365, required=False)
     trip_type = serializers.ChoiceField(choices=TravelTripTypeChoices.choices)
     trip_type_details = serializers.ChoiceField(
         TravelPurposeChoices.choices,
+        required=False,
+    )
+    international_flight = serializers.BooleanField(
+        default=False,
+        help_text="Is this insurance for an international flight?",
         required=False,
     )
 
