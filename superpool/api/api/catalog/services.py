@@ -1,29 +1,23 @@
-from abc import ABC, abstractmethod
-import uuid
+import logging
 import traceback
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, NewType, Union
-from api.notifications.base import NotificationService
-from core.models import Coverage
-from core.providers.models import Provider as InsurancePartner
-from django.db import transaction, DatabaseError
-
-from rest_framework.generics import get_object_or_404
+from typing import Any, Dict, List, Union
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
+from api.catalog.serializers import QuoteSerializer
 from core.catalog.models import Policy, Price, Product, Quote
 from core.merchants.models import Merchant
+from core.models import Coverage
+from core.providers.models import Provider as InsurancePartner
 from core.user.models import Customer
-from django.core.mail import send_mail
-from django.utils import timezone
-from django.db import models
-from django.db.models import Q, QuerySet
-from rest_framework.serializers import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.exceptions import APIException
-
-import logging
+from django.db import DatabaseError, models, transaction
+from django.db.models import Q, QuerySet
+from django.utils import timezone
+from rest_framework.generics import get_object_or_404
+from rest_framework.serializers import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -562,6 +556,11 @@ class IQuote(ABC):
 
 
 class QuoteService(IQuote):
+    """
+    A service that handles the logic of retrieving and aggregating insurance quotes
+    from various providers (integrated providers and internal providers)
+    """
+
     FLAT_FEES = {
         # Product Type -> (Coverage Type -> Flat Fee)
         "Smart Generations Protection": {
@@ -866,3 +865,57 @@ class QuoteService(IQuote):
             )
         else:
             raise ValueError("Either product, or quote_code must be provided.")
+
+    def request_quote(self, validated_data: dict):
+        """
+        Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
+        """
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+        coverage_preferences = validated_data["coverage_preferences"]
+
+        providers = self._get_providers_for_product_type(product_type)
+        internal_quotes = self._retrieve_quotes_from_internal_providers(
+            providers, validated_data
+        )
+
+        aggregated_quotes = models.Aggregate()
+        return QuoteSerializer(aggregated_quotes, many=True)
+
+    def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
+        """
+        Fetch all insurance providers with the who offers some product
+        for this product type
+        """
+        return InsurancePartner.objects.filter(
+            products__product_type=product_type
+        ).distinct()
+
+    def _retrieve_realtime_quotes(self, providers: List[str], validated_data: dict):
+        """
+        Requests for real-time quotes for this product type from external integrated
+        providers
+
+        This method makes a request call to a integrated insurers' API
+        to request a quote for this product type and with some defaults from the incoming
+        request, before updating our database with the values
+        """
+        pass
+
+    def _retrieve_quotes_from_internal_providers(
+        self, providers: QuerySet, validated_data: dict
+    ) -> QuerySet:
+        """
+        Fetches quotes from traditional internal insurance providers based on stored data
+
+        Arguments:
+            providers (QuerySet): List of insurance providers that offer the requested product.
+            validated_data (dict): Validated data from the incoming request.
+
+        Returns:
+            QuerySet of internal quotes
+        """
+        return Quote.objects.filter(
+            product__provider__in=providers,
+            product__product_type=validated_data["insurance_details"]["product_type"],
+        )
