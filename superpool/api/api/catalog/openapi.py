@@ -449,7 +449,7 @@ quote_request_example = OpenApiExample(
             },
         },
         "coverage_preferences": {
-            "coverage_type": ["Basic", "Comprehensive"],
+            "coverage_type": ["Medical", "Accidental"],
             "coverage_amount": 1000000.00,
             "additional_coverages": ["Critical Illness"],
         },
