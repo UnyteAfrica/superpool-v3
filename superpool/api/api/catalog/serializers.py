@@ -1235,7 +1235,7 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
     )
 
 
-class QuoteResponseSerializer(serializers.Serializer):
+class QuoteResponseSerializer(serializers.ModelSerializer):
     """
     Serializer to format the quote response in a structured, unified way.
     """
@@ -1269,6 +1269,7 @@ class QuoteResponseSerializer(serializers.Serializer):
     )
 
     class Meta:
+        model = Quote
         fields = [
             "provider",
             "pricing",
@@ -1282,54 +1283,32 @@ class QuoteResponseSerializer(serializers.Serializer):
             "purchase_id_description",
         ]
 
-    def to_representation(self, instance):
+    def get_provider(self, obj) -> dict:
         """
-        Format the complex relationships in the response.
-        `instance` will be a `Quote` object.
+        Returns the information on the insurer providing the
+        product
         """
+        return {
+            "provider_name": obj.product.provider.name,
+            "provider_id": obj.product.provider.id,
+        }
 
-        provider_data = {
-            "provider_name": instance.product.provider.name,
-            "provider_id": instance.product.provider.id,
+    def get_pricing(self, obj) -> dict:
+        return {
+            "currency": obj.premium.currency,
+            "base_premium": obj.base_price,
+            "total_amount_for_quotation": obj.base_price,
+            "discount_amount": obj.discount_amount or Decimal("0.00"),
         }
-        pricing_data = {
-            "currency": instance.premium.currency,
-            "base_premium": instance.base_price,
-            "discount_amount": instance.premium.discount_amount,
-            "total_amount_for_quotation": instance.premium.amount,
-        }
-        coverages = [
-            {
-                "coverage_type": coverage.coverage_type,
-                "coverage_limit": coverage.coverage_limit,
-                "exclusions": instance.product.tiers.first().exclusions.split("\n"),
-                "benefits": instance.product.tiers.first().benefits.split("\n"),
-            }
-            for coverage in instance.product.tiers.first().coverages.all()
-        ]
-        exclusions = instance.product.tiers.first().exclusions.split("\n")
-        benefits = instance.product.tiers.first().benefits.split("\n")
-        policy_terms_data = {
-            "duration": instance.product.tiers.first().pricing_model,
-            # "renewal_options": instance.product.tiers.first().renewal_options,
-            "cancellation_policy": "30 days notice required for cancellation without penalty",
-        }
-        additional_metadata = {
-            "product_type": instance.product.product_type,
-            "tier": instance.product.tiers.first().tier_name,
-            "available_addons": [],
-            "last_updated": instance.updated_at.isoformat(),
-        }
-        response = {
-            "provider": provider_data,
-            "pricing": pricing_data,
-            "coverages": coverages,
-            "exclusions": exclusions,
-            "benefits": benefits,
-            "policy_terms": policy_terms_data,
-            "additional_metadata": additional_metadata,
-            "quote_code": instance.quote_code,
-            "purchase_id": instance.purchase_id,
-            "purchase_id_description": "Provide this ID to the external payment processor.",
-        }
-        return response
+
+    def get_exclusions(self, obj):
+        """
+        Fetch exclusions from the 'additional_metadata' stored in the Quote.
+        """
+        return obj.additional_metadata.get("exclusions", [])
+
+    def get_benefits(self, obj):
+        """
+        Fetch benefits from the 'additional_metadata' stored in the Quote.
+        """
+        return obj.additional_metadata.get("benefits", [])
