@@ -982,7 +982,7 @@ class QuoteService(IQuote):
 
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict
-    ) -> QuerySet:
+    ) -> list[QuerySet]:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
 
@@ -991,9 +991,60 @@ class QuoteService(IQuote):
             validated_data (dict): Validated data from the incoming request.
 
         Returns:
-            QuerySet of internal quotes
+            List of internal quotes
         """
-        return Quote.objects.filter(
-            product__provider__in=providers,
-            product__product_type=validated_data["insurance_details"]["product_type"],
+        # IN FUTURE WE ARE GOING TO BE DOING SOME DYNAMIC CALCULATION IN HERE
+        #
+        # FOR NOW WE ARE JUST GOING TO RETURN THE BASE PREMIUMS BACK TO THE MERCHANT
+        # AS THE AMOUNT TO BE PAID
+        quotes = []
+
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+
+        # Prefetch related product tiers and coverages in a single query
+        #
+        # fetch all products matching the product information (name, type, tier or something)
+        products = (
+            Product.objects.filter(
+                provider__in=providers,
+                product_type=product_type,
+            )
+            .select_related("provider")
+            .prefetch_related("tiers", "tiers__coverages")
         )
+
+        # if product name is present in the incoming request, include search by name
+        if product_name:
+            products.filter(name__icontains=product_name)
+
+        # When a quote is being generated based on the product coverage,
+        # and provider, we are doing something interesting here,
+        # we would create a Quote object for each provider and tier.
+        #
+        # Such that when we pulling the pricing and currency values, we won't
+        # be hard-coding it, we wuld be pulling it from the Quote model
+        for product in products:
+            for tier in product.tiers.all():
+                premium = Price.objects.create(
+                    amount=tier.base_preimum,
+                    description=f"{product.name} - {tier.name} Premium",
+                )
+                quote = Quote.objects.create(
+                    product=product,
+                    premium=premium,
+                    base_price=tier.base_preimum,
+                    additional_metadata={
+                        "tier_name": tier.tier_name,
+                        "coverage_details": [
+                            {
+                                "coverage_type": coverage.coverage_name,
+                                "coverage_limit": coverage.coverage_limit,
+                            }
+                            for coverage in tier.coverages.all()
+                        ],
+                    },
+                )
+                quotes.append(quote)
+
+        return quotes
