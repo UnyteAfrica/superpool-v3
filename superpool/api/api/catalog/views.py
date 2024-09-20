@@ -888,18 +888,19 @@ class QuoteRequestView(views.APIView):
     """
 
     @extend_schema(
-        summary="Request a Quote",
-        description="Submit a request to generate insurance quotes for a specified product type and customer details.",
-        request=QuoteRequestSerializerV2,
+        summary="Request a quote for an insurance policy or product",
+        description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
+        tags=["Quotes"],
+        request=OpenApiRequest(
+            request=QuoteRequestSerializerV2(many=True),
+            examples=[quote_request_example],
+        ),
         responses={
             200: OpenApiResponse(
-                response=QuoteResponseSerializer,
+                response=QuoteResponseSerializer(many=True),
                 description="The response contains a list of available quotes from different providers.",
             )
         },
-        examples=[
-            quote_request_example,
-        ],
     )
     def post(self, request):
         serializer = QuoteRequestSerializerV2(data=request.data)

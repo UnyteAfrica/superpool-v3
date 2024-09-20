@@ -966,7 +966,7 @@ class QuoteService(IQuote):
         for this product type
         """
         return InsurancePartner.objects.filter(
-            products__product_type=product_type
+            product__product_type=product_type
         ).distinct()
 
     def _retrieve_realtime_quotes(self, providers: List[str], validated_data: dict):
@@ -998,6 +998,7 @@ class QuoteService(IQuote):
         # FOR NOW WE ARE JUST GOING TO RETURN THE BASE PREMIUMS BACK TO THE MERCHANT
         # AS THE AMOUNT TO BE PAID
         quotes = []
+        providers_list = [provider.name for provider in providers]
 
         product_type = validated_data["insurance_details"]["product_type"]
         product_name = validated_data["insurance_details"].get("product_name")
@@ -1007,16 +1008,16 @@ class QuoteService(IQuote):
         # fetch all products matching the product information (name, type, tier or something)
         products = (
             Product.objects.filter(
-                provider__in=providers,
+                provider__name__in=providers_list,
                 product_type=product_type,
             )
-            .select_related("provider")
+            # .select_related("provider")
             .prefetch_related("tiers", "tiers__coverages")
         )
 
         # if product name is present in the incoming request, include search by name
         if product_name:
-            products.filter(name__icontains=product_name)
+            products = products.filter(name__icontains=product_name)
 
         # When a quote is being generated based on the product coverage,
         # and provider, we are doing something interesting here,
@@ -1027,15 +1028,15 @@ class QuoteService(IQuote):
         for product in products:
             for tier in product.tiers.all():
                 premium = Price.objects.create(
-                    amount=tier.base_preimum,
-                    description=f"{product.name} - {tier.name} Premium",
+                    amount=tier.base_premium,
+                    description=f"{product.name} - {tier.tier_name} Premium",
                 )
 
                 with transaction.atomic():
                     quote = Quote.objects.create(
                         product=product,
                         premium=premium,
-                        base_price=tier.base_preimum,
+                        base_price=tier.base_premium,
                         additional_metadata={
                             "tier_name": tier.tier_name,
                             "coverage_details": [
