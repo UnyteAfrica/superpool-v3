@@ -34,6 +34,7 @@ from .openapi import (
     policy_cancellation_request_example,
     policy_cancellation_request_example_2,
     products_response_example,
+    quote_request_example,
 )
 from .serializers import (
     CoverageSerializer,
@@ -886,6 +887,20 @@ class QuoteRequestView(views.APIView):
     View to handle insurance quote requests and return aggregated quotes.
     """
 
+    @extend_schema(
+        summary="Request a Quote",
+        description="Submit a request to generate insurance quotes for a specified product type and customer details.",
+        request=QuoteRequestSerializerV2,
+        responses={
+            200: OpenApiResponse(
+                response=QuoteResponseSerializer,
+                description="The response contains a list of available quotes from different providers.",
+            )
+        },
+        examples=[
+            quote_request_example,
+        ],
+    )
     def post(self, request):
         serializer = QuoteRequestSerializerV2(data=request.data)
         if not serializer.is_valid():
@@ -895,14 +910,12 @@ class QuoteRequestView(views.APIView):
 
         service = QuoteService()
         try:
-            quotes = service.request_quote(validated_data)
-
-            print(f"Quotes: {quotes}")
-            response_serializer = QuoteResponseSerializer(quotes, many=True)
+            quote_data = service.request_quote(validated_data)
+            print(f"Quotes: {quote_data}")
+            response_serializer = QuoteResponseSerializer(quote_data, many=True)
         except Exception as exc:
             logger.error(f"Error occured: {exc}")
             return Response({"error": str(exc)})
-
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
