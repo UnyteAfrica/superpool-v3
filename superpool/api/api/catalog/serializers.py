@@ -1137,6 +1137,17 @@ class CoveragePreferencesSerializer(serializers.Serializer):
         required=False,
     )
 
+    def get_coverage_type_display(self, value):
+        """
+        returns the valid options if an incorrect input is given for a vald coverage type
+        """
+        valid_choices = [choice[0] for choice in Coverage.CoverageType.choices]
+        if value not in valid_choices:
+            raise serializers.ValidationError(
+                f"Invalid coverage type. Expected one of {valid_choices}."
+            )
+        return value
+
 
 class QuoteRequestSerializerV2(serializers.Serializer):
     """
@@ -1249,7 +1260,6 @@ class QuoteResponseSerializer(serializers.ModelSerializer):
         child=serializers.CharField(),
         help_text="List of exclusions for the insurance product",
     )
-    coverage = QuoteCoverageSerializer(help_text="Coverage details for the product")
     benefits = serializers.ListField(
         child=serializers.CharField(),
         help_text="List of benefits included in the insurance product",
@@ -1273,7 +1283,7 @@ class QuoteResponseSerializer(serializers.ModelSerializer):
         fields = [
             "provider",
             "pricing",
-            "coverage",
+            "coverages",
             "exclusions",
             "benefits",
             "policy_terms",
