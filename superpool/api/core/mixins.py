@@ -58,6 +58,13 @@ class TrashableModelMixin(models.Model):
 
     def delete(self, *args: dict, **kwargs: dict) -> None:
         """
-        Overrides the delete method to trash the model instance instead of deleting it
+        Overrides the delete method to trash the model instance instead of permanently deleting it
         """
         self.trash()
+
+    def full_delete(self) -> None:
+        """
+        Perform a hard delete (permanent deletion) by calling the default delete method
+        from Django's base model, bypassing the soft delete.
+        """
+        super(TrashableModelMixin, self).delete(*args, **kwargs)
