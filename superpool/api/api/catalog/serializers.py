@@ -1322,3 +1322,10 @@ class QuoteResponseSerializer(serializers.ModelSerializer):
         Fetch benefits from the 'additional_metadata' stored in the Quote.
         """
         return obj.additional_metadata.get("benefits", [])
+
+    def to_representation(self, instance) -> dict:
+        representation = super().to_representation(instance)
+        representation["additional_metadata"]["last_updated"] = (
+            instance.additional_metadata.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        return representation
