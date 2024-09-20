@@ -1030,21 +1030,24 @@ class QuoteService(IQuote):
                     amount=tier.base_preimum,
                     description=f"{product.name} - {tier.name} Premium",
                 )
-                quote = Quote.objects.create(
-                    product=product,
-                    premium=premium,
-                    base_price=tier.base_preimum,
-                    additional_metadata={
-                        "tier_name": tier.tier_name,
-                        "coverage_details": [
-                            {
-                                "coverage_type": coverage.coverage_name,
-                                "coverage_limit": coverage.coverage_limit,
-                            }
-                            for coverage in tier.coverages.all()
-                        ],
-                    },
-                )
-                quotes.append(quote)
 
+                with transaction.atomic():
+                    quote = Quote.objects.create(
+                        product=product,
+                        premium=premium,
+                        base_price=tier.base_preimum,
+                        additional_metadata={
+                            "tier_name": tier.tier_name,
+                            "coverage_details": [
+                                {
+                                    "coverage_type": coverage.coverage_name,
+                                    "coverage_limit": coverage.coverage_limit,
+                                }
+                                for coverage in tier.coverages.all()
+                            ],
+                            "exclusions": tier.exclusions.split("\n"),
+                            "benefits": tier.benefits.split("\n"),
+                        },
+                    )
+                    quotes.append(quote)
         return quotes
