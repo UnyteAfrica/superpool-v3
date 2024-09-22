@@ -885,11 +885,115 @@ class RequestQuoteView(views.APIView):
 class QuoteRequestView(views.APIView):
     """
     View to handle insurance quote requests and return aggregated quotes.
+
+    This endpoint allows merchants to request insurance quotes for various insurance products.
+    The system aggregates quotes from different insurance providers based on the provided
+    product type, product name, and coverage preferences. The response includes a list of
+    available quotes, along with detailed information such as coverage, premium, exclusions,
+    and provider information.
+
+    The request body requires customer metadata, insurance product details, and coverage preferences.
+
+    Example Request Body: SEE API REQUEST EXAMPLE
+
+    **Filtering Options**:
+    The following filters will be available to refine the results:
+
+    - **Insurance Provider**: Filter by specific insurance providers. You can pass a list of provider IDs to get quotes from specific insurers.
+    - **Coverage Type**: Filter quotes by the type of coverage (e.g., Health, Auto, Life). This narrows down quotes to specific coverage types that match the merchant’s preferences.
+    - **Premium Amount**: You can filter quotes based on price by specifying either:
+        - `min_price`: Minimum premium amount to return.
+        - `max_price`: Maximum premium amount to return.
+    - **Sort Options**: Sort quotes by:
+        - `cheapest`: Sort quotes by the lowest premium amount.
+        - `best_value`: Sort quotes by the best value, considering both premium and coverage limits.
+
+    Example of Filter Query Parameters (to be supported in future versions):
+    ```
+    POST /api/v1/quotes/?provider_name=AXA&min_price=500&max_price=1000&sort=cheapest
+    ```
+
+    **Response Format**:
+    The response will contain a list of quotes with the following structure:
+
+    ```json
+    {
+      "quotes": [
+        {
+          "provider": {
+            "provider_name": "Provider A",
+            "provider_id": "provider_a"
+          },
+          "pricing": {
+            "base_premium": 500.00,
+            "total_amount_for_quotation": 520.00,
+            "currency": "USD",
+            "discount_amount": 20.00
+          },
+          "coverage": {
+            "coverage_type": "Health",
+            "coverage_limit": 100000
+          },
+          "exclusions": ["Pre-existing conditions"],
+          "benefits": ["Regular checkups", "Emergency care"],
+          "policy_terms": {
+            "duration": "12 months",
+            "renewal_option": "Auto-renew"
+          },
+          "quote_code": "quote_123456",
+          "purchase_id": "purchase_123456",
+          "purchase_id_description": "Use this ID for the payment processor."
+        }
+      ]
+    }
+    ```
+
+    **Filtering and Sorting**:
+    The response can be filtered and sorted based on the following criteria:
+
+    - `provider`: Filter by insurance provider (Name of the provider).
+    - `min_price`: Filter by minimum premium amount.
+    - `max_price`: Filter by maximum premium amount.
+    - `coverage_type`: Filter by coverage type (e.g., Health, Auto).
+    - `sort`: Sort the quotes by either `cheapest` (lowest premium) or `best_value` (premium-to-coverage ratio).
+
+    Example of a successful response:
+    ```json
+    {
+      "quotes": [
+        {
+          "provider": {
+            "provider_name": "Universal Insurance Plc",
+            "provider_id": "provider_001"
+          },
+          "pricing": {
+            "base_premium": 450.00,
+            "total_amount_for_quotation": 480.00,
+            "currency": "USD",
+            "discount_amount": 30.00
+          },
+          "coverage": {
+            "coverage_type": "Health",
+            "coverage_limit": 100000
+          },
+          "exclusions": ["Pre-existing conditions"],
+          "benefits": ["Emergency medical care"],
+          "policy_terms": {
+            "duration": "12 months",
+            "renewal_option": "Auto-renew"
+          },
+          "quote_code": "quote_internal_456",
+          "purchase_id": "purchase_456",
+          "purchase_id_description": "Use this ID to complete payment."
+        }
+      ]
+    }
+    ```
     """
 
     @extend_schema(
         summary="Request a quote for an insurance policy or product",
-        description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
+        # description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
         tags=["Quotes"],
         request=OpenApiRequest(
             request=QuoteRequestSerializerV2(many=True),
@@ -916,7 +1020,9 @@ class QuoteRequestView(views.APIView):
             response_serializer = QuoteResponseSerializer(quote_data, many=True)
         except Exception as exc:
             logger.error(f"Error occured: {exc}")
-            return Response({"error": str(exc)})
+            return Response(
+                {"error": exc}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 

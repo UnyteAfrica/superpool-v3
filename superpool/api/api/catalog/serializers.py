@@ -1185,6 +1185,14 @@ class QuoteCoverageSerializer(serializers.Serializer):
         help_text="List of benefits for this coverage type",
     )
 
+    def to_representation(self, instance):
+        """
+        Convert Decimal fields to strings before serializing
+        """
+        representation = super().to_representation(instance)
+        representation["coverage_limit"] = str(representation["coverage_limit"])
+        return representation
+
 
 class QuoteTermsSerializer(serializers.Serializer):
     """
@@ -1226,6 +1234,18 @@ class QuotePricingSerializer(serializers.Serializer):
     total_amount_for_quotation = serializers.DecimalField(
         max_digits=10, decimal_places=2, help_text="Total premium after adjustments"
     )
+
+    def to_representation(self, instance):
+        try:
+            representation = super().to_representation(instance)
+            representation["base_premium"] = str(representation["base_premium"])
+            representation["discount_amount"] = str(representation["discount_amount"])
+            representation["total_amount_for_quotation"] = str(
+                representation["total_amount_for_quotation"]
+            )
+            return representation
+        except Exception as exc:
+            raise exc
 
 
 class QuoteAdditionalMetadataSerializer(serializers.Serializer):
@@ -1306,9 +1326,9 @@ class QuoteResponseSerializer(serializers.ModelSerializer):
     def get_pricing(self, obj) -> dict:
         return {
             "currency": obj.premium.currency,
-            "base_premium": obj.base_price,
-            "total_amount_for_quotation": obj.base_price,
-            "discount_amount": obj.discount_amount or Decimal("0.00"),
+            "base_premium": str(obj.base_price),
+            "total_amount_for_quotation": str(obj.base_price),
+            "discount_amount": str(obj.discount_amount or Decimal("0.00")),
         }
 
     def get_exclusions(self, obj):
@@ -1325,7 +1345,9 @@ class QuoteResponseSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance) -> dict:
         representation = super().to_representation(instance)
-        representation["additional_metadata"]["last_updated"] = (
-            instance.additional_metadata.last_updated.strftime("%Y-%m-%d %H:%M:%S")
-        )
+        # representation["additional_metadata"]["last_updated"] = (
+        #     instance.additional_metadata.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+        # )
+        if "base_price" in instance and isinstance(instance.base_price, Decimal):
+            representation["base_price"] = str(instance.base_price)
         return representation

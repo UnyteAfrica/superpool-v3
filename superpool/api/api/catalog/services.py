@@ -1015,9 +1015,12 @@ class QuoteService(IQuote):
             .prefetch_related("tiers", "tiers__coverages")
         )
 
+        logger.info(f"Found products: {products}")
+
         # if product name is present in the incoming request, include search by name
         if product_name:
             products = products.filter(name__icontains=product_name)
+            logger.info(f"Filtered products: {products}")
 
         # When a quote is being generated based on the product coverage,
         # and provider, we are doing something interesting here,
@@ -1025,30 +1028,48 @@ class QuoteService(IQuote):
         #
         # Such that when we pulling the pricing and currency values, we won't
         # be hard-coding it, we wuld be pulling it from the Quote model
-        for product in products:
-            for tier in product.tiers.all():
-                premium = Price.objects.create(
-                    amount=tier.base_premium,
-                    description=f"{product.name} - {tier.tier_name} Premium",
-                )
-
-                with transaction.atomic():
-                    quote = Quote.objects.create(
-                        product=product,
-                        premium=premium,
-                        base_price=tier.base_premium,
-                        additional_metadata={
-                            "tier_name": tier.tier_name,
-                            "coverage_details": [
-                                {
-                                    "coverage_type": coverage.coverage_name,
-                                    "coverage_limit": coverage.coverage_limit,
-                                }
-                                for coverage in tier.coverages.all()
-                            ],
-                            "exclusions": tier.exclusions.split("\n"),
-                            "benefits": tier.benefits.split("\n"),
-                        },
+        try:
+            for product in products:
+                for tier in product.tiers.all():
+                    logger.info(
+                        f"Processing product: {product.name}, Tier: {tier.tier_name}"
                     )
-                    quotes.append(quote)
-        return quotes
+                    print(f"Product: {product.name}")
+                    print(f"Tier: {tier.tier_name}")
+
+                    with transaction.atomic():
+                        premium = Price.objects.create(
+                            amount=tier.base_premium,
+                            description=f"{product.name} - {tier.tier_name} Premium",
+                        )
+
+                        logger.info(
+                            f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
+                        )
+
+                        # pdb.set_trace()
+
+                        quote = Quote.objects.create(
+                            product=product,
+                            premium=premium,
+                            base_price=tier.base_premium,
+                            additional_metadata={
+                                "tier_name": tier.tier_name,
+                                "coverage_details": [
+                                    {
+                                        "coverage_type": coverage.coverage_name,
+                                        "coverage_limit": coverage.coverage_limit,
+                                    }
+                                    for coverage in tier.coverages.all()
+                                ],
+                                "exclusions": tier.exclusions or "",
+                                "benefits": tier.benefits or "",
+                            },
+                        )
+                        print(f"Created Quote: {quote}")
+
+                        quotes.append(quote)
+            return quotes
+        except Exception as exc:
+            logger.error(f"Error while processing product tiers: {exc}")
+            raise exc
