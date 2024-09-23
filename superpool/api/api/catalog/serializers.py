@@ -1163,7 +1163,7 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     coverage_preferences = CoveragePreferencesSerializer(default=False)
 
 
-class QuoteCoverageSerializer(serializers.Serializer):
+class QuoteCoverageSerializer(serializers.ModelSerializer):
     """
     Quote 2.0
 
@@ -1318,6 +1318,7 @@ class QuoteResponseSerializer(serializers.Serializer):
         help_text="Purchase ID for completing the transaction with an external payment processor"
     )
     provider_information = QuoteProviderSerializer(source="product")
+    coverages = QuoteCoverageSerializer(many=True)
     additional_metadata = QuoteAdditionalMetadataSerializer(
         help_text="Additional information about the product and product tier",
     )
@@ -1330,6 +1331,7 @@ class QuoteResponseSerializer(serializers.Serializer):
             "quote_code",
             "purchase_id",
             "provider_information",
+            "coverages",
             "additional_metadata",
             "policy_terms",
         ]
