@@ -1020,7 +1020,7 @@ class QuoteRequestView(views.APIView):
             response_serializer = QuoteResponseSerializer(quote_data, many=True)
             return Response(
                 {
-                    "message": "Quote successfully created",
+                    "message": "Quote successfully retrieved",
                     "data": response_serializer.data,
                 }
             )
