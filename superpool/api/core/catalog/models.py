@@ -432,6 +432,11 @@ class Quote(models.Model):
         help_text="Unique identifier provided to payment processors to identify a quote purchase",
     )
     purchase_id_created_at = models.DateTimeField(null=True, blank=True)
+    policy_terms = models.JSONField(
+        help_text="Terms and conditions of the insurance policy, stored as a JSON object.",
+        default=dict,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "quote"

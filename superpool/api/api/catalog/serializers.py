@@ -1209,6 +1209,18 @@ class QuoteTermsSerializer(serializers.Serializer):
         help_text="Cancellation policy details, e.g., '30 days notice required for cancellation without penalty."
     )
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["duration"] = representation.get("duration", "12 months")
+        representation["renewal_options"] = representation.get(
+            "renewal_options", "Auto-renewal disabled; policy renewal is not automatic."
+        )
+        representation["cancellation_policy"] = representation.get(
+            "cancellation_policy",
+            "30 days notice required for cancellation without penalty.",
+        )
+        return representation
+
 
 class QuoteProviderSerializer(serializers.ModelSerializer):
     provider_name = serializers.CharField(
