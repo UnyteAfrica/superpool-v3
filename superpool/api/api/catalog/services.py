@@ -1059,7 +1059,9 @@ class QuoteService(IQuote):
                                 "tier_name": tier.tier_name,
                                 "coverage_details": [
                                     {
+                                        "coverage_name": coverage.coverage_name,
                                         "coverage_type": coverage.coverage_name,
+                                        "coverage_description": coverage.description,
                                         "coverage_limit": str(coverage.coverage_limit),
                                     }
                                     for coverage in tier.coverages.all()

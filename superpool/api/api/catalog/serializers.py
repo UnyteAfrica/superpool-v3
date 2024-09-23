@@ -1163,7 +1163,7 @@ class QuoteRequestSerializerV2(serializers.Serializer):
     coverage_preferences = CoveragePreferencesSerializer(default=False)
 
 
-class QuoteCoverageSerializer(serializers.ModelSerializer):
+class QuoteCoverageSerializer(serializers.Serializer):
     """
     Quote 2.0
 
@@ -1182,21 +1182,21 @@ class QuoteCoverageSerializer(serializers.ModelSerializer):
     coverage_limit = serializers.DecimalField(
         max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
     )
-    exclusions = serializers.ListField(
-        child=serializers.CharField(
-            help_text="Exclusions or limitations of the coverage",
-            allow_blank=True,
-        ),
-    )
-    benefits = serializers.ListField(
-        child=serializers.CharField(
-            help_text="Specific benefits included in the coverage",
-            allow_blank=True,
-        ),
-    )
+    # exclusions = serializers.ListField(
+    #     child=serializers.CharField(
+    #         help_text="Exclusions or limitations of the coverage",
+    #         allow_blank=True,
+    #     ),
+    # )
+    # benefits = serializers.ListField(
+    #     child=serializers.CharField(
+    #         help_text="Specific benefits included in the coverage",
+    #         allow_blank=True,
+    #     ),
+    # )
 
     class Meta:
-        model = Coverage
+        # model = Coverage
         fields = [
             "coverage_name",
             "coverage_description",
@@ -1318,7 +1318,11 @@ class QuoteResponseSerializer(serializers.Serializer):
         help_text="Purchase ID for completing the transaction with an external payment processor"
     )
     provider_information = QuoteProviderSerializer(source="product")
-    coverages = QuoteCoverageSerializer(many=True)
+    coverages = QuoteCoverageSerializer(
+        source="additional_metadata.coverage_details",
+        many=True,
+        help_text="List of coverage details",
+    )
     additional_metadata = QuoteAdditionalMetadataSerializer(
         help_text="Additional information about the product and product tier",
     )
