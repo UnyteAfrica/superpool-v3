@@ -1170,6 +1170,12 @@ class QuoteCoverageSerializer(serializers.Serializer):
     Revised Serializer to format the quote response.
     """
 
+    coverage_name = serializers.CharField(
+        help_text="Name of the coverage, e.g., Collision, Medical"
+    )
+    coverage_description = serializers.CharField(
+        help_text="Description of the coverage"
+    )
     coverage_type = serializers.CharField(
         help_text="Type of coverage, e.g., Health, Accident"
     )
