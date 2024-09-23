@@ -1182,18 +1182,6 @@ class QuoteCoverageSerializer(serializers.Serializer):
     coverage_limit = serializers.DecimalField(
         max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
     )
-    # exclusions = serializers.ListField(
-    #     child=serializers.CharField(
-    #         help_text="Exclusions or limitations of the coverage",
-    #         allow_blank=True,
-    #     ),
-    # )
-    # benefits = serializers.ListField(
-    #     child=serializers.CharField(
-    #         help_text="Specific benefits included in the coverage",
-    #         allow_blank=True,
-    #     ),
-    # )
 
     class Meta:
         # model = Coverage
@@ -1205,15 +1193,6 @@ class QuoteCoverageSerializer(serializers.Serializer):
             "exclusions",
             "benefits",
         ]
-
-    #
-    # def to_representation(self, instance):
-    #     """
-    #     Convert Decimal fields to strings before serializing
-    #     """
-    #     representation = super().to_representation(instance)
-    #     representation["coverage_limit"] = str(representation["coverage_limit"])
-    #     return representation
 
 
 class QuoteTermsSerializer(serializers.Serializer):
@@ -1293,13 +1272,32 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="List of available tiers for the product",
     )
+    exclusions = serializers.ListField(
+        child=serializers.CharField(
+            help_text="Exclusions or limitations of the coverage",
+            allow_blank=True,
+        ),
+    )
+    benefits = serializers.ListField(
+        child=serializers.CharField(
+            help_text="Specific benefits included in the coverage",
+            allow_blank=True,
+        ),
+    )
     last_updated = serializers.DateTimeField(
         help_text="Timestamp of the last update to this quote in ISO 8601 format",
         read_only=True,
     )
 
     class Meta:
-        fields = ["product_type", "tier", "available_tiers", "last_updated"]
+        fields = [
+            "product_type",
+            "tier",
+            "available_tiers",
+            "exclusions",
+            "benefits",
+            "last_updated",
+        ]
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
