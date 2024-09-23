@@ -982,7 +982,7 @@ class QuoteService(IQuote):
 
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict
-    ) -> list[QuerySet]:
+    ) -> QuerySet:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
 
@@ -1060,8 +1060,8 @@ class QuoteService(IQuote):
                                 "coverage_details": [
                                     {
                                         "coverage_name": coverage.coverage_name,
-                                        "coverage_type": coverage.coverage_name,
                                         "coverage_description": coverage.description,
+                                        "coverage_type": coverage.coverage_name,
                                         "coverage_limit": str(coverage.coverage_limit),
                                     }
                                     for coverage in tier.coverages.all()
@@ -1075,8 +1075,8 @@ class QuoteService(IQuote):
                         logger.info(
                             f"Created quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
                         )
-                        quotes.append(quote)
-            return quotes
+                        quotes.append(quote.pk)
+            return Quote.objects.filter(pk__in=quotes)
         except Exception as exc:
             logger.error(f"Error while processing product tiers: {exc}")
             raise exc

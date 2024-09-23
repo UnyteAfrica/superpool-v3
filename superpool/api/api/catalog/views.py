@@ -1017,12 +1017,21 @@ class QuoteRequestView(views.APIView):
         try:
             quote_data = service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
+
+            paginator = LimitOffsetPagination()
+            page = paginator.paginate_queryset(quote_data, request)
+
+            if page is not None:
+                response_serializer = QuoteResponseSerializer(page, many=True)
+                return paginator.get_paginated_response(response_serializer.data)
+
             response_serializer = QuoteResponseSerializer(quote_data, many=True)
             return Response(
                 {
                     "message": "Quote successfully retrieved",
                     "data": response_serializer.data,
-                }
+                },
+                status=status.HTTP_200_OK,
             )
         except Exception as exc:
             logger.error(f"Error occured: {exc}")
