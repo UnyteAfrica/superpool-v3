@@ -995,6 +995,21 @@ class QuoteRequestView(views.APIView):
         summary="Request a quote for an insurance policy or product",
         # description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
         tags=["Quotes"],
+        parameters=[
+            OpenApiParameter(
+                name="coverage_type",
+                description="Filter quotes by Coverage Type",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="sort_by",
+                description="Sort quotes by cheapest or best coverage",
+                required=False,
+                type=str,
+                enum=["cheapest", "best_coverage"],
+            ),
+        ],
         request=OpenApiRequest(
             request=QuoteRequestSerializerV2(many=True),
             examples=[quote_request_example],
