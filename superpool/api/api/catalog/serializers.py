@@ -1184,14 +1184,14 @@ class QuoteCoverageSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="List of benefits for this coverage type",
     )
-
-    def to_representation(self, instance):
-        """
-        Convert Decimal fields to strings before serializing
-        """
-        representation = super().to_representation(instance)
-        representation["coverage_limit"] = str(representation["coverage_limit"])
-        return representation
+    #
+    # def to_representation(self, instance):
+    #     """
+    #     Convert Decimal fields to strings before serializing
+    #     """
+    #     representation = super().to_representation(instance)
+    #     representation["coverage_limit"] = str(representation["coverage_limit"])
+    #     return representation
 
 
 class QuoteTermsSerializer(serializers.Serializer):
@@ -1210,11 +1210,17 @@ class QuoteTermsSerializer(serializers.Serializer):
     )
 
 
-class QuoteProviderSerializer(serializers.Serializer):
-    provider_name = serializers.CharField(help_text="Name of the insurance provider")
-    provider_id = serializers.CharField(
-        help_text="Unique identifier for the insurance provider"
+class QuoteProviderSerializer(serializers.ModelSerializer):
+    provider_name = serializers.CharField(
+        source="provider.name", help_text="Name of the insurance provider"
     )
+    provider_id = serializers.CharField(
+        source="provider.id", help_text="Unique identifier for the insurance provider"
+    )
+
+    class Meta:
+        model = Product
+        fields = ["provider_id", "provider_name"]
 
 
 class QuotePricingSerializer(serializers.Serializer):
@@ -1235,18 +1241,6 @@ class QuotePricingSerializer(serializers.Serializer):
         max_digits=10, decimal_places=2, help_text="Total premium after adjustments"
     )
 
-    def to_representation(self, instance):
-        try:
-            representation = super().to_representation(instance)
-            representation["base_premium"] = str(representation["base_premium"])
-            representation["discount_amount"] = str(representation["discount_amount"])
-            representation["total_amount_for_quotation"] = str(
-                representation["total_amount_for_quotation"]
-            )
-            return representation
-        except Exception as exc:
-            raise exc
-
 
 class QuoteAdditionalMetadataSerializer(serializers.Serializer):
     """
@@ -1254,100 +1248,68 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
     """
 
     product_type = serializers.CharField(
-        help_text="Type of product, e.g., Health Insurance"
+        help_text="Type of product, e.g., Health Insurance",
     )
-    tier = serializers.CharField(help_text="Tier of the product, e.g., Standard")
-    available_addons = serializers.ListField(
+    tier = serializers.CharField(
+        help_text="Tier of the product, e.g., Standard", source="tier_name"
+    )
+    available_tiers = serializers.ListField(
         child=serializers.CharField(),
-        help_text="List of available add-ons for the product",
+        help_text="List of available tiers for the product",
     )
     last_updated = serializers.DateTimeField(
-        help_text="Timestamp of the last update to this quote in ISO 8601 format"
+        help_text="Timestamp of the last update to this quote in ISO 8601 format",
+        read_only=True,
     )
 
+    class Meta:
+        fields = ["product_type", "tier", "available_tiers", "last_updated"]
 
-class QuoteResponseSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        last_updated = timezone.now()
+        representation["last_updated"] = last_updated.strftime("%Y-%m-%d %H:%M:%S")
+        return representation
+
+
+class QuoteResponseSerializer(serializers.Serializer):
     """
     Serializer to format the quote response in a structured, unified way.
     """
 
-    provider = QuoteProviderSerializer(help_text="Provider offering the quote")
-    pricing = QuotePricingSerializer(help_text="Pricing details for the quote")
-    coverages = QuoteCoverageSerializer(
-        many=True, help_text="List of coverages offered in the quote"
+    quote_code = serializers.CharField(help_text="Unique identifier for the quote")
+    purchase_id = serializers.CharField(
+        help_text="Purchase ID for completing the transaction with an external payment processor"
     )
-    exclusions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of exclusions for the insurance product",
-    )
-    benefits = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of benefits included in the insurance product",
+    provider_information = QuoteProviderSerializer(source="product")
+    additional_metadata = QuoteAdditionalMetadataSerializer(
+        help_text="Additional information about the product and product tier",
     )
     policy_terms = QuoteTermsSerializer(
         help_text="Terms and conditions of the insurance policy"
     )
-    additional_metadata = QuoteAdditionalMetadataSerializer(
-        help_text="Additional information about the product and product tier"
-    )
-    quote_code = serializers.CharField(help_text="Unique identifier for the quote")
-    purchase_id = serializers.CharField(
-        help_text="Purchase ID for completing the transaction"
-    )
-    purchase_id_description = serializers.CharField(
-        help_text="Instructions for using the purchase ID with external payment processor"
-    )
 
     class Meta:
-        model = Quote
         fields = [
-            "provider",
-            "pricing",
-            "coverages",
-            "exclusions",
-            "benefits",
-            "policy_terms",
-            "additional_metadata",
             "quote_code",
             "purchase_id",
-            "purchase_id_description",
+            "provider_information",
+            "additional_metadata",
+            "policy_terms",
         ]
 
-    def get_provider(self, obj) -> dict:
-        """
-        Returns the information on the insurer providing the
-        product
-        """
-        return {
-            "provider_name": obj.product.provider.name,
-            "provider_id": obj.product.provider.id,
-        }
-
-    def get_pricing(self, obj) -> dict:
-        return {
-            "currency": obj.premium.currency,
-            "base_premium": str(obj.base_price),
-            "total_amount_for_quotation": str(obj.base_price),
-            "discount_amount": str(obj.discount_amount or Decimal("0.00")),
-        }
-
-    def get_exclusions(self, obj):
-        """
-        Fetch exclusions from the 'additional_metadata' stored in the Quote.
-        """
-        return obj.additional_metadata.get("exclusions", [])
-
-    def get_benefits(self, obj):
-        """
-        Fetch benefits from the 'additional_metadata' stored in the Quote.
-        """
-        return obj.additional_metadata.get("benefits", [])
-
-    def to_representation(self, instance) -> dict:
+    def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # representation["additional_metadata"]["last_updated"] = (
-        #     instance.additional_metadata.last_updated.strftime("%Y-%m-%d %H:%M:%S")
-        # )
-        if "base_price" in instance and isinstance(instance.base_price, Decimal):
-            representation["base_price"] = str(instance.base_price)
+
+        # Extract the pricing information using Price model ('premium')
+        # from the Quote instance
+        representation["pricing"] = QuotePricingSerializer(
+            {
+                "currency": instance.premium.currency,
+                "base_premium": instance.premium.amount,
+                "discount_amount": instance.premium.discount_amount or 0,
+                "total_amount_for_quotation": instance.base_price,
+            }
+        ).data
+
         return representation

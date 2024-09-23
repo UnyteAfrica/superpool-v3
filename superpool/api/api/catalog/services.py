@@ -1030,6 +1030,8 @@ class QuoteService(IQuote):
         # be hard-coding it, we wuld be pulling it from the Quote model
         try:
             for product in products:
+                # fetch all the tier nnmes for this product
+                all_tier_names = [tier.tier_name for tier in product.tiers.all()]
                 for tier in product.tiers.all():
                     logger.info(
                         f"Processing product: {product.name}, Tier: {tier.tier_name}"
@@ -1058,16 +1060,19 @@ class QuoteService(IQuote):
                                 "coverage_details": [
                                     {
                                         "coverage_type": coverage.coverage_name,
-                                        "coverage_limit": coverage.coverage_limit,
+                                        "coverage_limit": str(coverage.coverage_limit),
                                     }
                                     for coverage in tier.coverages.all()
                                 ],
                                 "exclusions": tier.exclusions or "",
                                 "benefits": tier.benefits or "",
+                                "product_type": product.product_type,
+                                "available_tiers": all_tier_names,  # All addons available for this product
                             },
                         )
-                        print(f"Created Quote: {quote}")
-
+                        logger.info(
+                            f"Created quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                        )
                         quotes.append(quote)
             return quotes
         except Exception as exc:

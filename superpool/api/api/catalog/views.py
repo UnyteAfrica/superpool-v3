@@ -1016,14 +1016,19 @@ class QuoteRequestView(views.APIView):
         service = QuoteService()
         try:
             quote_data = service.request_quote(validated_data)
-            print(f"Quotes: {quote_data}")
+            logger.info(f"Quote Data: {quote_data}")
             response_serializer = QuoteResponseSerializer(quote_data, many=True)
+            return Response(
+                {
+                    "message": "Quote successfully created",
+                    "data": response_serializer.data,
+                }
+            )
         except Exception as exc:
             logger.error(f"Error occured: {exc}")
             return Response(
-                {"error": exc}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class PolicyPurchaseView(generics.GenericAPIView):
