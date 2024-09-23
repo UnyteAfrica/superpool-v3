@@ -1183,13 +1183,29 @@ class QuoteCoverageSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
     )
     exclusions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of exclusions for this coverage type",
+        child=serializers.CharField(
+            help_text="Exclusions or limitations of the coverage",
+            allow_blank=True,
+        ),
     )
     benefits = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of benefits for this coverage type",
+        child=serializers.CharField(
+            help_text="Specific benefits included in the coverage",
+            allow_blank=True,
+        ),
     )
+
+    class Meta:
+        model = Coverage
+        fields = [
+            "coverage_name",
+            "coverage_description",
+            "coverage_type",
+            "coverage_limit",
+            "exclusions",
+            "benefits",
+        ]
+
     #
     # def to_representation(self, instance):
     #     """
