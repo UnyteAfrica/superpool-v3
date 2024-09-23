@@ -1200,13 +1200,15 @@ class QuoteTermsSerializer(serializers.Serializer):
     """
 
     duration = serializers.CharField(
-        help_text="Duration of the policy, e.g., 12 months"
+        help_text="Duration of the policy, e.g., 12 months", required=False
     )
     renewal_options = serializers.CharField(
-        help_text="Renewal option for the policy, e.g., Auto-renew; 'Automatic renewal with premium adjustment based on claims history.'"
+        help_text="Renewal option for the policy, e.g., Auto-renew; 'Automatic renewal with premium adjustment based on claims history.'",
+        required=False,
     )
     cancellation_policy = serializers.CharField(
-        help_text="Cancellation policy details, e.g., '30 days notice required for cancellation without penalty."
+        help_text="Cancellation policy details, e.g., '30 days notice required for cancellation without penalty.",
+        required=False,
     )
 
     def to_representation(self, instance):
