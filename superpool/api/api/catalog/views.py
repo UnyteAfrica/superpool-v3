@@ -991,6 +991,9 @@ class QuoteRequestView(views.APIView):
     ```
     """
 
+    filterset_backend = [DjangoFilterBackend]
+    filterset_class = QuoteFilter
+
     @extend_schema(
         summary="Request a quote for an insurance policy or product",
         # description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
@@ -1033,14 +1036,44 @@ class QuoteRequestView(views.APIView):
             quote_data = service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
 
+            # MAYBE I SHOULD WRAP THIS IN A CONDITIONAL?
+            #
+            # IF FILTERING PARAMETERS IS ADDED THEN IT SHOULD DO THIS
+            # IF SORTING? APPLY IF NECCESSARY
+            #
+            # WHAT IF WE DON'T WANT TO SORT ANYTHING OR FILTER ANYTHING, JUST PASS
+            # QQUOTE_DATA ALONG
+
+            filtered_quotes = quote_data
+            sorted_quotes = quote_data
+
+            # next we should check if any params was passed
+
+            if any(
+                param in request.query_params
+                for param in [
+                    "provider_name",
+                    "coverage_type",
+                    "min_price",
+                    "max_price",
+                ]
+            ):
+                filtered_quotes = self._apply_filters(request, quote_data)
+
+            # next check for sorting
+            if "sort_by" or "sort" in request.query_params:
+                sorted_quotes = self._sort_queryset(
+                    request, filtered_qs=filtered_quotes
+                )
+
             paginator = LimitOffsetPagination()
-            page = paginator.paginate_queryset(quote_data, request)
+            page = paginator.paginate_queryset(sorted_quotes, request)
 
             if page is not None:
                 response_serializer = QuoteResponseSerializer(page, many=True)
                 return paginator.get_paginated_response(response_serializer.data)
 
-            response_serializer = QuoteResponseSerializer(quote_data, many=True)
+            response_serializer = QuoteResponseSerializer(sorted_quotes, many=True)
             return Response(
                 {
                     "message": "Quote successfully retrieved",
@@ -1053,6 +1086,34 @@ class QuoteRequestView(views.APIView):
             return Response(
                 {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def _apply_filters(self, request: Request, qs: QuerySet):
+        """
+        Uses QuoteFilter to apply filtering logic onto incoming request
+        """
+        filterset = self.filterset_class(request.query_params, queryset=qs)
+        return filterset.qs
+
+    def _sort_queryset(self, request: Request, filtered_qs: QuerySet):
+        """
+        Apply sorting onto a filtered queryset and returns a filtered quotes
+        """
+        query_params = request.query_params
+
+        # SORTING LOGIC
+        #
+        # SORT BY 'BEST_VALUE' OR 'CHEAPEST'
+        sort_by = query_params.get("sort_by")
+
+        if sort_by == "cheapest":
+            filtered_qs = filtered_qs.order_by("premium__amount")
+        elif sort_by == "best_coverage":
+            filtered_qs = filtered_qs.annotate(
+                value_ratio=(
+                    F("additional_metadata__coverage_limit") / F("premium__amount")
+                )
+            ).order_by("-value_ratio")
+        return filtered_qs
 
 
 class PolicyPurchaseView(generics.GenericAPIView):
