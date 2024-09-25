@@ -8,7 +8,7 @@ class QSearchFilter(SearchFilter):
     search_param = "q"
 
 
-class QuoteFilter(SearchFilter):
+class QuoteFilter(filters.FilterSet):
     """
     Filter class for filtering quotes by various criteria such as provider, coverage type,
     and sorting by cheapest or best coverage.
