@@ -1,8 +1,10 @@
 import pytest
+from django.db import transaction
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from core.catalog.models import Price, Product, Quote
+from core.catalog.models import Price, Product, ProductTier, Quote
+from core.models import Coverage
 from core.providers.models import Provider as InsuranceProvider
 
 
@@ -12,125 +14,143 @@ def api_client():
 
 
 @pytest.fixture
-def provider_fixture():
-    provider, created = InsuranceProvider.objects.get_or_create(
-        name="AIICO",
-        id="1",
-        support_email="support@aiioexample.com",
-        support_phone="08012345678",
+@pytest.mark.django_db
+def setup_data():
+    provider_1 = InsuranceProvider.objects.create(name="AXA")
+    provider_2 = InsuranceProvider.objects.create(name="BedRock Global Partners")
+
+    product_1 = Product.objects.create(
+        provider=provider_1, name="Phone Insurance", product_type="Gadget"
     )
-    return provider
-
-
-@pytest.fixture
-def data_fixture(provider_fixture):
-    # create the insurer
-    aiico_insurance = provider_fixture
-
-    product_health, created = Product.objects.get_or_create(
-        name="Health Insurance",
-        product_type="Health",
-        product_description="Health",
-        provider=aiico_insurance,
-        # product_price=1000,
+    product_2 = Product.objects.create(
+        provider=provider_2, name="Laptop Insurance", product_type="Gadget"
     )
 
-    product_auto, created = Product.objects.get_or_create(
-        name="Auto Insurance",
-        product_type="Auto",
-        product_description="Auto",
-        provider=aiico_insurance,
-        # product_price=2000,
+    tier_1 = ProductTier.objects.create(
+        product=product_1, tier_name="Basic", base_premium=500
+    )
+    tier_2 = ProductTier.objects.create(
+        product=product_1, tier_name="Premium", base_premium=1000
     )
 
-    product_travel, created = Product.objects.get_or_create(
-        name="Travel Insurance",
-        product_type="Travel",
-        product_description="Travel",
-        provider=aiico_insurance,
-        # product_price=3000,
+    coverage_1 = Coverage.objects.create(
+        coverage_name="Accidental Damage",
+        coverage_limit=50000,
+        coverage_type=Coverage.CoverageType.DAMAGES,
     )
-    print(f"Created product for health insurance: {product_health}")
-    print(f"Created product for auto insurance: {product_auto}")
-    print(f"Created product for travel insurance: {product_travel}")
-
-    return product_health, product_auto, product_travel
-
-
-@pytest.fixture
-def quotes(data_fixture, provider_fixture):
-    product_health, product_auto, product_travel = data_fixture
-
-    # Create or get the Prices instance (The Premiums)
-    premium_health, created = Price.objects.get_or_create(
-        amount=1000.0, description="Standard health insurance premium"
+    coverage_2 = Coverage.objects.create(
+        coverage_name="Theft",
+        coverage_limit=100000,
+        coverage_type=Coverage.CoverageType.LIABILITY,
     )
 
-    premium_auto, created = Price.objects.get_or_create(
-        amount=1500.0, description="Comprehensive auto insurance premium"
-    )
-
-    premium_travel, created = Price.objects.get_or_create(
-        amount=2000.0, description="Standard travel insurance premium"
-    )
-
-    # create quote instances
-    quote_health = Quote.objects.create(
-        product=product_health,
-        quote_code="QH001",
-        base_price=1000,
-        premium=premium_health,
-        additional_metadata={
-            "coverage": "Standard",
-            "age": "30",
-            "health_condition": "good",
-        },
-    )
-
-    quote_auto = Quote.objects.create(
-        product=product_auto,
-        quote_code="QA001",
-        base_price=2000,
-        premium=premium_auto,
-        additional_metadata={
-            "coverage": "Standard",
-            "age": "30",
-            "car_make": "Toyota",
-        },
-    )
-
-    quote_travel = Quote.objects.create(
-        product=product_travel,
-        quote_code="QT001",
-        base_price=3000,
-        premium=premium_travel,
-        additional_info={
-            "coverage": "Standard",
-            "age": "30",
-            "destination": "USA",
-        },
-    )
-
-    print(f"Created quote for health insurance: {quote_health}")
-    print(f"Created quote for auto insurance: {quote_auto}")
-    print(f"Created quote for travel insurance: {quote_travel}")
-    return quote_health, quote_auto, quote_travel
+    return {
+        "provider_1": provider_1,
+        "provider_2": provider_2,
+        "product_1": product_1,
+        "product_2": product_2,
+        "tier_1": tier_1,
+        "tier_2": tier_2,
+        "coverage_1": coverage_1,
+        "coverage_2": coverage_2,
+    }
 
 
 @pytest.mark.django_db
-def test_request_quotes_successful(api_client, quotes):
-    data = {
-        "product": quotes[0].product.id,
-        "quote_code": "QH001",
-        "base_price": 1000,
-        "premium": quotes[0].premium.id,
-        "additional_metadata": {
-            "coverage": "Standard",
-            "age": "30",
-            "health_condition": "good",
-        },
-    }
-    response = api_client.post(reverse("request-quote"), data=data, format="json")
-    assert response.status_code == 200
-    assert response.json() is not None
-    assert response.json() == data
+class TestQuoteRequestView:
+    def test_filter_products_by_type(self, setup_data):
+        products = Product.objects.filter(
+            provider__name__in=[setup_data["provider_1"].name], product_type="Gadget"
+        )
+
+        assert products.count() == 1
+        assert products.first().name == "Phone Insurance"
+
+    def test_tier_and_coverage(self, setup_data):
+        tiers = setup_data["product_1"].tiers.all()
+        assert tiers.count() == 2
+
+        basic_tier = tiers.first()
+        coverages = basic_tier.coverages.all()
+
+        assert coverages.count() == 1
+        assert coverages.first().coverage_name == "Accidental Damage"
+
+    def test_quote_creation(self, setup_data):
+        with transaction.atomic():
+            premium = Price.objects.create(
+                amount=setup_data["tier_1"].base_premium,
+                description=f"{setup_data['product_1'].name} - {setup_data['tier_1'].tier_name} Premium",
+            )
+
+            quote = Quote.objects.create(
+                product=setup_data["product_1"],
+                premium=premium,
+                base_price=setup_data["tier_1"].base_premium,
+                additional_metadata={
+                    "tier_name": setup_data["tier_1"].tier_name,
+                    "coverage_details": [
+                        {
+                            "coverage_name": setup_data["coverage_1"].coverage_name,
+                            "coverage_description": setup_data[
+                                "coverage_1"
+                            ].description,
+                            "coverage_type": setup_data["coverage_1"].coverage_name,
+                            "coverage_limit": str(
+                                setup_data["coverage_1"].coverage_limit
+                            ),
+                        }
+                    ],
+                    "exclusions": setup_data["tier_1"].exclusions or "",
+                    "benefits": setup_data["tier_1"].benefits or "",
+                    "product_type": setup_data["product_1"].product_type,
+                    "available_tiers": [
+                        setup_data["tier_1"].tier_name,
+                        setup_data["tier_2"].tier_name,
+                    ],  # All addons available for this product
+                },
+            )
+
+        assert quote.base_price == 500
+        assert quote.additional_metadata["tier_name"] == "Basic"
+
+    def test_integration_quote_request(self, api_client, setup_data):
+        request_data = {
+            "insurance_details": {
+                "product_type": "Gadget",
+                "additional_information": {},
+            },
+            "coverage_preferences": {
+                "coverage_type": [],
+                "coverage_amount": "1000000",
+                "additional_coverages": [],
+            },
+        }
+
+        response = api_client.post(
+            reverse("request-quote"),
+            data=request_data,
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+
+        response_data = response.json()
+        assert "data" in response_data
+        assert len(response_data["data"]) > 0
+
+    @pytest.mark.parametrize(
+        "product_type,expected_product_name",
+        [
+            ("Gadget", "Phone Insurance"),
+            ("Home", "Home Insurance"),
+        ],
+    )
+    def test_product_type_filtering(
+        self, setup_data, product_type, expected_product_name
+    ):
+        products = Product.objects.filter(product_type=product_type)
+
+        if product_type == "Gadget":
+            assert products.count() == 2
+            assert products.first().name == expected_product_name

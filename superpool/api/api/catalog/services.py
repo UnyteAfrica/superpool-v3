@@ -940,6 +940,7 @@ class QuoteService(IQuote):
         internal_quotes = self._retrieve_quotes_from_internal_providers(
             providers, validated_data
         )
+        # external_quotes = self._retrieve_realtime_quotes()
         return internal_quotes
 
     def _get_tier_by_coverage_type(self, product, coverage_type):
