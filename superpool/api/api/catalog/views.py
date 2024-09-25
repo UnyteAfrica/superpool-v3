@@ -2,7 +2,8 @@ import logging
 from datetime import timedelta
 
 from django.core.exceptions import MultipleObjectsReturned
-from django.db.models import Q, QuerySet
+from django.db.models import F, Q, QuerySet
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -20,6 +21,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.catalog.exceptions import QuoteNotFoundError
+from api.catalog.filters import QuoteFilter
 from api.catalog.permissions import AdminOnlyInsurerFilterPermission
 from api.catalog.serializers import PolicyPurchaseResponseSerializer
 from core.catalog.models import Policy, Product, Quote
