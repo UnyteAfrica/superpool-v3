@@ -1000,16 +1000,34 @@ class QuoteRequestView(views.APIView):
         tags=["Quotes"],
         parameters=[
             OpenApiParameter(
+                name="provider_name",
+                description="Filter quotes by insurance provider (e.g., 'AXA', 'Universal Insurance')",
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
                 name="coverage_type",
                 description="Filter quotes by Coverage Type",
                 required=False,
-                type=str,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="min_price",
+                description="Filter quotes with a minimum premium amount",
+                required=False,
+                type=OpenApiTypes.FLOAT,
+            ),
+            OpenApiParameter(
+                name="max_price",
+                description="Filter quotes with a maximum premium amount",
+                required=False,
+                type=OpenApiTypes.FLOAT,
             ),
             OpenApiParameter(
                 name="sort_by",
-                description="Sort quotes by cheapest or best coverage",
+                description="Sort quotes by either 'cheapest' (lowest premium) or 'best_value' (premium-to-coverage ratio)",
                 required=False,
-                type=str,
+                type=OpenApiTypes.STR,
                 enum=["cheapest", "best_coverage"],
             ),
         ],
