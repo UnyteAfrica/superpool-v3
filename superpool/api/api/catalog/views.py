@@ -4,7 +4,6 @@ from datetime import timedelta
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import DecimalField, F, Q, QuerySet, Value
 from django.db.models.functions import Cast, Coalesce, NullIf
-from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -22,7 +21,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from api.catalog.exceptions import QuoteNotFoundError
-from api.catalog.filters import QuoteFilter
 from api.catalog.permissions import AdminOnlyInsurerFilterPermission
 from api.catalog.serializers import PolicyPurchaseResponseSerializer
 from core.catalog.models import Policy, Product, Quote
@@ -994,8 +992,8 @@ class QuoteRequestView(views.APIView):
     ```
     """
 
-    filterset_backend = [DjangoFilterBackend]
-    filterset_class = QuoteFilter
+    # filterset_backend = [DjangoFilterBackend]
+    # filterset_class = QuoteFilter
 
     @extend_schema(
         summary="Request a quote for an insurance policy or product",
@@ -1045,7 +1043,7 @@ class QuoteRequestView(views.APIView):
             )
         },
     )
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1137,9 +1135,9 @@ class QuoteRequestView(views.APIView):
             COVERAGE_LIMIT = F("additional_metadata__coverage_limit")
             PREMIUM_AMOUNT = F("premium__amount")
 
-            import pdb
-
-            pdb.set_trace()
+            # import pdb
+            #
+            # pdb.set_trace()
             filtered_qs = filtered_qs.annotate(
                 # See: https://devdocs.io/django~5.0/ref/models/database-functions#django.db.models.functions.Cast
                 # Coalesce here, because initally its found that some of our coverage limit
