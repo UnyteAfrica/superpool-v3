@@ -2,7 +2,8 @@ import logging
 from datetime import timedelta
 
 from django.core.exceptions import MultipleObjectsReturned
-from django.db.models import F, Q, QuerySet
+from django.db.models import DecimalField, F, Q, QuerySet, Value
+from django.db.models.functions import Cast, Coalesce
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -1128,10 +1129,18 @@ class QuoteRequestView(views.APIView):
         if sort_by == "cheapest":
             filtered_qs = filtered_qs.order_by("premium__amount")
         elif sort_by == "best_coverage":
+            # HERE WE ARE RETRIEVEING THE LIMIT OF THE QUOTE COVERAGE
+            #
+            # FROM THE ADDITONAL_METADATA FIELD ON THE QUOTE OBJECT
+            # WHICH IS A JSON FILED, WE WANT TO HOWEVER PASS DECIMAL
+            # OBJECT INTO THE QUERYSET MANAGER
+            COVERAGE_LIMIT = F("additional_metadata__coverage_limit")
             filtered_qs = filtered_qs.annotate(
-                value_ratio=(
-                    F("additional_metadata__coverage_limit") / F("premium__amount")
-                )
+                # See: https://devdocs.io/django~5.0/ref/models/database-functions#django.db.models.functions.Cast
+                # Coalesce here, because initally its found that some of our coverage limit
+                # values have null values been passed into this function hence breaking the feature
+                coverage_limit=Coalesce(Cast(COVERAGE_LIMIT, DecimalField()), Value(0)),
+                value_ratio=(F("coverage_limit") / F("premium__amount")),
             ).order_by("-value_ratio")
         return filtered_qs
 
