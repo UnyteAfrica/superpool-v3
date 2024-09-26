@@ -11,6 +11,7 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     extend_schema,
 )
+from django_filters import rest_framework as filters
 from rest_framework import generics, mixins, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -21,7 +22,7 @@ from rest_framework.response import Response
 
 from api.catalog.exceptions import QuoteNotFoundError
 from api.catalog.permissions import AdminOnlyInsurerFilterPermission
-from api.catalog.serializers import PolicyPurchaseResponseSerializer
+from api.catalog.serializers import PolicyPurchaseResponseSerializer, QuoteResponseExampleSerializer
 from core.catalog.models import Policy, Product, Quote
 from core.models import Coverage
 
@@ -881,29 +882,35 @@ class RequestQuoteView(views.APIView):
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuoteRequestView(views.APIView):
+class QuoteRequestView(generics.ListAPIView):
     """
     View to handle insurance quote requests and return aggregated quotes.
     """
 
-    def post(self, request):
-        serializer = QuoteRequestSerializerV2(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    queryset = Product.objects.filter(is_trashed=False).prefetch_related('tiers').select_related('provider')
+    serializer_class = QuoteResponseExampleSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('name', 'product_type')
 
-        validated_data = serializer.validated_data
 
-        service = QuoteService()
-        try:
-            quotes = service.request_quote(validated_data)
-
-            print(f"Quotes: {quotes}")
-            response_serializer = QuoteResponseSerializer(quotes, many=True)
-        except Exception as exc:
-            logger.error(f"Error occured: {exc}")
-            return Response({"error": str(exc)})
-
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+    # def post(self, request):
+    #     serializer = QuoteRequestSerializerV2(data=request.data)
+    #     if not serializer.is_valid():
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #
+    #     validated_data = serializer.validated_data
+    #
+    #     service = QuoteService()
+    #     try:
+    #         quotes = service.request_quote(validated_data)
+    #
+    #         print(f"Quotes: {quotes}")
+    #         response_serializer = QuoteResponseSerializer(quotes, many=True)
+    #     except Exception as exc:
+    #         logger.error(f"Error occured: {exc}")
+    #         return Response({"error": str(exc)})
+    #
+    #     return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 class PolicyPurchaseView(generics.GenericAPIView):

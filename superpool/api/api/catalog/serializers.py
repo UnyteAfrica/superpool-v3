@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
 
-from core.catalog.models import Beneficiary, Policy, Price, Product, Quote
+from core.catalog.models import Beneficiary, Policy, Price, Product, Quote, ProductTier
 from core.merchants.models import Merchant
 from core.models import Coverage
 from core.providers.models import Provider
@@ -1233,6 +1233,22 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
     last_updated = serializers.DateTimeField(
         help_text="Timestamp of the last update to this quote in ISO 8601 format"
     )
+
+
+class ProductTierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductTier
+        fields = ['id', 'tier_name', 'tier_type', 'base_premium', 'description', 'benefits', 'exclusions']
+
+
+class QuoteResponseExampleSerializer(serializers.ModelSerializer):
+    tiers = ProductTierSerializer(many=True)
+    provider = PolicyProviderSerializer(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ['id', 'provider', 'name', 'description', 'product_type', 'tiers', 'created_at', 'updated_at']
+    ...
 
 
 class QuoteResponseSerializer(serializers.Serializer):
