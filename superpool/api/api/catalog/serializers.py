@@ -1248,7 +1248,6 @@ class QuoteResponseExampleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'provider', 'name', 'description', 'product_type', 'tiers', 'created_at', 'updated_at']
-    ...
 
 
 class QuoteResponseSerializer(serializers.Serializer):
