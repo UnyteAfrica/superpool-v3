@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -78,3 +79,8 @@ urlpatterns = [
 urlpatterns += router.urls
 # urlpatterns += customer_route
 # urlpatterns += customer_router.urls
+
+if settings.DEBUG:
+    import debug_toolbar
+
+    urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]
