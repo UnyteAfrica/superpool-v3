@@ -59,6 +59,9 @@ jobs:
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+          GOOGLE_SMTP_SERVER: ${{ secrets.GOOGLE_SMTP_SERVER }}
+          GOOGLE_EMAIL_USER: ${{ secrets.GOOGLE_EMAIL_USER }}
+          GOOGLE_EMAIL_PASSWORD: ${{ secrets.GOOGLE_EMAIL_PASSWORD }}
 
 
           # GCP related keys
