@@ -90,6 +90,7 @@ jobs:
           DISABLE_AUTH: ${{ secrets.DISABLE_AUTH }}
           HEIRS_API_KEY: ${{ secrets.HEIRS_API_KEY }}
           HEIRS_APP_ID: ${{ secrets.HEIRS_APP_ID }}
+          SUPERPOOL_TEST_PROD_DB_URL: ${{secrets.SUPERPOOL_TEST_PROD_DB_URL}}
         run: |
           cd superpool/api
           poetry run pytest .
