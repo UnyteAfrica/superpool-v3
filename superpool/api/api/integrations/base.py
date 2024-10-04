@@ -4,13 +4,15 @@ import requests
 
 
 class IClient(abc.ABC):
-    def __init__(self, base_url: str, api_key: str):
+    def __init__(self, base_url: str, api_key: str, headers: dict | None = None):
         self.base_url = base_url
         self.api_key = api_key
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
         }
+        if additional_headers := headers:
+            self.headers.update(additional_headers)
 
     @abc.abstractmethod
     def get(self, url: str):
@@ -22,8 +24,8 @@ class IClient(abc.ABC):
 
 
 class BaseClient(IClient):
-    def __init__(self, base_url: str, api_key: str):
-        super().__init__(base_url, api_key)
+    def __init__(self, base_url: str, api_key: str, **headers: dict):
+        super().__init__(base_url, api_key, **headers)
 
     def get(self, url: str):
         response = requests.get(f"{self.base_url}/{url}", headers=self.headers)

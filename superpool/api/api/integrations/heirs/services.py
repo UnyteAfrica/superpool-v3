@@ -4,9 +4,7 @@ Heirs Assurance Service
 
 from typing import List, Union
 
-from django.conf import settings
-
-from api.integrations.heirs.client import HeirsLifeAssuranceClient
+from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
 from core.providers.integrations.heirs.registry import (
     APIErrorResponse,
     AutoPolicy,
@@ -22,15 +20,6 @@ from core.providers.integrations.heirs.registry import (
     QuoteDefinition,
     TravelPolicyClass,
 )
-
-HEIRS_SERVER_URL = (
-    settings.HEIRS_ASSURANCE_STAGING_URL or settings.HEIRS_ASSURANCE_PROD_URL
-)
-"""
-Endpoint for the Heirs Assurance API
-
-This approach allows us to switch between the staging and production urls easily
-"""
 
 
 class HeirsAssuranceService:
