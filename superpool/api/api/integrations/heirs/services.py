@@ -1,3 +1,7 @@
+"""
+Heirs Assurance Service
+"""
+
 from typing import List, Union
 
 from django.conf import settings
@@ -18,6 +22,15 @@ from core.providers.integrations.heirs.registry import (
     QuoteDefinition,
     TravelPolicyClass,
 )
+
+HEIRS_SERVER_URL = (
+    settings.HEIRS_ASSURANCE_STAGING_URL or settings.HEIRS_ASSURANCE_PROD_URL
+)
+"""
+Endpoint for the Heirs Assurance API
+
+This approach allows us to switch between the staging and production urls easily
+"""
 
 
 class HeirsAssuranceService:
@@ -87,9 +100,7 @@ class HeirsAssuranceService:
         """
         Register a customer as a policy holder on Heirs platform
         """
-        register_policy_holder_url = (
-            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/policy_holder"
-        )
+        register_policy_holder_url = f"{HEIRS_SERVER_URL}/policy_holder"
 
         if not isinstance(beneficiary_data, dict):
             raise TypeError("Policy holder object must be of type dict")
@@ -108,8 +119,21 @@ class HeirsAssuranceService:
         A product class, can also be reffered, as the product category
         """
         company = "Heirs%20Insurance"
-        fetch_products_url = f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/class/{product_class}/product"
+        fetch_products_url = (
+            f"{HEIRS_SERVER_URL}/{company}/class/{product_class}/product"
+        )
         response = self.client.get(fetch_products_url)
+        return response
+
+    def get_product_information(self, product_id: str | int):
+        """
+        Retrieve information about a specific product from the Heirs API
+        """
+        company = "Heirs%20Insurance"
+        fetch_product_info_url = (
+            f"{HEIRS_SERVER_URL}/{company}/product/{product_id}/info"
+        )
+        response = self.client.get(fetch_product_info_url)
         return response
 
     def get_policy_details(self, policy_num: str) -> PolicyInfo:
@@ -120,9 +144,7 @@ class HeirsAssuranceService:
             policyNumber string unique reference used to identify a policy
         """
         company = "Heirs%20Insurance"
-        fetch_policy_info_url = (
-            f"{settings.HEIRS_ASSURANCE_STAGING_URL}/{company}/policy/{policy_num}"
-        )
+        fetch_policy_info_url = f"{HEIRS_SERVER_URL}/{company}/policy/{policy_num}"
         response = self.client.get(fetch_policy_info_url)
         return response
 
@@ -137,15 +159,15 @@ class HeirsAssuranceService:
         """
         match category:
             case "auto" | "motor":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
+                return f'{HEIRS_SERVER_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
             case "biker":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
+                return f'{HEIRS_SERVER_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
             case "travel":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
+                return f'{HEIRS_SERVER_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
             case "personal_accident":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/quote/{params.get("product_id")}'
+                return f'{HEIRS_SERVER_URL}/personal-accident/quote/{params.get("product_id")}'
             case "device":
-                return f'{settings.HEIRS_ASSURANCE_STAGING_URL}/device/quote/{params.get("item_value")}'
+                return f'{HEIRS_SERVER_URL}/device/quote/{params.get("item_value")}'
             case _:
                 return "Unsupported category"
 
@@ -159,14 +181,14 @@ class HeirsAssuranceService:
         if isinstance(product_class, MotorPolicy) or isinstance(
             product_class, AutoPolicy
         ):
-            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/motor/{product_id}/policy"
+            return f"{HEIRS_SERVER_URL}/motor/{product_id}/policy"
         elif isinstance(product_class, BikerPolicy):
-            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/biker/{product_id}/policy"
+            return f"{HEIRS_SERVER_URL}/biker/{product_id}/policy"
         elif isinstance(product_class, TravelPolicyClass):
-            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/travel/{product_id}/policy"
+            return f"{HEIRS_SERVER_URL}/travel/{product_id}/policy"
         elif isinstance(product_class, PersonalAccidentPolicy):
-            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/personal-accident/{product_id}/policy"
+            return f"{HEIRS_SERVER_URL}/personal-accident/{product_id}/policy"
         elif isinstance(product_class, DevicePolicy):
-            return f"{settings.HEIRS_ASSURANCE_STAGING_URL}/device/policy"
+            return f"{HEIRS_SERVER_URL}/device/policy"
         else:
             return "Unsupported Policy/Product Class"
