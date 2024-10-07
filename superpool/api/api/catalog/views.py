@@ -1055,44 +1055,44 @@ class QuoteRequestView(views.APIView):
             quote_data = service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
 
-            # MAYBE I SHOULD WRAP THIS IN A CONDITIONAL?
+            # # MAYBE I SHOULD WRAP THIS IN A CONDITIONAL?
+            # #
+            # # IF FILTERING PARAMETERS IS ADDED THEN IT SHOULD DO THIS
+            # # IF SORTING? APPLY IF NECCESSARY
+            # #
+            # # WHAT IF WE DON'T WANT TO SORT ANYTHING OR FILTER ANYTHING, JUST PASS
+            # # QQUOTE_DATA ALONG
             #
-            # IF FILTERING PARAMETERS IS ADDED THEN IT SHOULD DO THIS
-            # IF SORTING? APPLY IF NECCESSARY
+            # filtered_quotes = quote_data
+            # sorted_quotes = quote_data
             #
-            # WHAT IF WE DON'T WANT TO SORT ANYTHING OR FILTER ANYTHING, JUST PASS
-            # QQUOTE_DATA ALONG
-
-            filtered_quotes = quote_data
-            sorted_quotes = quote_data
-
-            # next we should check if any params was passed
-
-            if any(
-                param in request.query_params
-                for param in [
-                    "provider_name",
-                    "coverage_type",
-                    "min_price",
-                    "max_price",
-                ]
-            ):
-                filtered_quotes = self._apply_filters(request, quote_data)
-
-            # next check for sorting
-            if "sort_by" or "sort" in request.query_params:
-                sorted_quotes = self._sort_queryset(
-                    request, filtered_qs=filtered_quotes
-                )
+            # # next we should check if any params was passed
+            #
+            # if any(
+            #     param in request.query_params
+            #     for param in [
+            #         "provider_name",
+            #         "coverage_type",
+            #         "min_price",
+            #         "max_price",
+            #     ]
+            # ):
+            #     filtered_quotes = self._apply_filters(request, quote_data)
+            #
+            # # next check for sorting
+            # if "sort_by" or "sort" in request.query_params:
+            #     sorted_quotes = self._sort_queryset(
+            #         request, filtered_qs=filtered_quotes
+            #     )
 
             paginator = LimitOffsetPagination()
-            page = paginator.paginate_queryset(sorted_quotes, request)
+            page = paginator.paginate_queryset(quote_data, request)
 
             if page is not None:
                 response_serializer = QuoteResponseSerializer(page, many=True)
                 return paginator.get_paginated_response(response_serializer.data)
 
-            response_serializer = QuoteResponseSerializer(sorted_quotes, many=True)
+            response_serializer = QuoteResponseSerializer(quote_data, many=True)
             return Response(
                 {
                     "message": "Quote successfully retrieved",

@@ -936,7 +936,7 @@ class QuoteService(IQuote):
 
         1. Request Comes In:
            - Extract product details from the incoming request using the validated data.
-           - The key product information includes the `product_type` and `product_name`, along with coverage preferences.
+           - The key product information includes the `product_type`, along with coverage preferences.
 
         2. Asynchronous External Provider Requests:
            - Based on the product type, we check if it matches specific product categories (e.g., Auto, Home, Personal Accident, Travel).
@@ -976,22 +976,22 @@ class QuoteService(IQuote):
         # product type
         #
         # e.g for now, it calls `api.integrations.heirs.services`
-        VALID_EXTERNAL_PRODUCT_TYPES = {
-            "Motor",
-            "TenantProtect",
-            "HomeProtect",
-            "BusinessProtect",
-            "Personal Accident",
-            "Marine Cargo",
-            "Device",
-            "Travel",
-        }
-        if product_type not in VALID_EXTERNAL_PRODUCT_TYPES:
-            # skip external provider requests for invalid product types
-            # and proceed to internal quotes
-            internal_quotes = self._retrieve_quotes_from_internal_providers(
-                providers, validated_data
-            )
+        # VALID_EXTERNAL_PRODUCT_TYPES = {
+        #     "Motor",
+        #     "TenantProtect",
+        #     "HomeProtect",
+        #     "BusinessProtect",
+        #     "Personal Accident",
+        #     "Marine Cargo",
+        #     "Device",
+        #     "Travel",
+        # }
+        # if product_type not in VALID_EXTERNAL_PRODUCT_TYPES:
+        #     # skip external provider requests for invalid product types
+        #     # and proceed to internal quotes
+        #     internal_quotes = self._retrieve_quotes_from_internal_providers(
+        #         providers, validated_data
+        #     )
 
         internal_quotes = self._retrieve_quotes_from_internal_providers(
             providers, validated_data
