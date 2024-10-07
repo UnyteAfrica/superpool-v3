@@ -119,7 +119,7 @@ class ExternalQuoteProvider(BaseQuoteProvider):
             await Quote.objects.aupdate_or_create(
                 product=product,
                 premium=premium,
-                base_price=data.get("base_price", 0),  # Ensure to extract base price
+                base_price=data.get("base_price", 0),
                 origin="External",
                 provider=provider_name,
                 additional_metadata=data.get("additional_metadata", {}),
