@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Mapping, Union
 
 from api.integrations.heirs.services import HeirsAssuranceService
-from core.catalog.models import Quote
+from core.catalog.models import Product, Quote
 from core.providers.models import Provider
 
 logger = logging.getLogger(__name__)
@@ -116,12 +116,25 @@ class ExternalQuoteProvider(BaseQuoteProvider):
             raise ValueError(f"Provider with name {provider_name} not found")
 
         for data in response_data:
+            # create corresponding product object for that insurer
+            product, _ = await Product.objects.aupdate_or_create(
+                provider=provider,
+                name=data["product_name"],
+                defaults={
+                    "description": data["description"],
+                    "product_type": "Auto",  # NOTE: WE NEED TO DYNAMICALLY SET THIS
+                    "is_live": True,
+                },
+            )
+
+            # create corresponding price (premium) object
+
             await Quote.objects.aupdate_or_create(
                 product=product,
                 premium=premium,
                 base_price=data.get("base_price", 0),
                 origin="External",
-                provider=provider_name,
+                provider=provider.name,
                 additional_metadata=data.get("additional_metadata", {}),
                 policy_terms=data.get("policy_terms", {}),
             )
