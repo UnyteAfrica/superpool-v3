@@ -99,13 +99,20 @@ class HeirsAssuranceService:
         )
         return response
 
-    def product_queryset(self, product_class: str) -> List[Product]:
+    def fetch_all_products(self) -> List[Product]:
         """
-        Get Insurance products that belongs to a product class
+        Fetch all products offered by Heirs Insurance
+        """
+        company = "Heirs%20Insurance"
+        fetch_products_url = f"{HEIRS_SERVER_URL}/{company}/product"
+        response = self.client.get(fetch_products_url)
+        return response
+
+    def get_insurance_products(self, product_class: str) -> List[Product]:
+        """
+        Get Insurance products that belongs to a specific product category
 
         Fetches all subproducts offered under a product class
-
-        A product class, can also be reffered, as the product category
         """
         company = "Heirs%20Insurance"
         fetch_products_url = (
