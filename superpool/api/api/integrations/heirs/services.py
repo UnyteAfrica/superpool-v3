@@ -59,6 +59,7 @@ class HeirsAssuranceService:
             "biker",
             "personal_accident",
             "device",
+            "pos",
         )
         if not category:
             raise ValueError(
@@ -160,10 +161,12 @@ class HeirsAssuranceService:
                 return f'{HEIRS_SERVER_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
             case "travel":
                 return f'{HEIRS_SERVER_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
-            case "personal_accident":
+            case "personal_accident" | "accident":
                 return f'{HEIRS_SERVER_URL}/personal-accident/quote/{params.get("product_id")}'
             case "device":
                 return f'{HEIRS_SERVER_URL}/device/quote/{params.get("item_value")}'
+            case "pos":
+                return f'{HEIRS_SERVER_URL}/pos/quote/{params.get("item_value")}'
             case _:
                 return "Unsupported category"
 
