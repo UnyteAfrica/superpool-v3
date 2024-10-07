@@ -3,7 +3,7 @@ import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
@@ -931,16 +931,71 @@ class QuoteService(IQuote):
     def request_quote(self, validated_data: dict):
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
+
+        This function follows a four-step process:
+
+        1. Request Comes In:
+           - Extract product details from the incoming request using the validated data.
+           - The key product information includes the `product_type` and `product_name`, along with coverage preferences.
+
+        2. Asynchronous External Provider Requests:
+           - Based on the product type, we check if it matches specific product categories (e.g., Auto, Home, Personal Accident, Travel).
+           - For valid product types, we initiate concurrent external API requests to our insurance providers using the `ProviderNameService`.
+           - This involves:
+               a. Fetching all insurance products under a specific product type.
+               b. For each product, fetching the product description based on `productId`.
+               c. Fetching the premium and contribution details for the selected product.
+
+        3. Internal Quotes:
+           - Simultaneously, we retrieve internal quotes from our database using the product information.
+           - Providers are fetched based on the `product_type`, and quotes are generated for each matching product.
+
+        4. Aggregation & Filtering:
+           - Once the external provider data is gathered, it is aggregated into a unified schema.
+           - We use the retrieved data to filter quotes from the internal `Quote` model.
+           - Finally, we return the list of quotes that match the coverage and product preferences back to the merchant.
+
         """
+
         product_type = validated_data["insurance_details"]["product_type"]
         product_name = validated_data["insurance_details"].get("product_name")
         coverage_preferences = validated_data["coverage_preferences"]
 
+        # NOTE: WE SHOULD MAKE AN API CALL TO THE EXTERNAL PROVIDERS
+        #
+        # however, we should only make external API calls for specific product types
+        #
+        # (Device, Motor, Home, Travel, Personal Accident)
+
+        # external_quotes = self._retrieve_realtime_quotes()
+        # internal use
         providers = self._get_providers_for_product_type(product_type)
+
+        # call external insurers with APIs
+        # aschornously (and in parrallel) and get the premium and products for this
+        # product type
+        #
+        # e.g for now, it calls `api.integrations.heirs.services`
+        VALID_EXTERNAL_PRODUCT_TYPES = {
+            "Motor",
+            "TenantProtect",
+            "HomeProtect",
+            "BusinessProtect",
+            "Personal Accident",
+            "Marine Cargo",
+            "Device",
+            "Travel",
+        }
+        if product_type not in VALID_EXTERNAL_PRODUCT_TYPES:
+            # skip external provider requests for invalid product types
+            # and proceed to internal quotes
+            internal_quotes = self._retrieve_quotes_from_internal_providers(
+                providers, validated_data
+            )
+
         internal_quotes = self._retrieve_quotes_from_internal_providers(
             providers, validated_data
         )
-        # external_quotes = self._retrieve_realtime_quotes()
         return internal_quotes
 
     def _get_tier_by_coverage_type(self, product, coverage_type):
@@ -970,7 +1025,9 @@ class QuoteService(IQuote):
             product__product_type=product_type
         ).distinct()
 
-    def _retrieve_realtime_quotes(self, providers: List[str], validated_data: dict):
+    def _retrieve_realtime_quotes(
+        self, product_type: str, validated_data: dict, **extra_kwargs: dict
+    ):
         """
         Requests for real-time quotes for this product type from external integrated
         providers
@@ -979,7 +1036,28 @@ class QuoteService(IQuote):
         to request a quote for this product type and with some defaults from the incoming
         request, before updating our database with the values
         """
-        pass
+
+        product_class = None
+
+        # FOR NOW WE WANT TO FOCUS ON MOTOR, HOME, DEVICE, TRAVEL AND PERSONAL ACCIDENT
+        if product_type == Product.ProductType.AUTO:
+            # it means we have to call our external API with 'Motor' product type
+            product_class = "Motor"
+        elif product_type == Product.ProductType.HOME:
+            # it means we have to call our external API with 'HomeProtect' product type
+            product_class = "HomeProtect"
+        elif product_type == Product.ProductType.PERSONAL_ACCIDENT:
+            # it means we have to call our external API with 'Personal Accident' product type
+            product_class = "Personal%20Accident"
+        elif product_type == Product.ProductType.GADGET:
+            # it means we have to call our external API with 'Device' product type
+            product_class = "Device"
+        else:
+            product_class = None
+
+        if product_class:
+            # call the external API for quotes
+            pass
 
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict

@@ -1049,8 +1049,8 @@ class QuoteRequestView(views.APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
-
         service = QuoteService()
+
         try:
             quote_data = service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
