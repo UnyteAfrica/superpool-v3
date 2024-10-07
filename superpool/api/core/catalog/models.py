@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
@@ -105,6 +106,8 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     Packages offered by an insurance partner
 
     E.g Life Insurance, MicroInsurance, General Insurance, etc
+
+    Can exist with or without associated tiers
     """
 
     class ProductType(models.TextChoices):
@@ -154,6 +157,12 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         blank=True,
         help_text="Detailed breakdown of what's covered",
     )
+    base_premium = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Base premium price if no tiers are defined",
+        default=Decimal("0.00"),
+    )
     is_live = models.BooleanField(
         default=True, help_text="Indicates if the package is live"
     )
@@ -166,6 +175,9 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         Override the delete method to trash the model instance
         """
         self.trash()
+
+    def full_delete(self) -> None:
+        return super().full_delete()
 
     class Meta:
         indexes = [

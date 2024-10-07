@@ -13,6 +13,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.serializers import ValidationError
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
+from api.catalog.interfaces import ExternalQuoteProvider
 from api.catalog.serializers import QuoteSerializer
 from core.catalog.models import Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
@@ -562,6 +563,11 @@ class QuoteService(IQuote):
     A service that handles the logic of retrieving and aggregating insurance quotes
     from various providers (integrated providers and internal providers)
     """
+
+    def __init__(self) -> None:
+        # to add more API-based providers, simply add them to the dictionary
+        # as a key-value pair where the key is the provider name and the value is the provider object
+        self.providers = {"Heirs": ExternalQuoteProvider("Heirs")}
 
     FLAT_FEES = {
         # Product Type -> (Coverage Type -> Flat Fee)
