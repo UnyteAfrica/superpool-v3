@@ -305,7 +305,6 @@ class TravelInsuranceSerializer:
 class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
     """
     Validate the health insurance quote request payload
-
     """
 
     class CoverageTypeChoices(models.TextChoices):
@@ -1203,9 +1202,9 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
         model = Product
         fields = ["product_type", "product_name", "additional_information"]
 
-    def get_additional_information(self, product_type):
+    def get_matching_serializer(self, product_type):
         """
-        Uses the product type to determine the additional information required
+        Returns the appropriate serializer class based on the product type.
 
         using the:
         - product_type
@@ -1220,7 +1219,7 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
         otherwise, we would not use the additional information field, and only use the
         product_type
         """
-        matching_serializer = {
+        matching_serializers = {
             Product.ProductType.HEALTH: HealthInsuranceSerializer,
             Product.ProductType.AUTO: AutoInsuranceSerializer,
             Product.ProductType.TRAVEL: TravelInsuranceSerializer,
@@ -1228,26 +1227,36 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
             Product.ProductType.HOME: HomeInsuranceSerializer,
             Product.ProductType.GADGET: GadgetInsuranceSerializer,
         }
-
-        product_serializer = matching_serializer.get(product_type)
-        if product_serializer:
-            return product_serializer
-        return None
+        return matching_serializers.get(product_type)
 
     def validate(self, attrs):
         product_type = attrs.get("product_type")
         additional_information = attrs.get("additional_information")
 
-        if additional_information:
-            # validate the additional information based on the product type
-            product_serializer = self.get_additional_information(product_type)
-            if not product_serializer:
+        # Only validate additional_information if the product_type matches one of the specified categories
+        if product_type in [
+            Product.ProductType.HEALTH,
+            Product.ProductType.AUTO,
+            Product.ProductType.TRAVEL,
+            Product.ProductType.PERSONAL_ACCIDENT,
+            Product.ProductType.HOME,
+            Product.ProductType.GADGET,
+        ]:
+            if not additional_information:
+                raise ValidationError(
+                    "Additional information is required for this product type."
+                )
+
+            product_serializer_class = self.get_matching_serializer(product_type)
+            if not product_serializer_class:
                 raise ValidationError("Invalid product type.")
 
-            product_serializer = product_serializer(data=additional_information)
-
+            product_serializer = product_serializer_class(data=additional_information)
             if not product_serializer.is_valid():
-                raise ValidationError(product_serializer.errors)
+                raise ValidationError(
+                    {"additional_information": product_serializer.errors}
+                )
+
             attrs["additional_information"] = product_serializer.validated_data
         return attrs
 
