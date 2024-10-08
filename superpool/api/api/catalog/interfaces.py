@@ -7,6 +7,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Mapping, Union
 
+from typing_extensions import deprecated
+
 from api.catalog.serializers import ProductDetailsSerializer
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.catalog.models import Price, Product, Quote
@@ -21,13 +23,14 @@ class BaseQuoteProvider(ABC):
     """
 
     @abstractmethod
-    async def get_quotes(self, validated_data: dict[str, Any]) -> list[dict[str, Any]]:
+    async def fetch_and_save_quotes(self, validated_data: dict[str, Any]) -> None:
         """
-        Retrieve quotes from the provider based on incoming validated request data.
+        Retrieve quotes from the provider based on incoming validated request data and save them to the database.
         """
-        return NotImplemented
+        pass
 
 
+@deprecated("This class is deprecated. Use HeirsQuoteProvider instead")
 class ExternalQuoteProvider(BaseQuoteProvider):
     """
     Handles the retrieval of quotes from external providers.
@@ -198,7 +201,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
     def __init__(self):
         self.client = HeirsAssuranceService()
 
-    async def get_quotes(self, validated_data: dict[str, Any]) -> list[dict[str, Any]]:
+    async def fetch_and_save_quotes(self, validated_data: dict[str, Any]) -> None:
         """
         Fetch quotes from Heirs Assurance.
         """
@@ -212,7 +215,9 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         tasks = []
         for product in sub_products:
             product_id = product["productId"]
-            tasks.append(self._fetch_product_info_and_quote(product_id, params))
+            tasks.append(
+                self._fetch_product_info_and_save_quote(product_id, category, params)
+            )
 
         # product_info_tasks = [
         #     self.client.get_product_info(product["productId"])
@@ -221,23 +226,26 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         # product_info_responses = await asyncio.gather(*product_info_tasks)
         # return list(zip(sub_products, product_info_responses))
 
-        quotes = await asyncio.gather(*tasks)
-        return [quote for quote in quotes if quote is not None]
+        await asyncio.gather(*tasks)
 
-    async def _fetch_product_info_and_quote(
-        self, product_id: str, params: dict[str, Any]
+    async def _fetch_product_info_and_save_quote(
+        self, product_id: str, product_class: str, params: dict[str, Any]
     ) -> Union[dict[str, Any], None]:
         """
         Fetch product info and quote for a specific product
         """
         product_info = await self.client.get_product_info(product_id)
-        quote = self.client.get_quote(product_id, **params)
+        quote = self.client.get_quote(product_class, **params)
+
+        print(f"Product Info: {product_info}")
+        print(f"Quote Data: {quote}")
 
         # if quote retrieval fails, return None
         if not product_info:
             return None
 
-        return {
+        # we want some form of consistency
+        quote_data = {
             "product_id": product_id,
             "product_name": product_info["productName"],
             "product_info": product_info["info"],
@@ -245,6 +253,47 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             "contribution": quote.get("contribution"),
             "origin": "Heirs",
         }
+
+        if product_info and quote_data:
+            await self._save_quote(product_info, quote_data)
+
+    async def _save_quote(self, product_info: dict, quote_data: dict) -> None:
+        """
+        Save the product, price, quote to the database
+        """
+        provider_name = quote_data.get("origin", "Heirs")
+        provider = Provider.objects.filter(name__icontains=provider_name).first()
+
+        product_type = self._map_category_to_product_type(product_info["category"])
+        product, _ = await Product.objects.aupdate_or_create(
+            provider=provider,
+            name=product_info["product_name"],
+            defaults={
+                "description": product_info.get("info", ""),
+                "product_type": product_type,
+                "is_live": True,
+            },
+        )
+
+        premium_amount, _ = Price.objects.get_or_create(
+            amount=quote_data["premium"],
+            currency="NGN",
+        )
+
+        await Quote.objects.aupdate_or_create(
+            product=product,
+            defaults={
+                "product": product,
+                "premium": premium_amount,
+                "base_price": premium_amount,
+                "origin": "External",
+                "provider": provider.name,
+                "additional_metadata": {
+                    "contribution": quote_data.get("contribution", 0),
+                    "policy_terms": quote_data.get("policy_terms", {}),
+                },
+            },
+        )
 
     def _map_product_type_to_category(self, product_type: str) -> str:
         mapping = {
