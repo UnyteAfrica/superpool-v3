@@ -3,7 +3,7 @@
 # This file is used to define the container services that will be run in the local environment
 
 service:
-  database:
+  test_database:
     image: postgres:16.3-alpine
     container_name: superpool_database
     restart: unless-stopped
@@ -13,8 +13,9 @@ service:
     ports:
       - 5432:5432
     volumes:
-      - ./superpool_database:/var/lib/postgresql/data:rw
-  redis:
+      - ./superpool_test_database:/var/lib/postgresql/data:rw
+
+  cache:
     image: redis:6.2-alpine
     container_name: superpool_redis
     ports:
@@ -23,6 +24,27 @@ service:
     volumes:
       - redis_data:/data:rw
 
+  # CELERY (CELERY AND CELERY FLOWER)
+  worker:
+    build: . # TODO: would have to change this to match the directory of backend folder
+    container_name: jobberman
+    command: celery -A superpool.api.tasks worker --pool=prefork --concurrency=4
+    depends_on:
+      - cache
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      DATABASE_URL: ${DATABASE_URL}
+
+  flower:
+    image: celery/flower
+    container_name: flower
+    command: flower -A superppool.api.tasks --port=5555
+    depends_on:
+      - worker
+    ports:
+      - 5555:5555
+
 volumes:
-  superpool_database: {}
+  superpool_test_database: {}
   redis_data: {}
