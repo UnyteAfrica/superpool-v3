@@ -26,7 +26,9 @@ service:
 
   # CELERY (CELERY AND CELERY FLOWER)
   worker:
-    build: . # TODO: would have to change this to match the directory of backend folder
+    build:
+      context: ./superpool/api
+      dockerfile: ../Dockerfile
     container_name: jobberman
     command: celery -A superpool.api.tasks worker --pool=prefork --concurrency=4
     depends_on:
