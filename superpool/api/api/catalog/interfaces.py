@@ -7,8 +7,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Mapping, Union
 
+from api.catalog.serializers import ProductDetailsSerializer
 from api.integrations.heirs.services import HeirsAssuranceService
-from core.catalog.models import Product, Quote
+from core.catalog.models import Price, Product, Quote
 from core.providers.models import Provider
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,42 @@ class ExternalQuoteProvider(BaseQuoteProvider):
     def __init__(self, provider: str):
         self.provider = provider
         self.service = HeirsAssuranceService()
+
+    async def process_request(self, validated_data: dict) -> Union[Mapping, list]:
+        """
+        Handle the request and return quotes.
+        """
+        product_type = validated_data["insurance_details"].get("product_type")
+        category = validated_data["insurance_details"]["product_type"].lower()
+
+        product_details_serializer = ProductDetailsSerializer(data=validated_data)
+        product_details_serializer.is_valid(raise_exception=True)
+
+        matching_serializer_class = product_details_serializer.get_matching_serializer(
+            product_type
+        )
+        if not matching_serializer_class:
+            raise ValueError("No matching serializer found for the product type.")
+
+        additional_info_serializer = matching_serializer_class(
+            data=validated_data.get("additional_information")
+        )
+        additional_info_serializer.is_valid(raise_exception=True)
+
+        request_params = {
+            **additional_info_serializer.validated_data,
+        }
+
+        params = self._extract_params(validated_data)
+
+        try:
+            response = await self._make_request(category, **params)
+            parsed_quotes = self._parse_response(response)
+            await self._create_quotes(parsed_quotes)
+            return parsed_quotes
+        except Exception as e:
+            logger.error(f"Error retrieving quotes from {self.provider}: {e}")
+            return []
 
     async def _make_request(self, category: str, **params: dict) -> list[tuple]:
         """
@@ -86,20 +123,33 @@ class ExternalQuoteProvider(BaseQuoteProvider):
             )
         return quotes
 
-    async def get_quotes(self, validated_data: Mapping) -> Union[Mapping, list]:
+    def _extract_params(self, validated_data: dict) -> dict:
         """
-        Retrieve quotes from the provider based on incoming validated request data.
+        Extract parameters from the validated request data.
         """
-        category = validated_data["insurance_details"]["product_type"].lower()
-        params = self._extract_params(validated_data)
+        params = {}
+        product_type = validated_data["insurance_details"]["product_type"]
 
-        try:
-            response = await self._make_request(category, **params)
-            parsed_quotes = self._parse_response(response)
-            return await self._create_quotes(parsed_quotes)
-        except Exception as e:
-            logger.error(f"Error retrieving quotes from {self.provider}: {e}")
-            return []
+        # VALID PARAMETTERS BASED ON PRODUCT TYPES
+        if product_type == "motor":
+            params = {
+                "motor_value": validated_data.get("motor_value"),
+                "motor_class": validated_data.get("motor_class"),
+                "motor_type": validated_data.get("motor_type"),
+            }
+        elif product_type == "travel":
+            params = {
+                "user_age": validated_data.get("user_age"),
+                "start_date": validated_data.get("start_date"),
+                "end_date": validated_data.get("end_date"),
+            }
+        elif product_type == "biker":
+            params = {
+                "motor_value": validated_data.get("motor_value"),
+                "motor_class": validated_data.get("motor_class"),
+            }
+
+        return params
 
     async def _create_quotes(self, response_data: list) -> None:
         """
@@ -128,6 +178,10 @@ class ExternalQuoteProvider(BaseQuoteProvider):
             )
 
             # create corresponding price (premium) object
+            premium = Price.objects.create(
+                amount=data["premium"],
+                currency="NGN",
+            )
 
             await Quote.objects.aupdate_or_create(
                 product=product,

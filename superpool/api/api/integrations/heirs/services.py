@@ -109,7 +109,7 @@ class HeirsAssuranceService:
         response = self.client.get(fetch_products_url)
         return response
 
-    def fetch_insurance_products(self, product_class: str) -> List[Product]:
+    def fetch_insurance_products(self, product_class: str):
         """
         Get Insurance products that belongs to a specific product category
 
