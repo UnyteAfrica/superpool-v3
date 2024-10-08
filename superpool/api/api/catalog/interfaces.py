@@ -4,7 +4,6 @@ This module contains the abstract  and concrete implementation for quote provide
 
 import asyncio
 import logging
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Mapping, Union
 
@@ -328,7 +327,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         return additional_info
 
 
-@warnings.warn("This class has not been implemented yet")
+# @warnings.warn("This class has not been implemented yet")
 class LeadwayQuoteProvider(BaseQuoteProvider):
     """
     TO BE USED WHEN WE WANT TO INTEGRATE LEADWAY INSURANCE
@@ -337,7 +336,7 @@ class LeadwayQuoteProvider(BaseQuoteProvider):
     pass
 
 
-@warnings.warn("This class has not been implemented yet")
+# @warnings.warn("This class has not been implemented yet")
 class AXAQuoteProvider(BaseQuoteProvider):
     """
     TO BE USED WHEN WE WANT TO INTEGRATE AXA INSURANCE

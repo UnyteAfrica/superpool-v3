@@ -15,7 +15,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.serializers import ValidationError
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
-from api.catalog.interfaces import QuoteProviderFactory
+from api.catalog.providers import QuoteProviderFactory
 from api.catalog.serializers import QuoteSerializer
 from core.catalog.models import Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
