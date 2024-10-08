@@ -1085,50 +1085,6 @@ class QuoteService(IQuote):
         }
         return product_type in VALID_EXTERNAL_PRODUCT_TYPES
 
-    def _create_quotes_from_external_data(
-        self, external_quotes_data: list[Dict[str, Any]]
-    ):
-        """
-        Create Quote instances from pulled external provider data.
-        """
-        quotes = []
-        for data in external_quotes_data:
-            provider_name = data["origin"]
-            provider, _ = Provider.objects.get_or_create(name=provider_name)
-
-            product, _ = Product.objects.get_or_create(
-                provider=provider,
-                name=data["product_name"],
-                defaults={
-                    "description": data["product_info"],
-                    "product_type": data["product_type"],
-                    "is_live": True,
-                },
-            )
-
-            # Create or get Price instance
-            premium, _ = Price.objects.get_or_create(
-                amount=data["premium"],
-                currency="NGN",
-            )
-
-            quote, created = Quote.objects.update_or_create(
-                quote_code=data["product_id"],
-                defaults={
-                    "product": product,
-                    "premium": premium,
-                    "base_price": data.get("base_price", data["premium"]),
-                    "origin": "External",
-                    "provider": provider.name,
-                    "additional_metadata": {
-                        "contribution": data.get("contribution"),
-                        "policy_terms": data.get("policy_terms", {}),
-                    },
-                },
-            )
-            quotes.append(quote.pk)
-        return quotes
-
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict
     ) -> QuerySet:
