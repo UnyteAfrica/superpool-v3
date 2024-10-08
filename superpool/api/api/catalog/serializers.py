@@ -1504,3 +1504,23 @@ class QuoteResponseSerializer(serializers.Serializer):
         ).data
 
         return representation
+
+
+class QuoteResponseSerializerV2(serializers.ModelSerializer):
+    provider = serializers.CharField(source="provider.name")
+    product = serializers.CharField(source="product.name")
+    premium = serializers.DecimalField(
+        source="premium.amount", max_digits=10, decimal_places=2
+    )
+
+    class Meta:
+        model = Quote
+        fields = [
+            "quote_code",
+            "provider",
+            "product",
+            "base_price",
+            "premium",
+            "purchase_id",
+            "additional_metadata",
+        ]

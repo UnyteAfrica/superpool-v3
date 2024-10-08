@@ -5,7 +5,7 @@ This module contains the abstract  and concrete implementation for quote provide
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Mapping, Union
+from typing import Any, Mapping, Union
 
 from api.catalog.serializers import ProductDetailsSerializer
 from api.integrations.heirs.services import HeirsAssuranceService
@@ -21,7 +21,7 @@ class BaseQuoteProvider(ABC):
     """
 
     @abstractmethod
-    def get_quotes(self, validated_data: Mapping | dict) -> Union[Mapping, list]:
+    async def get_quotes(self, validated_data: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Retrieve quotes from the provider based on incoming validated request data.
         """
@@ -192,3 +192,99 @@ class ExternalQuoteProvider(BaseQuoteProvider):
                 additional_metadata=data.get("additional_metadata", {}),
                 policy_terms=data.get("policy_terms", {}),
             )
+
+
+class HeirsQuoteProvider(BaseQuoteProvider):
+    def __init__(self):
+        self.client = HeirsAssuranceService()
+
+    async def get_quotes(self, validated_data: dict[str, Any]) -> list[dict[str, Any]]:
+        """
+        Fetch quotes from Heirs Assurance.
+        """
+        product_type = validated_data["insurance_details"]["product_type"].lower()
+        category = self._map_product_type_to_category(product_type)
+        params = self._extract_params(validated_data)
+
+        # Fetch product details and insurance info
+        sub_products = await self.client.fetch_insurance_products(category)
+
+        tasks = []
+        for product in sub_products:
+            product_id = product["productId"]
+            tasks.append(self._fetch_product_info_and_quote(product_id, params))
+
+        # product_info_tasks = [
+        #     self.client.get_product_info(product["productId"])
+        #     for product in sub_products
+        # ]
+        # product_info_responses = await asyncio.gather(*product_info_tasks)
+        # return list(zip(sub_products, product_info_responses))
+
+        quotes = await asyncio.gather(*tasks)
+        return [quote for quote in quotes if quote is not None]
+
+    async def _fetch_product_info_and_quote(
+        self, product_id: str, params: dict[str, Any]
+    ) -> Union[dict[str, Any], None]:
+        """
+        Fetch product info and quote for a specific product
+        """
+        product_info = await self.client.get_product_info(product_id)
+        quote = self.client.get_quote(product_id, **params)
+
+        # if quote retrieval fails, return None
+        if not product_info:
+            return None
+
+        return {
+            "product_id": product_id,
+            "product_name": product_info["productName"],
+            "product_info": product_info["info"],
+            "premium": quote.get("premium"),
+            "contribution": quote.get("contribution"),
+            "origin": "Heirs",
+        }
+
+    def _map_product_type_to_category(self, product_type: str) -> str:
+        mapping = {
+            "Auto": "Motor",
+            "Home": "HomeProtect",
+            "Personal_Accident": "Personal Accident",
+            "Gadget": "Device",
+            "Travel": "Travel",
+        }
+        # return the original product type if no mapping is found
+        return mapping.get(product_type, product_type)
+
+    def _map_category_to_product_type(self, category: str) -> str:
+        reverse_mapping = {
+            "Motor": "Auto",
+            "HomeProtect": "Home",
+            "Personal Accident": "Personal_Accident",
+            "Device": "Gadget",
+            "Travel": "Travel",
+        }
+        # return the category if no mapping is found
+        return reverse_mapping.get(category, category)
+
+    def _extract_params(self, validated_data: dict) -> dict:
+        """
+        Extract required parameters from validated request data.
+        """
+        additional_info = validated_data["insurance_details"].get(
+            "additional_information"
+        )
+        return additional_info
+
+
+class LeadwayQuoteProvider(BaseQuoteProvider):
+    """
+    TO BE USED WHEN WE WANT TO INTEGRATE LEADWAY INSURANCE
+    """
+
+
+class AXAQuoteProvider(BaseQuoteProvider):
+    """
+    TO BE USED WHEN WE WANT TO INTEGRATE AXA INSURANCE
+    """

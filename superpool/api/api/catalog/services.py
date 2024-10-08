@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import traceback
 from abc import ABC, abstractmethod
@@ -13,7 +14,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.serializers import ValidationError
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
-from api.catalog.interfaces import ExternalQuoteProvider
+from api.catalog.interfaces import QuoteProviderFactory
 from api.catalog.serializers import QuoteSerializer
 from core.catalog.models import Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
@@ -564,11 +565,6 @@ class QuoteService(IQuote):
     from various providers (integrated providers and internal providers)
     """
 
-    def __init__(self) -> None:
-        # to add more API-based providers, simply add them to the dictionary
-        # as a key-value pair where the key is the provider name and the value is the provider object
-        self.providers = {"Heirs": ExternalQuoteProvider("Heirs")}
-
     FLAT_FEES = {
         # Product Type -> (Coverage Type -> Flat Fee)
         "Smart Generations Protection": {
@@ -934,7 +930,38 @@ class QuoteService(IQuote):
         )
         return quote
 
-    def request_quote(self, validated_data: dict):
+    def _retrieve_external_quotes(self, validated_data: Dict[str, Any]) -> QuerySet:
+        """
+        Retrieve quotes from external providers asynchronously.
+        """
+        provider_names = ["Heirs"]
+        quotes = []
+
+        async def gather_quotes():
+            tasks = []
+            for provider_name in provider_names:
+                provider = QuoteProviderFactory.get_provider(provider_name)
+                tasks.append(provider.get_quotes(validated_data))
+            results = await asyncio.gather(*tasks)
+            return results
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            provider_quotes = loop.run_until_complete(gather_quotes())
+        finally:
+            loop.close()
+
+        # Flatten the list of lists
+        external_quotes_data = [
+            quote for sublist in provider_quotes for quote in sublist
+        ]
+
+        # Process and store the quotes
+        quotes = self._create_quotes_from_external_data(external_quotes_data)
+        return Quote.objects.filter(pk__in=quotes)
+
+    def request_quote(self, validated_data: dict) -> QuerySet:
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
 
@@ -965,7 +992,9 @@ class QuoteService(IQuote):
 
         product_type = validated_data["insurance_details"]["product_type"]
         product_name = validated_data["insurance_details"].get("product_name")
-        coverage_preferences = validated_data["coverage_preferences"]
+        coverage_preferences = validated_data.get("coverage_preferences", {})
+
+        providers = self._get_providers_for_product_type(product_type)
 
         # NOTE: WE SHOULD MAKE AN API CALL TO THE EXTERNAL PROVIDERS
         #
@@ -973,36 +1002,35 @@ class QuoteService(IQuote):
         #
         # (Device, Motor, Home, Travel, Personal Accident)
 
-        # external_quotes = self._retrieve_realtime_quotes()
-        # internal use
-        providers = self._get_providers_for_product_type(product_type)
-
-        # call external insurers with APIs
-        # aschornously (and in parrallel) and get the premium and products for this
-        # product type
-        #
-        # e.g for now, it calls `api.integrations.heirs.services`
-        # VALID_EXTERNAL_PRODUCT_TYPES = {
-        #     "Motor",
-        #     "TenantProtect",
-        #     "HomeProtect",
-        #     "BusinessProtect",
-        #     "Personal Accident",
-        #     "Marine Cargo",
-        #     "Device",
-        #     "Travel",
-        # }
-        # if product_type not in VALID_EXTERNAL_PRODUCT_TYPES:
-        #     # skip external provider requests for invalid product types
-        #     # and proceed to internal quotes
-        #     internal_quotes = self._retrieve_quotes_from_internal_providers(
-        #         providers, validated_data
-        #     )
+        external_quotes = []
+        external_product_class = self._is_external_provider_product(product_type)
+        if external_product_class:
+            external_quotes = self._retrieve_external_quotes(validated_data)
+        # external_quotes_task = (
+        #     self._retrieve_external_quotes(validated_data)
+        #     if external_product_class
+        #     else None
+        # )
 
         internal_quotes = self._retrieve_quotes_from_internal_providers(
-            providers, validated_data
+            product_type, coverage_preferences
         )
-        return internal_quotes
+
+        # # Gather external quotes
+        # tasks = [internal_quotes_task]
+        #
+        # if external_quotes_task:
+        #     tasks.append(external_quotes_task)
+        #
+        # results = asyncio.run(asyncio.gather(*tasks))
+
+        # internal_quotes = results[0]
+        # logger.info(f"Internal quotes: {internal_quotes}")
+        # external_quotes = results[1] if external_quotes_task else []
+        # logger.info(f"External quotes: {external_quotes}")
+
+        all_quotes = internal_quotes.union(external_quotes)
+        return all_quotes
 
     def _get_tier_by_coverage_type(self, product, coverage_type):
         """
@@ -1031,39 +1059,75 @@ class QuoteService(IQuote):
             product__product_type=product_type
         ).distinct()
 
-    def _retrieve_realtime_quotes(
-        self, product_type: str, validated_data: dict, **extra_kwargs: dict
+    def _is_external_provider_product(self, product_type: str) -> bool:
+        """
+        Map internal product type to external product class for API calls
+        Determine if the product type requires external API calls
+
+        This approach is because of Heirs right now
+        """
+        VALID_EXTERNAL_PRODUCT_TYPES = {
+            "Motor",
+            "TenantProtect",
+            "HomeProtect",
+            "BusinessProtect",
+            "Personal Accident",
+            "Marine Cargo",
+            "Device",
+            "Travel",
+        }
+        mapping = {
+            "Auto": "Motor",
+            "Home": "HomeProtect",
+            "Personal_Accident": "Personal Accident",
+            "Gadget": "Device",
+            "Travel": "Travel",
+        }
+        return product_type in VALID_EXTERNAL_PRODUCT_TYPES
+
+    def _create_quotes_from_external_data(
+        self, external_quotes_data: list[Dict[str, Any]]
     ):
         """
-        Requests for real-time quotes for this product type from external integrated
-        providers
-
-        This method makes a request call to a integrated insurers' API
-        to request a quote for this product type and with some defaults from the incoming
-        request, before updating our database with the values
+        Create Quote instances from pulled external provider data.
         """
+        quotes = []
+        for data in external_quotes_data:
+            provider_name = data["origin"]
+            provider, _ = Provider.objects.get_or_create(name=provider_name)
 
-        product_class = None
+            product, _ = Product.objects.get_or_create(
+                provider=provider,
+                name=data["product_name"],
+                defaults={
+                    "description": data["product_info"],
+                    "product_type": data["product_type"],
+                    "is_live": True,
+                },
+            )
 
-        # FOR NOW WE WANT TO FOCUS ON MOTOR, HOME, DEVICE, TRAVEL AND PERSONAL ACCIDENT
-        if product_type == Product.ProductType.AUTO:
-            # it means we have to call our external API with 'Motor' product type
-            product_class = "Motor"
-        elif product_type == Product.ProductType.HOME:
-            # it means we have to call our external API with 'HomeProtect' product type
-            product_class = "HomeProtect"
-        elif product_type == Product.ProductType.PERSONAL_ACCIDENT:
-            # it means we have to call our external API with 'Personal Accident' product type
-            product_class = "Personal%20Accident"
-        elif product_type == Product.ProductType.GADGET:
-            # it means we have to call our external API with 'Device' product type
-            product_class = "Device"
-        else:
-            product_class = None
+            # Create or get Price instance
+            premium, _ = Price.objects.get_or_create(
+                amount=data["premium"],
+                currency="NGN",
+            )
 
-        if product_class:
-            # call the external API for quotes
-            pass
+            quote, created = Quote.objects.update_or_create(
+                quote_code=data["product_id"],
+                defaults={
+                    "product": product,
+                    "premium": premium,
+                    "base_price": data.get("base_price", data["premium"]),
+                    "origin": "External",
+                    "provider": provider.name,
+                    "additional_metadata": {
+                        "contribution": data.get("contribution"),
+                        "policy_terms": data.get("policy_terms", {}),
+                    },
+                },
+            )
+            quotes.append(quote.pk)
+        return quotes
 
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict
