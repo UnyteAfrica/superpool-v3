@@ -14,7 +14,7 @@ from .views import (
     MerchantSetPasswordView,
     PasswordResetConfirmView,
     PasswordResetView,
-    VerificationAPIView,
+    VerificationAPIView, HealthAPIView,
 )
 
 router = DefaultRouter()
@@ -73,6 +73,7 @@ urlpatterns = [
         MerchantForgotTenantIDView.as_view(),
         name="merchant-forgot-credentials",
     ),
+    path("health", HealthAPIView.as_view(), name="health"),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
 

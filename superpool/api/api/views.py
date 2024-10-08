@@ -684,3 +684,7 @@ class MerchantForgotTenantIDView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HealthAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({"message": "pong!"}, status=status.HTTP_200_OK)
