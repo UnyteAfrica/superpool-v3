@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, Union
 
+from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
 from django.db.models import Q, QuerySet
@@ -961,7 +962,7 @@ class QuoteService(IQuote):
         quotes = self._create_quotes_from_external_data(external_quotes_data)
         return Quote.objects.filter(pk__in=quotes)
 
-    def request_quote(self, validated_data: dict) -> QuerySet:
+    async def request_quote(self, validated_data: dict) -> QuerySet:
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
 
@@ -1185,3 +1186,23 @@ class QuoteService(IQuote):
         except Exception as exc:
             logger.error(f"Error while processing product tiers: {exc}")
             raise exc
+
+    async def _retrieve_quotes_from_db(
+        self, validated_data: dict[str, Any]
+    ) -> QuerySet:
+        """
+        Retrieve quotes from the database based on the validated data
+        """
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+
+        # fetch all products matching the product information (name, type, tier or something)
+        # products = Product.objects.filter(
+        #     product_type=product_type,
+        # )
+
+        # fetch all quotes for the products
+        quotes = await sync_to_async(
+            lambda: Quote.objects.filter(product__product_type=product_type)
+        )()
+        return quotes

@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from asgiref.sync import sync_to_async
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import DecimalField, F, Q, QuerySet, Value
 from django.db.models.functions import Cast, Coalesce, NullIf
@@ -19,6 +20,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
+from typing_extensions import deprecated
 
 from api.catalog.exceptions import QuoteNotFoundError
 from api.catalog.permissions import AdminOnlyInsurerFilterPermission
@@ -50,6 +52,7 @@ from .serializers import (
     QuoteRequestSerializer,
     QuoteRequestSerializerV2,
     QuoteResponseSerializer,
+    QuoteResponseSerializerV2,
     QuoteSerializer,
 )
 from .services import PolicyService, ProductService, QuoteService
@@ -896,9 +899,6 @@ class QuoteRequestView(views.APIView):
     The request body requires customer metadata, insurance product details, and coverage preferences.
 
     Example Request Body: SEE API REQUEST EXAMPLE
-    ```
-    POST /api/v1/quotes/?provider_name=AXA&min_price=500&max_price=1000&sort=cheapest
-    ```
 
     **Response Format**:
     The response will contain a list of quotes with the following structure:
@@ -934,15 +934,6 @@ class QuoteRequestView(views.APIView):
       ]
     }
     ```
-
-    **Filtering and Sorting**:
-    The response can be filtered and sorted based on the following criteria:
-
-    - `provider`: Filter by insurance provider (Name of the provider).
-    - `min_price`: Filter by minimum premium amount.
-    - `max_price`: Filter by maximum premium amount.
-    - `coverage_type`: Filter by coverage type (e.g., Health, Auto).
-    - `sort`: Sort the quotes by either `cheapest` (lowest premium) or `best_value` (premium-to-coverage ratio).
 
     Example of a successful response:
     ```json
@@ -1029,38 +1020,56 @@ class QuoteRequestView(views.APIView):
             )
         },
     )
-    def post(self, request, *args, **kwargs):
+    async def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
-        if not serializer.is_valid():
+
+        is_valid = await sync_to_async(serializer.is_valid)()
+        if not is_valid:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = serializer.validated_data
+        validated_data = await sync_to_async(lambda: serializer.validated_data)()
         service = QuoteService()
 
         try:
-            quote_data = service.request_quote(validated_data)
+            quote_data = await service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
+
             paginator = LimitOffsetPagination()
-            page = paginator.paginate_queryset(quote_data, request)
+            paginated_quotes = await sync_to_async(paginator.paginate_queryset)(
+                quote_data, request
+            )
 
-            if page is not None:
-                response_serializer = QuoteResponseSerializer(page, many=True)
-                return paginator.get_paginated_response(response_serializer.data)
+            if paginated_quotes is not None:
+                response_serializer = await sync_to_async(QuoteResponseSerializerV2)(
+                    paginated_quotes, many=True
+                )
+                serializer_data = await sync_to_async(
+                    lambda: response_serializer.data
+                )()
+                response = await sync_to_async(paginator.get_paginated_response)(
+                    serializer_data
+                )
+                return response
 
-            response_serializer = QuoteResponseSerializer(quote_data, many=True)
+            response_serializer = await sync_to_async(QuoteResponseSerializerV2)(
+                quote_data, many=True
+            )
+            serializer_data = await sync_to_async(lambda: response_serializer.data)()
             return Response(
                 {
                     "message": "Quote successfully retrieved",
-                    "data": response_serializer.data,
+                    "data": serializer_data,
                 },
                 status=status.HTTP_200_OK,
             )
         except Exception as exc:
-            logger.error(f"Error occured: {exc}")
+            logger.error(f"Error occurred: {exc}", exc_info=True)
             return Response(
-                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "An error occurred while processing your request."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @deprecated("This method is no longer supported")
     def _apply_filters(self, request: Request, qs: QuerySet):
         """
         Uses QuoteFilter to apply filtering logic onto incoming request
@@ -1068,6 +1077,7 @@ class QuoteRequestView(views.APIView):
         filterset = self.filterset_class(request.query_params, queryset=qs)
         return filterset.qs
 
+    @deprecated("This method is no longer supported")
     def _sort_queryset(self, request: Request, filtered_qs: QuerySet):
         """
         Apply sorting onto a filtered queryset and returns a filtered quotes
