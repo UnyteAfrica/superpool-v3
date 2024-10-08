@@ -896,20 +896,6 @@ class QuoteRequestView(views.APIView):
     The request body requires customer metadata, insurance product details, and coverage preferences.
 
     Example Request Body: SEE API REQUEST EXAMPLE
-
-    **Filtering Options**:
-    The following filters will be available to refine the results:
-
-    - **Insurance Provider**: Filter by specific insurance providers. You can pass a list of provider IDs to get quotes from specific insurers.
-    - **Coverage Type**: Filter quotes by the type of coverage (e.g., Health, Auto, Life). This narrows down quotes to specific coverage types that match the merchant’s preferences.
-    - **Premium Amount**: You can filter quotes based on price by specifying either:
-        - `min_price`: Minimum premium amount to return.
-        - `max_price`: Maximum premium amount to return.
-    - **Sort Options**: Sort quotes by:
-        - `cheapest`: Sort quotes by the lowest premium amount.
-        - `best_value`: Sort quotes by the best value, considering both premium and coverage limits.
-
-    Example of Filter Query Parameters (to be supported in future versions):
     ```
     POST /api/v1/quotes/?provider_name=AXA&min_price=500&max_price=1000&sort=cheapest
     ```
