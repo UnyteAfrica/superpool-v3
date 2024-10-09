@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
 
-from asgiref.sync import sync_to_async
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import DecimalField, F, Q, QuerySet, Value
 from django.db.models.functions import Cast, Coalesce, NullIf
@@ -52,7 +51,6 @@ from .serializers import (
     ProductSerializer,
     QuoteRequestSerializer,
     QuoteRequestSerializerV2,
-    QuoteResponseSerializer,
     QuoteResponseSerializerV2,
     QuoteSerializer,
 )
@@ -900,74 +898,6 @@ class QuoteRequestView(views.APIView):
     The request body requires customer metadata, insurance product details, and coverage preferences.
 
     Example Request Body: SEE API REQUEST EXAMPLE
-
-    **Response Format**:
-    The response will contain a list of quotes with the following structure:
-
-    ```json
-    {
-      "quotes": [
-        {
-          "provider": {
-            "provider_name": "Provider A",
-            "provider_id": "provider_a"
-          },
-          "pricing": {
-            "base_premium": 500.00,
-            "total_amount_for_quotation": 520.00,
-            "currency": "USD",
-            "discount_amount": 20.00
-          },
-          "coverage": {
-            "coverage_type": "Health",
-            "coverage_limit": 100000
-          },
-          "exclusions": ["Pre-existing conditions"],
-          "benefits": ["Regular checkups", "Emergency care"],
-          "policy_terms": {
-            "duration": "12 months",
-            "renewal_option": "Auto-renew"
-          },
-          "quote_code": "quote_123456",
-          "purchase_id": "purchase_123456",
-          "purchase_id_description": "Use this ID for the payment processor."
-        }
-      ]
-    }
-    ```
-
-    Example of a successful response:
-    ```json
-    {
-      "quotes": [
-        {
-          "provider": {
-            "provider_name": "Universal Insurance Plc",
-            "provider_id": "provider_001"
-          },
-          "pricing": {
-            "base_premium": 450.00,
-            "total_amount_for_quotation": 480.00,
-            "currency": "USD",
-            "discount_amount": 30.00
-          },
-          "coverage": {
-            "coverage_type": "Health",
-            "coverage_limit": 100000
-          },
-          "exclusions": ["Pre-existing conditions"],
-          "benefits": ["Emergency medical care"],
-          "policy_terms": {
-            "duration": "12 months",
-            "renewal_option": "Auto-renew"
-          },
-          "quote_code": "quote_internal_456",
-          "purchase_id": "purchase_456",
-          "purchase_id_description": "Use this ID to complete payment."
-        }
-      ]
-    }
-    ```
     """
 
     # filterset_backend = [DjangoFilterBackend]
@@ -977,85 +907,77 @@ class QuoteRequestView(views.APIView):
         summary="Request a quote for an insurance policy or product",
         # description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
         tags=["Quotes"],
-        parameters=[
-            OpenApiParameter(
-                name="provider_name",
-                description="Filter quotes by insurance provider (e.g., 'AXA', 'Universal Insurance')",
-                required=False,
-                type=OpenApiTypes.STR,
-            ),
-            OpenApiParameter(
-                name="coverage_type",
-                description="Filter quotes by Coverage Type",
-                required=False,
-                type=OpenApiTypes.STR,
-            ),
-            OpenApiParameter(
-                name="min_price",
-                description="Filter quotes with a minimum premium amount",
-                required=False,
-                type=OpenApiTypes.FLOAT,
-            ),
-            OpenApiParameter(
-                name="max_price",
-                description="Filter quotes with a maximum premium amount",
-                required=False,
-                type=OpenApiTypes.FLOAT,
-            ),
-            OpenApiParameter(
-                name="sort_by",
-                description="Sort quotes by either 'cheapest' (lowest premium) or 'best_value' (premium-to-coverage ratio)",
-                required=False,
-                type=OpenApiTypes.STR,
-                enum=["cheapest", "best_coverage"],
-            ),
-        ],
+        # parameters=[
+        #     OpenApiParameter(
+        #         name="provider_name",
+        #         description="Filter quotes by insurance provider (e.g., 'AXA', 'Universal Insurance')",
+        #         required=False,
+        #         type=OpenApiTypes.STR,
+        #     ),
+        #     OpenApiParameter(
+        #         name="coverage_type",
+        #         description="Filter quotes by Coverage Type",
+        #         required=False,
+        #         type=OpenApiTypes.STR,
+        #     ),
+        #     OpenApiParameter(
+        #         name="min_price",
+        #         description="Filter quotes with a minimum premium amount",
+        #         required=False,
+        #         type=OpenApiTypes.FLOAT,
+        #     ),
+        #     OpenApiParameter(
+        #         name="max_price",
+        #         description="Filter quotes with a maximum premium amount",
+        #         required=False,
+        #         type=OpenApiTypes.FLOAT,
+        #     ),
+        #     OpenApiParameter(
+        #         name="sort_by",
+        #         description="Sort quotes by either 'cheapest' (lowest premium) or 'best_value' (premium-to-coverage ratio)",
+        #         required=False,
+        #         type=OpenApiTypes.STR,
+        #         enum=["cheapest", "best_coverage"],
+        #     ),
+        # ],
         request=OpenApiRequest(
             request=QuoteRequestSerializerV2(many=True),
             examples=[quote_request_example],
         ),
         responses={
             200: OpenApiResponse(
-                response=QuoteResponseSerializer(many=True),
+                response=QuoteResponseSerializerV2(many=True),
                 description="The response contains a list of available quotes from different providers.",
             )
         },
     )
-    async def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
 
-        is_valid = await sync_to_async(serializer.is_valid)()
+        is_valid = serializer.is_valid()
         if not is_valid:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = await sync_to_async(lambda: serializer.validated_data)()
+        validated_data = serializer.validated_data
         service = QuoteService()
 
         try:
-            quote_data = await service.request_quote(validated_data)
+            quote_data = service.request_quote(validated_data)
             logger.info(f"Quote Data: {quote_data}")
 
             paginator = LimitOffsetPagination()
-            paginated_quotes = await sync_to_async(paginator.paginate_queryset)(
-                quote_data, request
-            )
+            paginated_quotes = paginator.paginate_queryset(quote_data, request)
 
             if paginated_quotes is not None:
-                response_serializer = await sync_to_async(QuoteResponseSerializerV2)(
+                response_serializer = QuoteResponseSerializerV2(
                     paginated_quotes, many=True
                 )
-                serializer_data = await sync_to_async(
-                    lambda: response_serializer.data
-                )()
-                response = await sync_to_async(paginator.get_paginated_response)(
-                    serializer_data
-                )
+                serializer_data = response_serializer.data
+                response = paginator.get_paginated_response(serializer_data)
                 return response
 
-            response_serializer = await sync_to_async(QuoteResponseSerializerV2)(
-                quote_data, many=True
-            )
-            serializer_data = await sync_to_async(lambda: response_serializer.data)()
+            response_serializer = QuoteResponseSerializerV2(quote_data, many=True)
+            serializer_data = response_serializer.data
             return Response(
                 {
                     "message": "Quote successfully retrieved",

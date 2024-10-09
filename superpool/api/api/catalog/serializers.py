@@ -256,7 +256,7 @@ class BaseQuoteRequestSerializer(serializers.Serializer):
     customer_metadata = CustomerDetailsSerializer(required=False)
 
 
-class TravelInsuranceSerializer:
+class TravelInsuranceSerializer(serializers.Serializer):
     """
     Validate the travel insurance quote request payload
 
@@ -340,7 +340,7 @@ class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
     )
 
 
-class AutoInsuranceSerializer:
+class AutoInsuranceSerializer(serializers.Serializer):
     """
     Validate the auto insurance quote request payload
     """
@@ -420,7 +420,7 @@ class AutoInsuranceSerializer:
     )
 
 
-class PersonalAccidentInsuranceSerializer:
+class PersonalAccidentInsuranceSerializer(serializers.Serializer):
     """
     Validate the personal accident insurance quote request payload
     """
@@ -446,7 +446,7 @@ class PersonalAccidentInsuranceSerializer:
     )
 
 
-class HomeInsuranceSerializer:
+class HomeInsuranceSerializer(serializers.Serializer):
     """
     Validate the home insurance quote request payload
 
@@ -471,7 +471,7 @@ class HomeInsuranceSerializer:
     security_details = serializers.JSONField(required=False)
 
 
-class GadgetInsuranceSerializer:
+class GadgetInsuranceSerializer(serializers.Serializer):
     """
     Validate the gadget (Device) insurance quote request payload
     """
@@ -1251,6 +1251,11 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
             if not product_serializer_class:
                 raise ValidationError("Invalid product type.")
 
+            logger.debug(
+                f"Using serializer class: {product_serializer_class} for product type: {product_type}"
+            )
+            logger.debug(f"Additional Information: {additional_information}")
+
             product_serializer = product_serializer_class(data=additional_information)
             if not product_serializer.is_valid():
                 raise ValidationError(
@@ -1274,6 +1279,7 @@ class CoveragePreferencesSerializer(serializers.Serializer):
             choices=Coverage.CoverageType.choices,
         ),
         help_text="An array specifying the type of coverage (e.g., Comprehensive, Basic, ThirdParty, etc.",
+        required=False,
     )
     coverage_amount = serializers.DecimalField(
         decimal_places=2,
@@ -1288,16 +1294,16 @@ class CoveragePreferencesSerializer(serializers.Serializer):
         required=False,
     )
 
-    def get_coverage_type_display(self, value):
-        """
-        returns the valid options if an incorrect input is given for a vald coverage type
-        """
-        valid_choices = [choice[0] for choice in Coverage.CoverageType.choices]
-        if value not in valid_choices:
-            raise serializers.ValidationError(
-                f"Invalid coverage type. Expected one of {valid_choices}."
-            )
-        return value
+    # def get_coverage_type_display(self, value):
+    #     """
+    #     returns the valid options if an incorrect input is given for a vald coverage type
+    #     """
+    #     valid_choices = [choice[0] for choice in Coverage.CoverageType.choices]
+    #     if value not in valid_choices:
+    #         raise serializers.ValidationError(
+    #             f"Invalid coverage type. Expected one of {valid_choices}."
+    #         )
+    #     return value
 
 
 class QuoteRequestSerializerV2(serializers.Serializer):
