@@ -153,11 +153,10 @@ class QuoteService:
         """
         all_tier_names = [tier.tier_name for tier in product.tiers.all()]
         with transaction.atomic():
-            premium = Price.objects.create(
+            premium, _ = Price.objects.get_or_create(
                 amount=tier.base_premium,
                 description=f"{product.name} - {tier.tier_name} Premium",
             )
-
             logger.info(
                 f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
             )
@@ -183,7 +182,7 @@ class QuoteService:
                     "available_tiers": all_tier_names,  # All addons available for this product
                 },
                 origin="Internal",
-                provider=product.provider,
+                provider=product.provider.name,
             )
             if created:
                 logger.info(
@@ -198,17 +197,17 @@ class QuoteService:
     async def _create_quote_for_internal_product(self, product: Product) -> list[str]:
         """
         Create Quote objects for each tier of a given product
+
+        Returns a list of quote IDs (or quote_codes).
         """
-        quote_ids: list[str] = []
+        quote_ids = []
         for tier in product.tiers.all():
             logger.info(f"Processing product: {product.name}, Tier: {tier.tier_name}")
-
             quote_id = await sync_to_async(self._create_quote)(product, tier)
-
             if quote_id:
                 quote_ids.append(quote_id)
                 logger.info(
-                    f"Processed product: {product.name}, Tier: {tier.tier_name}"
+                    f"Processed quote of tier: {tier.tier_name} for product: {product.name}"
                 )
         return quote_ids
 
@@ -250,7 +249,7 @@ class QuoteService:
         print(f"Quote IDs: {flattened_ids}")
 
         internal_quotes = Quote.objects.filter(quote_code__in=flattened_ids)
-        logger.info(f"Retrieved {len(quote_ids)} internal quotes")
+        logger.info(f"Retrieved {internal_quotes.count()} internal quotes")
         return internal_quotes
 
     async def _retrieve_quotes_from_db(
