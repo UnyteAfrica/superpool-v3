@@ -5,7 +5,9 @@ This module contains the abstract  and concrete implementation for quote provide
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Mapping, Union
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any, Mapping, Optional, Union
 
 from typing_extensions import deprecated
 
@@ -28,6 +30,20 @@ class BaseQuoteProvider(ABC):
         Retrieve quotes from the provider based on incoming validated request data and save them to the database.
         """
         pass
+
+
+@dataclass
+class QuoteData:
+    """
+    Defines the structure for a quote data object from Heirs
+    """
+
+    product_id: str
+    product_name: str
+    product_info: str
+    premium: Decimal
+    origin: str
+    contribution: Optional[Decimal] = Decimal(0)
 
 
 @deprecated("This class is deprecated. Use HeirsQuoteProvider instead")
@@ -245,6 +261,14 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             return None
 
         # we want some form of consistency
+        # quote_data = QuoteData(
+        #     product_id=product_id,
+        #     product_name=product_info["productName"],
+        #     product_info=product_info["info"],
+        #     premium=quote.get("premium"),
+        #     origin="Heirs",
+        #     contribution=quote.get("contribution"),
+        # )
         quote_data = {
             "product_id": product_id,
             "product_name": product_info["productName"],

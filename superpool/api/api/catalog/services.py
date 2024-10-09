@@ -942,7 +942,7 @@ class QuoteService(IQuote):
             tasks = []
             for provider_name in provider_names:
                 provider = QuoteProviderFactory.get_provider(provider_name)
-                tasks.append(provider.get_quotes(validated_data))
+                tasks.append(provider.fetch_and_save_quotes(validated_data))
             results = await asyncio.gather(*tasks)
             return results
 
@@ -983,12 +983,6 @@ class QuoteService(IQuote):
         3. Internal Quotes:
            - Simultaneously, we retrieve internal quotes from our database using the product information.
            - Providers are fetched based on the `product_type`, and quotes are generated for each matching product.
-
-        4. Aggregation & Filtering:
-           - Once the external provider data is gathered, it is aggregated into a unified schema.
-           - We use the retrieved data to filter quotes from the internal `Quote` model.
-           - Finally, we return the list of quotes that match the coverage and product preferences back to the merchant.
-
         """
 
         product_type = validated_data["insurance_details"]["product_type"]
