@@ -56,19 +56,6 @@ class QuoteService:
             self._fetch_and_save_provider_quotes(provider, validated_data)
             for provider in provider_names
         ]
-        # async def gather_quotes():
-        #     for provider_name in provider_names:
-        #         provider = QuoteProviderFactory.get_provider(provider_name)
-        #         tasks.append(provider.fetch_and_save_quotes(validated_data))
-        #     results = await asyncio.gather(*tasks)
-        #     return results
-        #
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(loop)
-        # try:
-        #     provider_quotes = loop.run_until_complete(gather_quotes())
-        # finally:
-        #     loop.close()
 
         # excute the tasks concurrently
         await asyncio.gather(*tasks)
@@ -95,6 +82,7 @@ class QuoteService:
             raise ValueError("Product type is required. It cannot be empty.")
 
         providers = self._get_providers_for_product_type(product_type)
+
         # determine if the product type requires external API calls, if it does match
         external_product_class = self._map_product_type_to_external_class(product_type)
         tasks = []
@@ -110,26 +98,9 @@ class QuoteService:
 
         external_quotes = results[0] if external_product_class else []
         internal_quotes = results[1]
+
         all_quotes = external_quotes | internal_quotes
         return all_quotes
-
-    def _get_tier_by_coverage_type(self, product, coverage_type):
-        """
-        Retrieve the appropriate product tier based on coverage type and product.
-        """
-        try:
-            tier = ProductTier.objects.filter(
-                product=product, coverages__coverage_type=coverage_type
-            ).first()
-            if not tier:
-                raise ValueError(
-                    f"Tier with coverage type '{coverage_type}' not found for product '{product.name}'."
-                )
-            return tier
-        except ProductTier.DoesNotExist:
-            raise ValueError(
-                f"Tier with coverage type '{coverage_type}' not found for product '{product.name}'."
-            )
 
     def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
         """
@@ -149,6 +120,7 @@ class QuoteService:
 
         This approach is because of Heirs right now
         """
+
         VALID_EXTERNAL_PRODUCT_TYPES = {
             "Motor",
             "TenantProtect",
@@ -159,7 +131,6 @@ class QuoteService:
             "Device",
             "Travel",
         }
-        """ The list of supported product class in Heirs API - we should be doing internal mapping """
         mapping = self.PRODUCT_TYPE_MAPPING.get(product_type)
         logger.info(f"External product class for {product_type}: {mapping}")
         return mapping if mapping in VALID_EXTERNAL_PRODUCT_TYPES else None
@@ -236,6 +207,9 @@ class QuoteService:
 
             if quote_id:
                 quote_ids.append(quote_id)
+                logger.info(
+                    f"Processed product: {product.name}, Tier: {tier.tier_name}"
+                )
         return quote_ids
 
     async def _retrieve_internal_quotes(
