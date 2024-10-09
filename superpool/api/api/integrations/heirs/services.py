@@ -3,11 +3,13 @@ Heirs Assurance Service
 """
 
 import logging
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
+import requests
 from typing_extensions import deprecated
 
 from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
+from api.integrations.heirs.exceptions import HeirsAPIException
 from core.providers.integrations.heirs.registry import (
     APIErrorResponse,
     AutoPolicy,
@@ -19,17 +21,18 @@ from core.providers.integrations.heirs.registry import (
     PersonalAccidentPolicy,
     PolicyInfo,
     Product,
-    QuoteAPIResponse,
     QuoteDefinition,
     TravelPolicyClass,
 )
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger("api_client")
 
 
 class HeirsAssuranceService:
     def __init__(self) -> None:
         self.client = HeirsLifeAssuranceClient()
+        logger.info("HeirsAssuranceService initialized.")
 
     @deprecated(
         "This method is deprecated and will be removed in future versions. Use the appropriate method for the specific policy type"
@@ -51,9 +54,36 @@ class HeirsAssuranceService:
             value=policy_data["value"],
         )
 
+    def _is_api_error_response(self, response: Dict[str, Any]) -> bool:
+        """
+        Determines if the returned response matches the APIErrorResponse structure.
+
+        Returns True if the response is an error response, False otherwise
+        """
+        return all(key in response for key in ["type", "title", "detail", "status"])
+
+    def _validate_params(
+        self, required_params: list, category: str, params: dict
+    ) -> None:
+        """
+        Validates that the required parameters are present in the params dictionary
+        """
+        missing_params = [
+            param
+            for param in required_params
+            if param not in params or params.get(param) is None
+        ]
+        if missing_params:
+            logger.error(
+                f"Missing required parameters {missing_params} for category {category}"
+            )
+            raise ValueError(
+                f"Missing required parameters for category '{category}': {missing_params}"
+            )
+
     def get_quote(
         self, category: Optional[str] = None, **params: QuoteDefinition
-    ) -> Union[QuoteAPIResponse, APIErrorResponse]:
+    ) -> Union[Dict[str, Any], Dict[str, Any]]:
         """
         Retrieve an Insurance Quotation from the Heirs API
 
@@ -70,15 +100,68 @@ class HeirsAssuranceService:
             "pos",
         )
         if not category:
+            logger.error("get_quote called without a category")
             raise ValueError(
                 "Policy category must be provided in order to retrieve quotes"
             )
         if category not in RECOGNIZED_INSURANCE_CATEGORIES:
+            logger.error(f"Unsupported category received: {category}")
             raise ValueError(
                 f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
             )
-        endpoint = self._get_endpoint_by_category(category, **params)
-        return self.client.get(endpoint)
+
+        try:
+            endpoint = self._get_endpoint_by_category(category, **params)
+            logger.info(f"Constructed endpoint for category '{category}': {endpoint}")
+            response = self.client.get(endpoint)
+            logger.info(f"Received response for category '{category}': {response}")
+
+            if self._is_api_error_response(response):
+                api_error = APIErrorResponse(response)
+                # return HeirsAPIException(api_error)
+                raise HeirsAPIException(
+                    type=api_error.get("type"),
+                    title=api_error.get("title"),
+                    detail=api_error.get("detail"),
+                    status=api_error.get("status"),
+                )
+
+            return response
+        except HeirsAPIException as e:
+            logger.error(f"Failed to retrieve quote: {e}", exc_info=True)
+            logger.error(
+                f"Heirs API Error | Type: {e.type} | Title: {e.title} | Detail: {e.detail} | Status: {e.status}"
+            )
+            return {
+                "error": {
+                    "type": e.type,
+                    "title": e.title,
+                    "detail": e.detail,
+                    "status": e.status,
+                }
+            }
+        except requests.HTTPError as http_err:
+            logger.error(
+                f"HTTPError during get_quote | Error: {http_err}", exc_info=True
+            )
+            return {
+                "error": {
+                    "type": "http_error",
+                    "title": "HTTP Error when get_quote was called to Heirs",
+                    "detail": str(http_err),
+                    "status": "HTTP Error",
+                }
+            }
+        except Exception as e:
+            logger.error(f"Unexpected Error in get_quote: {e}", exc_info=True)
+            return {
+                "error": {
+                    "type": "unexpected_error",
+                    "title": "An unexpected error occurred when requesting quotes from Heirs",
+                    "detail": str(e),
+                    "status": "500",
+                }
+            }
 
     def register_policy(self, product_id: str | int, product_class: InsuranceProduct):
         """
@@ -170,9 +253,8 @@ class HeirsAssuranceService:
             logger.error(
                 f"Failed to fetch products from Heirs API. Status Code: {response.status_code}"
             )
-            return {}
 
-    def _get_endpoint_by_category(self, category: str, params: QuoteDefinition) -> str:
+    def _get_endpoint_by_category(self, category: str, params: Any) -> str:
         """
         Contruct the API endpoint based on the category and parameters
 
@@ -189,23 +271,30 @@ class HeirsAssuranceService:
             "device": ["item_value"],
             "pos": ["item_value"],
         }
-        if category in required_params:
-            for param in required_params[category]:
-                if param not in params:
-                    raise ValueError(f"Missing required parameter: {param}")
-
+        # if category in required_params:
+        #     for param in required_params[category]:
+        #         if param not in params:
+        #             raise ValueError(f"Missing required parameter: {param}")
         match category:
             case "auto" | "motor":
+                self._validate_params(required_params["auto"], category, params)
                 return f'{HEIRS_SERVER_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
             case "biker":
+                self._validate_params(required_params["biker"], category, params)
                 return f'{HEIRS_SERVER_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
             case "travel":
+                self._validate_params(required_params["travel"], category, params)
                 return f'{HEIRS_SERVER_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
             case "personal_accident" | "accident":
+                self._validate_params(
+                    required_params["personal_accident"], category, params
+                )
                 return f'{HEIRS_SERVER_URL}/personal-accident/quote/{params.get("product_id")}'
             case "device":
+                self._validate_params(required_params["device"], category, params)
                 return f'{HEIRS_SERVER_URL}/device/quote/{params.get("item_value")}'
             case "pos":
+                self._validate_params(required_params["pos"], category, params)
                 return f'{HEIRS_SERVER_URL}/pos/quote/{params.get("item_value")}'
             case _:
                 logger.error(

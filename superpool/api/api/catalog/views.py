@@ -39,6 +39,7 @@ from .openapi import (
     products_response_example,
     quote_request_example,
 )
+from .quote_service import QuoteService
 from .serializers import (
     CoverageSerializer,
     FullCoverageSerializer,
@@ -55,7 +56,7 @@ from .serializers import (
     QuoteResponseSerializerV2,
     QuoteSerializer,
 )
-from .services import PolicyService, ProductService, QuoteService
+from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
 

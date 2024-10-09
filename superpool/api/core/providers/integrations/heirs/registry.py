@@ -1,7 +1,7 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional, Required, TypedDict, Union
+from typing import Any, Dict, List, Optional, Required, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
@@ -17,6 +17,7 @@ class Policy(abc.ABC):
 
 class QuoteAPIResponse(TypedDict):
     premium: str
+    contribution: Optional[str]
 
 
 class APIErrorResponse(TypedDict, total=False):
@@ -24,6 +25,14 @@ class APIErrorResponse(TypedDict, total=False):
     title: str
     detail: str
     status: str
+
+
+class QuoteAPIErrorResponse(dict[str, Any]):
+    def __init__(self, error: str, type) -> None:
+        self.error = error
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"error": self.error}
 
 
 class Quote(TypedDict):
