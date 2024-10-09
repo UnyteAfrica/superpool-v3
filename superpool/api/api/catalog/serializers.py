@@ -229,12 +229,10 @@ class CustomerDetailsSerializer(serializers.Serializer):
 
     first_name = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
-    customer_email = serializers.EmailField()
-    customer_phone = serializers.CharField(max_length=20, required=False)
-    customer_address = serializers.CharField()
-    customer_date_of_birth = serializers.DateField(
-        input_formats=["%Y-%m-%d"], required=False
-    )
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=20, required=False)
+    residential_address = serializers.CharField()
+    date_of_birth = serializers.DateField(input_formats=["%Y-%m-%d"], required=False)
     customer_gender = serializers.ChoiceField(
         choices=CustomerGenderChoices.choices,
         required=False,
@@ -258,7 +256,7 @@ class BaseQuoteRequestSerializer(serializers.Serializer):
     customer_metadata = CustomerDetailsSerializer(required=False)
 
 
-class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
+class TravelInsuranceSerializer(serializers.Serializer):
     """
     Validate the travel insurance quote request payload
 
@@ -275,16 +273,26 @@ class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
         ONE_WAY = "one_way", "One Way"
         ROUND_TRIP = "round_trip", "Round Trip"
 
-    destination = serializers.CharField(max_length=255)
+    destination = serializers.CharField(
+        max_length=255, help_text="Destination of travel"
+    )
     departure_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     return_date = serializers.DateField(input_formats=["%Y-%m-%d"])
     number_of_travellers = serializers.IntegerField(
         min_value=1, max_value=10, default=1
     )
-    trip_duration = serializers.IntegerField(min_value=1, max_value=365, required=False)
-    trip_type = serializers.ChoiceField(choices=TravelTripTypeChoices.choices)
-    trip_type_details = serializers.ChoiceField(
-        TravelPurposeChoices.choices,
+    trip_duration = serializers.IntegerField(
+        min_value=1,
+        max_value=365,
+        required=False,
+        help_text="Duration of the trip in days",
+    )
+    trip_type = serializers.ChoiceField(
+        choices=TravelTripTypeChoices.choices,
+        required=False,
+        help_text="Type of trip e.g One Way, Round Trip",
+    )
+    trip_type_details = serializers.CharField(
         required=False,
     )
     international_flight = serializers.BooleanField(
@@ -297,7 +305,6 @@ class TravelInsuranceSerializer(BaseQuoteRequestSerializer):
 class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
     """
     Validate the health insurance quote request payload
-
     """
 
     class CoverageTypeChoices(models.TextChoices):
@@ -305,29 +312,37 @@ class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
         STANDARD = "standard", "Standard"
         PREMIUM = "premium", "Premium"
 
+    class HealthCoverageType(models.TextChoices):
+        INDIVIDUAL = "individual", "Individual"
+        FAMILY = "family", "Family"
+        GROUP = "group", "Group"
+
     class HealthConditionChoices(models.TextChoices):
         GOOD = "good", "Good"
         FAIR = "fair", "Fair"
         POOR = "poor", "Poor"
         CRITICAL = "critical", "Critical"
 
-    health_condition = serializers.ChoiceField(choices=HealthConditionChoices.choices)
+    health_condition = serializers.ChoiceField(
+        choices=HealthConditionChoices.choices,
+        help_text="Health condition of the applicant e.g Good, Fair, Poor, Critical",
+    )
     age = serializers.IntegerField(min_value=1, max_value=100)
-    coverage_type = serializers.ChoiceField(choices=CoverageTypeChoices.choices)
-    coverage_type_details = serializers.ChoiceField(
-        choices=[
-            ("individual", "Individual"),
-            ("family", "Family"),
-            ("group", "Group"),
-        ],
+    coverage_type = serializers.ChoiceField(
+        choices=CoverageTypeChoices.choices,
+        help_text="Type of coverage e.g Basic, Standard, Premium",
         required=False,
+    )
+    coverage_type_details = serializers.ChoiceField(
+        choices=HealthCoverageType.choices,
+        required=False,
+        help_text="Additional details on the type of coverage e.g Individual, Family, Group",
     )
 
 
-class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
+class AutoInsuranceSerializer(serializers.Serializer):
     """
     Validate the auto insurance quote request payload
-
     """
 
     class VehicleUsageChoices(models.TextChoices):
@@ -348,28 +363,44 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
         BUSINESS = "business", "Business"
         COMMUTE = "commute", "Commute"
 
-    vehicle_type = serializers.ChoiceField(choices=VehicleTypeChoices.choices)
+    vehicle_type = serializers.ChoiceField(
+        choices=VehicleTypeChoices.choices, help_text="Type of vehicle e.g Car, Bike"
+    )
     vehicle_make = serializers.CharField(max_length=100, required=False)
     vehicle_model = serializers.CharField(max_length=100, required=False)
     vehicle_year = serializers.IntegerField(
         min_value=1900,
         max_value=datetime.now().year,
+        help_text="Year of manufacture of the vehicle",
     )
     vehicle_value = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False
+        max_digits=10,
+        decimal_places=2,
+        help_text="Estimated value of the vehicle",
     )
-    vehicle_usage = serializers.ChoiceField(choices=VehicleUsageChoices.choices)
+    vehicle_usage = serializers.ChoiceField(
+        choices=VehicleUsageChoices.choices,
+        help_text="How the vehicle is used e.g Personal, Commercial",
+        required=False,
+    )
     vehicle_usage_details = serializers.ChoiceField(
         choices=VehicleUsageMetadata.choices,
         required=False,
+        help_text="Additional details on how the vehicle is used, e.g Private, Public, Commercial",
     )
-    vehicle_mileage = serializers.IntegerField(min_value=1, max_value=100000)
+    vehicle_mileage = serializers.IntegerField(
+        min_value=1,
+        max_value=100000,
+        help_text="Mileage of the vehicle in KM",
+        required=False,
+    )
     vehicle_location = serializers.ChoiceField(
         choices=[
             ("urban", "Urban"),
             ("suburban", "Suburban"),
             ("rural", "Rural"),
-        ]
+        ],
+        required=False,
     )
     vehicle_location_details = serializers.ChoiceField(
         choices=[
@@ -381,6 +412,7 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
     )
     vehicle_purpose = serializers.ChoiceField(
         choices=VehicleUsageMetadata.choices,
+        required=False,
     )
     vehicle_purpose_details = serializers.ChoiceField(
         choices=VehiclePurposeChoices.choices,
@@ -388,14 +420,14 @@ class AutoInsuranceSerializer(BaseQuoteRequestSerializer):
     )
 
 
-class PersonalAccidentInsuranceSerializer(BaseQuoteRequestSerializer):
+class PersonalAccidentInsuranceSerializer(serializers.Serializer):
     """
     Validate the personal accident insurance quote request payload
-
-
     """
 
-    occupation = serializers.CharField(max_length=255)
+    occupation = serializers.CharField(
+        max_length=255, help_text="Occupation of the applicant"
+    )
     occupation_risk_level = serializers.ChoiceField(
         choices=[
             ("low", "Low"),
@@ -412,47 +444,108 @@ class PersonalAccidentInsuranceSerializer(BaseQuoteRequestSerializer):
         ],
         required=False,
     )
-    age = serializers.IntegerField(min_value=1, max_value=100)
 
 
-class HomeInsuranceSerializer(BaseQuoteRequestSerializer):
+class HomeInsuranceSerializer(serializers.Serializer):
     """
     Validate the home insurance quote request payload
 
     """
 
+    class PropertyTypeChoices(models.TextChoices):
+        HOUSE = "house", "House"
+        APARTMENT = "apartment", "Apartment"
+        CONDO = "condo", "Condo"
+
     property_type = serializers.ChoiceField(
-        choices=[
-            ("house", "House"),
-            ("apartment", "Apartment"),
-            ("condo", "Condo"),
-        ]
+        choices=PropertyTypeChoices.choices,
+        help_text="Type of property e.g House, Apartment",
     )
-    property_value = serializers.DecimalField(max_digits=10, decimal_places=2)
-    property_location = serializers.CharField(max_length=255)
+    property_value = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Estimated value of the property"
+    )
+    property_location = serializers.CharField(
+        max_length=255,
+        help_text="Location of the property in format: State, Country",
+    )
     security_details = serializers.JSONField(required=False)
 
 
-class GadgetInsuranceSerializer(BaseQuoteRequestSerializer):
+class GadgetInsuranceSerializer(serializers.Serializer):
     """
-    Validate the gadget insurance quote request payload
-
-
+    Validate the gadget (Device) insurance quote request payload
     """
+
+    class DeviceTypeCategory(models.TextChoices):
+        MOBILE = "mobile", "Mobile"
+        COMPUTER = "computer", "Computer"
+        CAMERA = "camera", "Camera"
+        AUDIO = "audio", "Audio"
+        WEARABLE = "wearable", "Wearable"
+        OTHER = "other", "Other"
+
+    class DeviceTypeChoices(models.TextChoices):
+        POS = "pos", "Point-of-Sale Terminal (POS)"
+        SMARTPHONE = "smartphone", "Smartphone"
+        LAPTOP = "laptop", "Laptop"
+        TABLET = "tablet", "Tablet"
+        SMARTWATCH = "smartwatch", "Smartwatch"
+        CAMERA = "camera", "Camera"
+        HEADPHONES = "headphones", "Headphones"
+        OTHER = "other", "Other"
 
     gadget_type = serializers.ChoiceField(
         choices=[
-            ("smartphone", "Smartphone"),
-            ("laptop", "Laptop"),
-            ("tablet", "Tablet"),
-            ("smartwatch", "Smartwatch"),
-            ("camera", "Camera"),
-            ("headphones", "Headphones"),
-            ("other", "Other"),
-        ]
+            (DeviceTypeChoices.POS, "Point-of-Sale Terminal (POS)"),
+            (DeviceTypeChoices.SMARTPHONE, "Smartphone"),
+            (DeviceTypeChoices.LAPTOP, "Laptop"),
+            (DeviceTypeChoices.TABLET, "Tablet"),
+            (DeviceTypeChoices.SMARTWATCH, "Smartwatch"),
+            (DeviceTypeChoices.CAMERA, "Camera"),
+            (DeviceTypeChoices.HEADPHONES, "Headphones"),
+            (DeviceTypeChoices.OTHER, "Other"),
+        ],
+        help_text="Type of gadget e.g Smartphone, Laptop, etc",
     )
-    gadget_information = serializers.JSONField(required=False)
-    usage_history = serializers.JSONField(required=False)
+    gadget_information = serializers.JSONField(
+        required=False,
+        help_text="Additional information about the gadget in JSON e.g IMEI number, Serial number",
+    )
+    usage_history = serializers.JSONField(
+        required=False, help_text="Usage history in JSON"
+    )
+
+    def get_device_category(self, gadget_type: str):
+        """
+        Returns the category of the device based on the device type
+        """
+        if gadget_type in [
+            self.DeviceTypeChoices.SMARTPHONE,
+            self.DeviceTypeChoices.TABLET,
+        ]:
+            return self.DeviceTypeCategory.MOBILE
+        elif gadget_type in [
+            self.DeviceTypeChoices.LAPTOP,
+            self.DeviceTypeChoices.POS,
+        ]:
+            return self.DeviceTypeCategory.COMPUTER
+        elif gadget_type == self.DeviceTypeChoices.CAMERA:
+            return self.DeviceTypeCategory.CAMERA
+        elif gadget_type == self.DeviceTypeChoices.HEADPHONES:
+            return self.DeviceTypeCategory.AUDIO
+        elif gadget_type == self.DeviceTypeChoices.SMARTWATCH:
+            return self.DeviceTypeCategory.WEARABLE
+        else:
+            return self.DeviceTypeCategory.OTHER
+
+    def validate(self, attrs: dict):
+        """
+        Validate the gadget insurance quote request payload
+        """
+        gadget_type = attrs.get("gadget_type")
+        if gadget_type:
+            attrs["gadget_category"] = self.get_device_category(gadget_type)
+        return attrs
 
 
 class QuoteRequestSerializer(serializers.Serializer):
@@ -1109,6 +1202,69 @@ class ProductDetailsSerializer(serializers.ModelSerializer):
         model = Product
         fields = ["product_type", "product_name", "additional_information"]
 
+    def get_matching_serializer(self, product_type):
+        """
+        Returns the appropriate serializer class based on the product type.
+
+        using the:
+        - product_type
+
+        determines which serializer to use for the additional information
+            - ProductType.HEALTH -> HealthInsuranceSerializer
+            - ProductType.AUTO -> AutoInsuranceSerializer
+            - ProductType.TRAVEL -> TravelInsuranceSerializer
+            - ProductType.PERSONAL_ACCIDENT -> PersonalAccidentInsuranceSerializer
+            - ProductType.HOME -> HomeInsuranceSerializer
+
+        otherwise, we would not use the additional information field, and only use the
+        product_type
+        """
+        matching_serializers = {
+            Product.ProductType.HEALTH: HealthInsuranceSerializer,
+            Product.ProductType.AUTO: AutoInsuranceSerializer,
+            Product.ProductType.TRAVEL: TravelInsuranceSerializer,
+            Product.ProductType.PERSONAL_ACCIDENT: PersonalAccidentInsuranceSerializer,
+            Product.ProductType.HOME: HomeInsuranceSerializer,
+            Product.ProductType.GADGET: GadgetInsuranceSerializer,
+        }
+        return matching_serializers.get(product_type)
+
+    def validate(self, attrs):
+        product_type = attrs.get("product_type")
+        additional_information = attrs.get("additional_information")
+
+        # Only validate additional_information if the product_type matches one of the specified categories
+        if product_type in [
+            Product.ProductType.HEALTH,
+            Product.ProductType.AUTO,
+            Product.ProductType.TRAVEL,
+            Product.ProductType.PERSONAL_ACCIDENT,
+            Product.ProductType.HOME,
+            Product.ProductType.GADGET,
+        ]:
+            if not additional_information:
+                raise ValidationError(
+                    "Additional information is required for this product type."
+                )
+
+            product_serializer_class = self.get_matching_serializer(product_type)
+            if not product_serializer_class:
+                raise ValidationError("Invalid product type.")
+
+            logger.debug(
+                f"Using serializer class: {product_serializer_class} for product type: {product_type}"
+            )
+            logger.debug(f"Additional Information: {additional_information}")
+
+            product_serializer = product_serializer_class(data=additional_information)
+            if not product_serializer.is_valid():
+                raise ValidationError(
+                    {"additional_information": product_serializer.errors}
+                )
+
+            attrs["additional_information"] = product_serializer.validated_data
+        return attrs
+
 
 class CoveragePreferencesSerializer(serializers.Serializer):
     """
@@ -1123,6 +1279,7 @@ class CoveragePreferencesSerializer(serializers.Serializer):
             choices=Coverage.CoverageType.choices,
         ),
         help_text="An array specifying the type of coverage (e.g., Comprehensive, Basic, ThirdParty, etc.",
+        required=False,
     )
     coverage_amount = serializers.DecimalField(
         decimal_places=2,
@@ -1136,6 +1293,17 @@ class CoveragePreferencesSerializer(serializers.Serializer):
         help_text="Any extra coverages the applicant may want (e.g., Critical Illness for Health Insurance)",
         required=False,
     )
+
+    # def get_coverage_type_display(self, value):
+    #     """
+    #     returns the valid options if an incorrect input is given for a vald coverage type
+    #     """
+    #     valid_choices = [choice[0] for choice in Coverage.CoverageType.choices]
+    #     if value not in valid_choices:
+    #         raise serializers.ValidationError(
+    #             f"Invalid coverage type. Expected one of {valid_choices}."
+    #         )
+    #     return value
 
 
 class QuoteRequestSerializerV2(serializers.Serializer):
@@ -1159,20 +1327,29 @@ class QuoteCoverageSerializer(serializers.Serializer):
     Revised Serializer to format the quote response.
     """
 
+    coverage_name = serializers.CharField(
+        help_text="Name of the coverage, e.g., Collision, Medical"
+    )
+    coverage_description = serializers.CharField(
+        help_text="Description of the coverage"
+    )
     coverage_type = serializers.CharField(
         help_text="Type of coverage, e.g., Health, Accident"
     )
     coverage_limit = serializers.DecimalField(
         max_digits=12, decimal_places=2, help_text="Maximum limit of the coverage"
     )
-    exclusions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of exclusions for this coverage type",
-    )
-    benefits = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of benefits for this coverage type",
-    )
+
+    class Meta:
+        # model = Coverage
+        fields = [
+            "coverage_name",
+            "coverage_description",
+            "coverage_type",
+            "coverage_limit",
+            "exclusions",
+            "benefits",
+        ]
 
 
 class QuoteTermsSerializer(serializers.Serializer):
@@ -1181,21 +1358,41 @@ class QuoteTermsSerializer(serializers.Serializer):
     """
 
     duration = serializers.CharField(
-        help_text="Duration of the policy, e.g., 12 months"
+        help_text="Duration of the policy, e.g., 12 months", required=False
     )
     renewal_options = serializers.CharField(
-        help_text="Renewal option for the policy, e.g., Auto-renew; 'Automatic renewal with premium adjustment based on claims history.'"
+        help_text="Renewal option for the policy, e.g., Auto-renew; 'Automatic renewal with premium adjustment based on claims history.'",
+        required=False,
     )
     cancellation_policy = serializers.CharField(
-        help_text="Cancellation policy details, e.g., '30 days notice required for cancellation without penalty."
+        help_text="Cancellation policy details, e.g., '30 days notice required for cancellation without penalty.",
+        required=False,
     )
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["duration"] = representation.get("duration", "12 months")
+        representation["renewal_options"] = representation.get(
+            "renewal_options", "Auto-renewal disabled; policy renewal is not automatic."
+        )
+        representation["cancellation_policy"] = representation.get(
+            "cancellation_policy",
+            "30 days notice required for cancellation without penalty.",
+        )
+        return representation
 
-class QuoteProviderSerializer(serializers.Serializer):
-    provider_name = serializers.CharField(help_text="Name of the insurance provider")
+
+class QuoteProviderSerializer(serializers.ModelSerializer):
+    provider_name = serializers.CharField(
+        source="provider.name", help_text="Name of the insurance provider"
+    )
     provider_id = serializers.CharField(
-        help_text="Unique identifier for the insurance provider"
+        source="provider.id", help_text="Unique identifier for the insurance provider"
     )
+
+    class Meta:
+        model = Product
+        fields = ["provider_id", "provider_name"]
 
 
 class QuotePricingSerializer(serializers.Serializer):
@@ -1223,16 +1420,47 @@ class QuoteAdditionalMetadataSerializer(serializers.Serializer):
     """
 
     product_type = serializers.CharField(
-        help_text="Type of product, e.g., Health Insurance"
+        help_text="Type of product, e.g., Health Insurance",
     )
-    tier = serializers.CharField(help_text="Tier of the product, e.g., Standard")
-    available_addons = serializers.ListField(
+    tier = serializers.CharField(
+        help_text="Tier of the product, e.g., Standard", source="tier_name"
+    )
+    available_tiers = serializers.ListField(
         child=serializers.CharField(),
-        help_text="List of available add-ons for the product",
+        help_text="List of available tiers for the product",
+    )
+    exclusions = serializers.ListField(
+        child=serializers.CharField(
+            help_text="Exclusions or limitations of the coverage",
+            allow_blank=True,
+        ),
+    )
+    benefits = serializers.ListField(
+        child=serializers.CharField(
+            help_text="Specific benefits included in the coverage",
+            allow_blank=True,
+        ),
     )
     last_updated = serializers.DateTimeField(
-        help_text="Timestamp of the last update to this quote in ISO 8601 format"
+        help_text="Timestamp of the last update to this quote in ISO 8601 format",
+        read_only=True,
     )
+
+    class Meta:
+        fields = [
+            "product_type",
+            "tier",
+            "available_tiers",
+            "exclusions",
+            "benefits",
+            "last_updated",
+        ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        last_updated = timezone.now()
+        representation["last_updated"] = last_updated.strftime("%Y-%m-%d %H:%M:%S")
+        return representation
 
 
 class QuoteResponseSerializer(serializers.Serializer):
@@ -1240,96 +1468,65 @@ class QuoteResponseSerializer(serializers.Serializer):
     Serializer to format the quote response in a structured, unified way.
     """
 
-    provider = QuoteProviderSerializer(help_text="Provider offering the quote")
-    pricing = QuotePricingSerializer(help_text="Pricing details for the quote")
+    quote_code = serializers.CharField(help_text="Unique identifier for the quote")
+    purchase_id = serializers.CharField(
+        help_text="Purchase ID for completing the transaction with an external payment processor"
+    )
+    provider_information = QuoteProviderSerializer(source="product")
     coverages = QuoteCoverageSerializer(
-        many=True, help_text="List of coverages offered in the quote"
+        source="additional_metadata.coverage_details",
+        many=True,
+        help_text="List of coverage details",
     )
-    exclusions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of exclusions for the insurance product",
-    )
-    coverage = QuoteCoverageSerializer(help_text="Coverage details for the product")
-    benefits = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="List of benefits included in the insurance product",
+    additional_metadata = QuoteAdditionalMetadataSerializer(
+        help_text="Additional information about the product and product tier",
     )
     policy_terms = QuoteTermsSerializer(
         help_text="Terms and conditions of the insurance policy"
     )
-    additional_metadata = QuoteAdditionalMetadataSerializer(
-        help_text="Additional information about the product and product tier"
-    )
-    quote_code = serializers.CharField(help_text="Unique identifier for the quote")
-    purchase_id = serializers.CharField(
-        help_text="Purchase ID for completing the transaction"
-    )
-    purchase_id_description = serializers.CharField(
-        help_text="Instructions for using the purchase ID with external payment processor"
-    )
 
     class Meta:
         fields = [
-            "provider",
-            "pricing",
-            "coverage",
-            "exclusions",
-            "benefits",
-            "policy_terms",
-            "additional_metadata",
             "quote_code",
             "purchase_id",
-            "purchase_id_description",
+            "provider_information",
+            "coverages",
+            "additional_metadata",
+            "policy_terms",
         ]
 
     def to_representation(self, instance):
-        """
-        Format the complex relationships in the response.
-        `instance` will be a `Quote` object.
-        """
+        representation = super().to_representation(instance)
 
-        provider_data = {
-            "provider_name": instance.product.provider.name,
-            "provider_id": instance.product.provider.id,
-        }
-        pricing_data = {
-            "currency": instance.premium.currency,
-            "base_premium": instance.base_price,
-            "discount_amount": instance.premium.discount_amount,
-            "total_amount_for_quotation": instance.premium.amount,
-        }
-        coverages = [
+        # Extract the pricing information using Price model ('premium')
+        # from the Quote instance
+        representation["pricing"] = QuotePricingSerializer(
             {
-                "coverage_type": coverage.coverage_type,
-                "coverage_limit": coverage.coverage_limit,
-                "exclusions": instance.product.tiers.first().exclusions.split("\n"),
-                "benefits": instance.product.tiers.first().benefits.split("\n"),
+                "currency": instance.premium.currency,
+                "base_premium": instance.premium.amount,
+                "discount_amount": instance.premium.discount_amount or 0,
+                "total_amount_for_quotation": instance.base_price,
             }
-            for coverage in instance.product.tiers.first().coverages.all()
+        ).data
+
+        return representation
+
+
+class QuoteResponseSerializerV2(serializers.ModelSerializer):
+    provider = serializers.CharField(source="provider.name")
+    product = serializers.CharField(source="product.name")
+    premium = serializers.DecimalField(
+        source="premium.amount", max_digits=10, decimal_places=2
+    )
+
+    class Meta:
+        model = Quote
+        fields = [
+            "quote_code",
+            "provider",
+            "product",
+            "base_price",
+            "premium",
+            "purchase_id",
+            "additional_metadata",
         ]
-        exclusions = instance.product.tiers.first().exclusions.split("\n")
-        benefits = instance.product.tiers.first().benefits.split("\n")
-        policy_terms_data = {
-            "duration": instance.product.tiers.first().pricing_model,
-            # "renewal_options": instance.product.tiers.first().renewal_options,
-            "cancellation_policy": "30 days notice required for cancellation without penalty",
-        }
-        additional_metadata = {
-            "product_type": instance.product.product_type,
-            "tier": instance.product.tiers.first().tier_name,
-            "available_addons": [],
-            "last_updated": instance.updated_at.isoformat(),
-        }
-        response = {
-            "provider": provider_data,
-            "pricing": pricing_data,
-            "coverages": coverages,
-            "exclusions": exclusions,
-            "benefits": benefits,
-            "policy_terms": policy_terms_data,
-            "additional_metadata": additional_metadata,
-            "quote_code": instance.quote_code,
-            "purchase_id": instance.purchase_id,
-            "purchase_id_description": "Provide this ID to the external payment processor.",
-        }
-        return response

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
@@ -105,6 +106,8 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
     Packages offered by an insurance partner
 
     E.g Life Insurance, MicroInsurance, General Insurance, etc
+
+    Can exist with or without associated tiers
     """
 
     class ProductType(models.TextChoices):
@@ -119,9 +122,11 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         TRAVEL = "Travel", "Travel Insurance"
         HOME = "Home", "Home Insurance"
         STUDENT_PROTECTION = "Student_Protection", "Student Protection"
+        ACCIDENT = "Accident", "Accident Insurance"
         PERSONAL_ACCIDENT = "Personal_Accident", "Personal Accident Insurance"
         CREDIT_LIFE = "CreditLife", "Credit Life Insurance"
         PET_INSURANCE = "PetCare", "PetCare Insurance"
+        GENERAL = "General", "General Insurance"
         OTHER = "Other", "Other"
 
     id: models.UUIDField = models.UUIDField(
@@ -152,6 +157,12 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         blank=True,
         help_text="Detailed breakdown of what's covered",
     )
+    base_premium = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Base premium price if no tiers are defined",
+        default=Decimal("0.00"),
+    )
     is_live = models.BooleanField(
         default=True, help_text="Indicates if the package is live"
     )
@@ -164,6 +175,9 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         Override the delete method to trash the model instance
         """
         self.trash()
+
+    def full_delete(self) -> None:
+        return super().full_delete()
 
     class Meta:
         indexes = [
@@ -390,13 +404,33 @@ class Quote(models.Model):
     Represents an insurance quote for a policy
     """
 
-    QUOTE_STATUS = (
-        ("pending", "pending"),
-        ("accepted", "accepted"),
-        ("declined", "declined"),
-    )
+    class QuoteStatus(models.TextChoices):
+        """
+        Choices for the status of a quote
+        """
+
+        PENDING = "pending", "Pending"
+        ACCEPTED = (
+            "accepted",
+            "Accepted",
+        )  # could also mean, "Paid or user has used the quote"
+        DECLINED = "declined", "Declined"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
 
     # id = models.CharField(max_length=80, primary_key=True, unique=True, editable=False)
+    origin = models.CharField(
+        max_length=255,
+        help_text="The origin of the quote, e.g., Internal, or External provider",
+        choices=[("Internal", "Internal"), ("External", "External")],
+        default="Internal",
+    )
+    provider = models.CharField(
+        max_length=255,
+        help_text="The provider of the quote, e.g., AXA, Leadway, etc",
+        null=True,
+        blank=True,
+    )
     quote_code = models.CharField(
         _("Quote Code"),
         primary_key=True,
@@ -421,7 +455,9 @@ class Quote(models.Model):
         help_text="The expiry date of the quote.",
         default=default_expiry_date,
     )
-    status = models.CharField(max_length=20, choices=QUOTE_STATUS, default="pending")
+    status = models.CharField(
+        max_length=20, choices=QuoteStatus.choices, default=QuoteStatus.PENDING
+    )
     additional_metadata = models.JSONField(
         null=True, blank=True, help_text="Additional information about the quote"
     )
@@ -432,6 +468,11 @@ class Quote(models.Model):
         help_text="Unique identifier provided to payment processors to identify a quote purchase",
     )
     purchase_id_created_at = models.DateTimeField(null=True, blank=True)
+    policy_terms = models.JSONField(
+        help_text="Terms and conditions of the insurance policy, stored as a JSON object.",
+        default=dict,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "quote"

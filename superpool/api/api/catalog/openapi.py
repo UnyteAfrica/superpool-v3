@@ -426,3 +426,32 @@ policy_cancellation_request_example_2 = OpenApiExample(
         "merchant_feedback": "The customer found a better policy elsewhere. So we are cancelling this policy",
     },
 )
+
+quote_request_example = OpenApiExample(
+    "Example Quote Request",
+    description="Example of how to request a quote using product details, customer information, and coverage preferences.",
+    value={
+        "customer_metadata": {
+            "first_name": "John",
+            "last_name": "Doe",
+            "customer_email": "john.doe@example.com",
+            "customer_phone": "+1234567890",
+            "customer_address": "1234 Elm Street, Some City, Some Country",
+            "customer_date_of_birth": "1990-06-15",
+            "customer_gender": "M",
+        },
+        "insurance_details": {
+            "product_type": "Health",
+            "product_name": "Comprehensive Health Insurance",
+            "additional_information": {
+                "existing_conditions": "None",
+                "smoker_status": "Non-smoker",
+            },
+        },
+        "coverage_preferences": {
+            "coverage_type": ["Medical", "Accidental"],
+            "coverage_amount": 1000000.00,
+            "additional_coverages": ["Critical Illness"],
+        },
+    },
+)

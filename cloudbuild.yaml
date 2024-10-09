@@ -1,0 +1,19 @@
+steps:
+ - name: 'docker/compose'
+   args: ['-f', 'docker-compose.yml', 'build']
+   id: Build Services
+
+ - name: 'docker/compose'
+   id: Start Services
+   args: ['-f', 'docker-compose.yml', 'up', '-d']
+
+ - name: 'gcr.io/cloud-builders/docker'
+   args: ['tag', 'gcr.io/$PROJECT_ID/superpool', 'gcr.io/$PROJECT_ID/superpool:latest']
+   id: Tag Image
+
+ - name: 'gcr.io/cloud-builders/docker'
+   args: ['push', 'gcr.io/$PROJECT_ID/superpool-v3:latest']
+   id: Push Image
+
+options:
+  logging: CLOUD_LOGGING_ONLY
