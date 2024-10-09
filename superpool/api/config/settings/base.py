@@ -128,7 +128,7 @@ else:
             "Please provide a DATABASE_URL or DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD,"
             "DATABASE_HOST, DATABASE_PORT to startup application",
         )
-DATABASES["default"]["ATOMIC_REQUESTS"] = True
+DATABASES["default"]["ATOMIC_REQUESTS"] = False
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -279,7 +279,7 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 # INSURANCE PARTNERS
 #
 # Heirs Holdings
-HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1/"
-HEIRS_ASSURANCE_STAGING_URL = "https://pubic-api.staging.heirsinsurance.com/v1/"
+HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1"
+HEIRS_ASSURANCE_STAGING_URL = "https://public-api.staging.heirsinsurance.com/v1"
 HEIRS_ASSURANCE_API_KEY = env("HEIRS_API_KEY")
 HEIRS_ASSURANCE_APP_ID = env("HEIRS_APP_ID")

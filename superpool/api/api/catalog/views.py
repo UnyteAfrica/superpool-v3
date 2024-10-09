@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from asgiref.sync import async_to_sync
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import DecimalField, F, Q, QuerySet, Value
 from django.db.models.functions import Cast, Coalesce, NullIf
@@ -951,18 +952,21 @@ class QuoteRequestView(views.APIView):
             )
         },
     )
+    # @transaction.non_atomic_requests
     def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
 
+        # is_valid = await sync_to_async(serializer.is_valid)()
         is_valid = serializer.is_valid()
         if not is_valid:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
+        # validated_data = await sync_to_async(lambda: serializer.validated_data)()
         service = QuoteService()
 
         try:
-            quote_data = service.request_quote(validated_data)
+            quote_data = async_to_sync(service.request_quote)(validated_data)
             logger.info(f"Quote Data: {quote_data}")
 
             paginator = LimitOffsetPagination()
@@ -973,8 +977,9 @@ class QuoteRequestView(views.APIView):
                     paginated_quotes, many=True
                 )
                 serializer_data = response_serializer.data
-                response = paginator.get_paginated_response(serializer_data)
-                return response
+                # response = paginator.get_paginated_response(serializer_data)
+                # return response
+                return paginator.get_paginated_response(serializer_data)
 
             response_serializer = QuoteResponseSerializerV2(quote_data, many=True)
             serializer_data = response_serializer.data
