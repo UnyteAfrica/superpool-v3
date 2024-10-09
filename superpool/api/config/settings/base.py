@@ -232,22 +232,36 @@ LOGGING = {
             "filename": LOG_FILE_PATH,
             "formatter": "verbose",
         },
+        "api_log_file": {
+            "class": "logging.FileHandler",
+            "filename": "api_client.log",
+            "formatter": "standard",
+        },
     },
     "formatters": {
         "verbose": {
             "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
+        "standard": {
+            "format": "[{asctime}] {levelname} [{name}:{lineno}] {message}",
+            "style": "{",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": LOG_LEVEL,
     },
     "loggers": {
         "django": {
-            "handlers": ["console"],
+            "handlers": ["console", "file"],
             "level": LOG_LEVEL,
             "propagate": True,
+        },
+        "api_client": {
+            "handlers": ["console", "api_log_file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }

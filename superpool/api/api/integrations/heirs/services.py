@@ -3,8 +3,9 @@ Heirs Assurance Service
 """
 
 import logging
-import warnings
 from typing import List, Optional, Union
+
+from typing_extensions import deprecated
 
 from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
 from core.providers.integrations.heirs.registry import (
@@ -30,7 +31,7 @@ class HeirsAssuranceService:
     def __init__(self) -> None:
         self.client = HeirsLifeAssuranceClient()
 
-    @warnings.warn(
+    @deprecated(
         "This method is deprecated and will be removed in future versions. Use the appropriate method for the specific policy type"
     )
     def get_auto_policy(self, policy_id):
@@ -93,17 +94,21 @@ class HeirsAssuranceService:
         endpoint = self._get_policy_endpoint(product_id, product_class)
         return self.client.post(endpoint, data=product_class.to_dict())
 
-    def register_policy_holder(self, beneficiary_data: CustomerInfo):
+    def register_policy_holder(self, beneficiary_data: CustomerInfo | dict):
         """
         Register a customer as a policy holder on Heirs platform
         """
         register_policy_holder_url = f"{HEIRS_SERVER_URL}/policy_holder"
 
-        if not isinstance(beneficiary_data, dict):
+        if hasattr(beneficiary_data, "to_dict"):
+            beneficiary_dict = beneficiary_data.to_dict()
+        elif not isinstance(beneficiary_data, dict):
+            beneficiary_dict = beneficiary_data
+        else:
             raise TypeError("Policy holder object must be of type dict")
 
         response = self.client.post(
-            url=register_policy_holder_url, data=beneficiary_data
+            url=register_policy_holder_url, data=beneficiary_dict
         )
         return response
 
@@ -114,9 +119,16 @@ class HeirsAssuranceService:
         company = "Heirs%20Insurance"
         fetch_products_url = f"{HEIRS_SERVER_URL}/{company}/product"
         response = self.client.get(fetch_products_url)
-        return response
+        if response.status_code == 200:
+            products_data = response.json()
+            return [Product(**product) for product in products_data]
+        else:
+            logger.error(
+                f"Failed to fetch products from Heirs API. Status Code: {response.status_code}"
+            )
+            return []
 
-    def fetch_insurance_products(self, product_class: str):
+    def fetch_insurance_products(self, product_class: str) -> list[Product]:
         """
         Get Insurance products that belongs to a specific product category
 
@@ -150,7 +162,15 @@ class HeirsAssuranceService:
         company = "Heirs%20Insurance"
         fetch_policy_info_url = f"{HEIRS_SERVER_URL}/{company}/policy/{policy_num}"
         response = self.client.get(fetch_policy_info_url)
-        return response
+
+        if response.status_code == 200:
+            policy_data = response.json()
+            return PolicyInfo(**policy_data)
+        else:
+            logger.error(
+                f"Failed to fetch products from Heirs API. Status Code: {response.status_code}"
+            )
+            return {}
 
     def _get_endpoint_by_category(self, category: str, params: QuoteDefinition) -> str:
         """
