@@ -17,7 +17,7 @@ This approach allows us to switch between the staging and production urls easily
 
 class HeirsLifeAssuranceClient(BaseClient):
     def __init__(self) -> None:
-        HEIRS_APP_ID = settings.HEIRS_APP_ID
+        HEIRS_APP_ID = settings.HEIRS_ASSURANCE_APP_ID
         headers = {"X-APP-ID": HEIRS_APP_ID}
         super().__init__(HEIRS_SERVER_URL, HEIRS_APP_ID, headers=headers)
 

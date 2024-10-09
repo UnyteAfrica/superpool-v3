@@ -14,14 +14,12 @@ from core.providers.integrations.heirs.registry import (
     APIErrorResponse,
     AutoPolicy,
     BikerPolicy,
-    CustomerInfo,
     DevicePolicy,
     InsuranceProduct,
     MotorPolicy,
     PersonalAccidentPolicy,
     PolicyInfo,
     Product,
-    QuoteDefinition,
     TravelPolicyClass,
 )
 
@@ -82,7 +80,7 @@ class HeirsAssuranceService:
             )
 
     def get_quote(
-        self, category: Optional[str] = None, **params: QuoteDefinition
+        self, category: Optional[str] = None, **params: dict
     ) -> Union[Dict[str, Any], Dict[str, Any]]:
         """
         Retrieve an Insurance Quotation from the Heirs API
@@ -177,14 +175,14 @@ class HeirsAssuranceService:
         endpoint = self._get_policy_endpoint(product_id, product_class)
         return self.client.post(endpoint, data=product_class.to_dict())
 
-    def register_policy_holder(self, beneficiary_data: CustomerInfo | dict):
+    def register_policy_holder(self, beneficiary_data: dict):
         """
         Register a customer as a policy holder on Heirs platform
         """
         register_policy_holder_url = f"{HEIRS_SERVER_URL}/policy_holder"
 
         if hasattr(beneficiary_data, "to_dict"):
-            beneficiary_dict = beneficiary_data.to_dict()
+            beneficiary_dict = beneficiary_data
         elif not isinstance(beneficiary_data, dict):
             beneficiary_dict = beneficiary_data
         else:
