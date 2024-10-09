@@ -2,7 +2,9 @@
 Heirs Assurance Service
 """
 
-from typing import List, Union
+import logging
+import warnings
+from typing import List, Optional, Union
 
 from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
 from core.providers.integrations.heirs.registry import (
@@ -21,11 +23,16 @@ from core.providers.integrations.heirs.registry import (
     TravelPolicyClass,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class HeirsAssuranceService:
     def __init__(self) -> None:
         self.client = HeirsLifeAssuranceClient()
 
+    @warnings.warn(
+        "This method is deprecated and will be removed in future versions. Use the appropriate method for the specific policy type"
+    )
     def get_auto_policy(self, policy_id):
         policy_data = self.client.get_policy_details(policy_id)
         return AutoPolicy(
@@ -44,8 +51,8 @@ class HeirsAssuranceService:
         )
 
     def get_quote(
-        self, category: str = None, **params: QuoteDefinition
-    ) -> Union[QuoteAPIResponse, APIErrorResponse, ValueError]:
+        self, category: Optional[str] = None, **params: QuoteDefinition
+    ) -> Union[QuoteAPIResponse, APIErrorResponse]:
         """
         Retrieve an Insurance Quotation from the Heirs API
 
@@ -66,8 +73,8 @@ class HeirsAssuranceService:
                 "Policy category must be provided in order to retrieve quotes"
             )
         if category not in RECOGNIZED_INSURANCE_CATEGORIES:
-            return ValueError(
-                "Product category must be one of auto, travel, biker or personal, device accident categories."
+            raise ValueError(
+                f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
             )
         endpoint = self._get_endpoint_by_category(category, **params)
         return self.client.get(endpoint)
@@ -154,6 +161,19 @@ class HeirsAssuranceService:
             params: Additional parameters passed unto the API call
 
         """
+        required_params = {
+            "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
+            "biker": ["product_id", "motor_value", "motor_class"],
+            "travel": ["user_age", "start_date", "end_date", "category_name"],
+            "personal_accident": ["product_id"],
+            "device": ["item_value"],
+            "pos": ["item_value"],
+        }
+        if category in required_params:
+            for param in required_params[category]:
+                if param not in params:
+                    raise ValueError(f"Missing required parameter: {param}")
+
         match category:
             case "auto" | "motor":
                 return f'{HEIRS_SERVER_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
@@ -168,7 +188,10 @@ class HeirsAssuranceService:
             case "pos":
                 return f'{HEIRS_SERVER_URL}/pos/quote/{params.get("item_value")}'
             case _:
-                return "Unsupported category"
+                logger.error(
+                    f"Unsupported category for insurance quote: {category} during API call"
+                )
+                raise ValueError("Unsupported category for insurance quote")
 
     def _get_policy_endpoint(
         self, product_id: str | int, product_class: InsuranceProduct
