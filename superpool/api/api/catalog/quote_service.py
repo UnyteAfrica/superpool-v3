@@ -23,6 +23,21 @@ class QuoteService:
         "Travel": "Travel",
     }
 
+    async def _get_active_external_providers(self) -> list[str]:
+        """
+        Fetch active external providers from the database.
+        """
+        providers = await sync_to_async(list)(
+            InsurancePartner.objects.filter(
+                is_active=True,
+                is_external=True,
+            )
+            .values_list("name", flat=True)
+            .distinct()
+        )
+        logger.info(f"Active external providers: {providers}")
+        return providers
+
     async def _fetch_and_save_provider_quotes(
         self, provider_name: str, validated_data: dict
     ):
@@ -116,14 +131,15 @@ class QuoteService:
         # print(f"Internal quotes: {internal_quotes}")
         return all_quotes
 
-    def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
+    async def _get_providers_for_product_type(self, product_type: str) -> list[str]:
         """
-        Fetch all insurance providers with the who offers some product
-        for this product type
+        Fetch all insurance providers that offer some product for the given product type
         """
-        providers = InsurancePartner.objects.filter(
-            product__product_type=product_type
-        ).distinct()
+        providers = await sync_to_async(list)(
+            InsurancePartner.objects.filter(product__product_type=product_type)
+            .values_list("name", flat=True)
+            .distinct()
+        )
         logger.info(f'Found providers for product type "{product_type}": {providers}')
         return providers
 
@@ -279,7 +295,10 @@ class QuoteService:
         product_type = validated_data["insurance_details"]["product_type"]
         product_name = validated_data["insurance_details"].get("product_name")
 
-        query = Q(product__product_type=product_type)
+        # uses our internal product type mapping if necessary
+        mapped_product_type = self.PRODUCT_TYPE_MAPPING.get(product_type, product_type)
+
+        query = Q(product__product_type=mapped_product_type)
         if product_name:
             query &= Q(product__name__icontains=product_name)
 
