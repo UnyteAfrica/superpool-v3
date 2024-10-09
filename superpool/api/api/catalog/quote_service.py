@@ -41,7 +41,9 @@ class QuoteService:
                 f"Failed to fetch quotes from {provider_name}: {e}", exc_info=True
             )
 
-    def _retrieve_external_quotes(self, validated_data: Dict[str, Any]) -> QuerySet:
+    async def _retrieve_external_quotes(
+        self, validated_data: Dict[str, Any]
+    ) -> QuerySet:
         """
         Retrieve quotes from external providers asynchronously.
 
@@ -51,35 +53,31 @@ class QuoteService:
         provider_names = ["Heirs"]
         quotes = []
         tasks = [
-            self._fetch_and_save_provider_quotes(provider_names, validated_data)
+            self._fetch_and_save_provider_quotes(provider, validated_data)
             for provider in provider_names
         ]
+        # async def gather_quotes():
+        #     for provider_name in provider_names:
+        #         provider = QuoteProviderFactory.get_provider(provider_name)
+        #         tasks.append(provider.fetch_and_save_quotes(validated_data))
+        #     results = await asyncio.gather(*tasks)
+        #     return results
+        #
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
+        # try:
+        #     provider_quotes = loop.run_until_complete(gather_quotes())
+        # finally:
+        #     loop.close()
 
-        async def gather_quotes():
-            for provider_name in provider_names:
-                provider = QuoteProviderFactory.get_provider(provider_name)
-                tasks.append(provider.fetch_and_save_quotes(validated_data))
-            results = await asyncio.gather(*tasks)
-            return results
+        # excute the tasks concurrently
+        await asyncio.gather(*tasks)
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            provider_quotes = loop.run_until_complete(gather_quotes())
-        finally:
-            loop.close()
-
-        # Flatten the list of lists
-        external_quotes_data = [
-            quote for sublist in provider_quotes for quote in sublist
-        ]
-
-        # Process and store the quotes
-        # NOTE WE DON'T NEED THE BELOW! - WE ARE ALREADY SAVING THE QUOTES IN THE PROVIDER
-        # ALSO WE DON'T NEED TO RETURN THE QUOTES HERE BECAUSE A SEPERATE FUNCTION WOULD BE
-        # CALLED TO RETRIEVE THE QUOTES FROM THE DATABASE
-        quotes = self._create_quotes_from_external_data(external_quotes_data)
-        return Quote.objects.filter(pk__in=quotes)
+        # after fetching, we should retrive the quotes from the database
+        external_quotes_data = await self._retrieve_quotes_from_db(
+            validated_data, origin="External"
+        )
+        return external_quotes_data
 
     async def request_quote(self, validated_data: dict) -> QuerySet:
         """
