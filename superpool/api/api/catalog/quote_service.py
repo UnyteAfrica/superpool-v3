@@ -51,13 +51,10 @@ class QuoteService:
         This method simply triggers the quote fetching process.
         """
         provider_names = ["Heirs"]
-        quotes = []
         tasks = [
             self._fetch_and_save_provider_quotes(provider, validated_data)
             for provider in provider_names
         ]
-
-        # excute the tasks concurrently
         await asyncio.gather(*tasks)
 
         # after fetching, we should retrive the quotes from the database
@@ -88,18 +85,35 @@ class QuoteService:
         tasks = []
 
         if external_product_class:
-            # external_quotes = self._retrieve_external_quotes(validated_data)
             tasks.append(self._retrieve_external_quotes(validated_data))
+        else:
+            external_quotes = Quote.objects.none()
 
         tasks.append(self._retrieve_internal_quotes(validated_data))
-        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        external_quotes, internal_quotes = results
+        try:
+            if external_product_class:
+                # Run both tasks concurrently
+                external_quotes, internal_quotes = await asyncio.gather(*tasks)
+            else:
+                # Only run internal_quotes task
+                (internal_quotes,) = await asyncio.gather(*tasks)
 
-        external_quotes = results[0] if external_product_class else []
-        internal_quotes = results[1]
+            if external_product_class:
+                # Combine the external and internal QuerySets
+                all_quotes = external_quotes | internal_quotes
+            else:
+                all_quotes = internal_quotes
 
-        all_quotes = external_quotes | internal_quotes
+        except Exception as e:
+            logger.error(f"Failed to retrieve quotes: {e}", exc_info=True)
+            raise
+
+        # results = await asyncio.gather(*tasks, return_exceptions=True)
+        # external_quotes = results[0] if external_product_class else Quote.objects.none()
+        # internal_quotes = results[1]
+        # print(f"External quotes: {external_quotes}")
+        # print(f"Internal quotes: {internal_quotes}")
         return all_quotes
 
     def _get_providers_for_product_type(self, product_type: str) -> QuerySet:
@@ -214,7 +228,7 @@ class QuoteService:
     async def _retrieve_internal_quotes(
         self,
         validated_data: dict[str, Any],
-    ) -> QuerySet | list[str]:
+    ) -> QuerySet:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
         """
