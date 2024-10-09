@@ -96,17 +96,21 @@ class QuoteService:
 
         providers = self._get_providers_for_product_type(product_type)
         # determine if the product type requires external API calls, if it does match
-        # we should make the API call to the external provider
+        external_product_class = self._map_product_type_to_external_class(product_type)
+        tasks = []
 
-        external_product_class = self._is_external_provider_product(product_type)
         if external_product_class:
-            external_quotes = self._retrieve_external_quotes(validated_data)
+            # external_quotes = self._retrieve_external_quotes(validated_data)
+            tasks.append(self._retrieve_external_quotes(validated_data))
 
-        internal_quotes = self._retrieve_internal_quotes(
-            product_type, coverage_preferences
-        )
+        tasks.append(self._retrieve_internal_quotes(validated_data))
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        all_quotes = internal_quotes.union(external_quotes)
+        external_quotes, internal_quotes = results
+
+        external_quotes = results[0] if external_product_class else []
+        internal_quotes = results[1]
+        all_quotes = external_quotes | internal_quotes
         return all_quotes
 
     def _get_tier_by_coverage_type(self, product, coverage_type):
@@ -132,11 +136,13 @@ class QuoteService:
         Fetch all insurance providers with the who offers some product
         for this product type
         """
-        return InsurancePartner.objects.filter(
+        providers = InsurancePartner.objects.filter(
             product__product_type=product_type
         ).distinct()
+        logger.info(f'Found providers for product type "{product_type}": {providers}')
+        return providers
 
-    def _is_external_provider_product(self, product_type: str) -> bool:
+    def _map_product_type_to_external_class(self, product_type: str) -> Optional[str]:
         """
         Map internal product type to external product class for API calls
         Determine if the product type requires external API calls
@@ -154,7 +160,9 @@ class QuoteService:
             "Travel",
         }
         """ The list of supported product class in Heirs API - we should be doing internal mapping """
-        return product_type in self.PRODUCT_TYPE_MAPPING
+        mapping = self.PRODUCT_TYPE_MAPPING.get(product_type)
+        logger.info(f"External product class for {product_type}: {mapping}")
+        return mapping if mapping in VALID_EXTERNAL_PRODUCT_TYPES else None
 
     async def _fetch_products(self, query: Q) -> list[Product]:
         """
@@ -232,45 +240,44 @@ class QuoteService:
 
     async def _retrieve_internal_quotes(
         self,
-        product_type: str,
-        product_name: Optional[str],
-        providers_list: list[str],
         validated_data: dict[str, Any],
-    ) -> list[str]:
+    ) -> QuerySet | list[str]:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
         """
-        if not providers_list:
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+        providers = self._get_providers_for_product_type(product_type)
+
+        if not providers:
             logger.info(f"No internal providers found for product type: {product_type}")
-            return []
+            return Quote.objects.none()
 
-        query = Q(product_type=product_type, provider__name__in=providers_list)
-
-        # if product name is present in the incoming request, include search by name
+        query = Q(product_type=product_type, provider__name__in=providers)
         if product_name:
-            query &= Q(name__icontains=product_name)
+            query &= Q(product__name__icontains=product_name)
 
-        products = Product.objects.filter(query).prefetch_related(
-            "tiers", "tiers__coverages"
-        )
-        logger.info(f"Found products: {products}")
+        # products = Product.objects.filter(query).prefetch_related(
+        #     "tiers", "tiers__coverages"
+        # )
+        products = await self._fetch_products(query)
         if not products:
             logger.info("No products found for the given criteria.")
-            return []
+            return Quote.objects.none()
 
-        quote_ids: list[str] = []
+        # quote_ids: list[str] = []
+        quote_ids = await asyncio.gather(
+            *(self._create_quote_for_internal_product(product) for product in products)
+        )
+        # for product in products:
+        #     quote_ids.extend(await self._create_quote_for_internal_product(product))
 
-        # When a quote is being generated based on the product coverage,
-        # and provider, we are doing something interesting here,
-        # we would create a Quote object for each provider and tier.
-        #
-        # Such that when we pulling the pricing and currency values, we won't
-        # be hard-coding it, we wuld be pulling it from the Quote model
-        for product in products:
-            quote_ids.extend(await self._create_quote_for_internal_product(product))
+        flattened_ids = [quote_id for sublist in quote_ids for quote_id in sublist]
+        print(f"Quote IDs: {flattened_ids}")
 
+        internal_quotes = Quote.objects.filter(quote_code__in=flattened_ids)
         logger.info(f"Retrieved {len(quote_ids)} internal quotes")
-        return quote_ids
+        return internal_quotes
 
     async def _retrieve_quotes_from_db(
         self, validated_data: dict[str, Any], origin: Optional[str] = None
