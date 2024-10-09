@@ -167,46 +167,50 @@ class QuoteService:
         """
         all_tier_names = [tier.tier_name for tier in product.tiers.all()]
         with transaction.atomic():
-            premium, _ = Price.objects.get_or_create(
-                amount=tier.base_premium,
-                description=f"{product.name} - {tier.tier_name} Premium",
-            )
-            logger.info(
-                f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
-            )
+            try:
+                premium, _ = Price.objects.get_or_create(
+                    amount=tier.base_premium,
+                    description=f"{product.name} - {tier.tier_name} Premium",
+                )
+                logger.info(
+                    f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
+                )
 
-            quote, created = Quote.objects.update_or_create(
-                product=product,
-                premium=premium,
-                base_price=tier.base_premium,
-                additional_metadata={
-                    "tier_name": tier.tier_name,
-                    "coverage_details": [
-                        {
-                            "coverage_name": coverage.coverage_name,
-                            "coverage_description": coverage.description,
-                            "coverage_type": coverage.coverage_name,
-                            "coverage_limit": str(coverage.coverage_limit),
-                        }
-                        for coverage in tier.coverages.all()
-                    ],
-                    "exclusions": tier.exclusions or "",
-                    "benefits": tier.benefits or "",
-                    "product_type": product.product_type,
-                    "available_tiers": all_tier_names,  # All addons available for this product
-                },
-                origin="Internal",
-                provider=product.provider.name,
-            )
-            if created:
-                logger.info(
-                    f"Created new quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                quote, created = Quote.objects.update_or_create(
+                    product=product,
+                    premium=premium,
+                    base_price=tier.base_premium,
+                    additional_metadata={
+                        "tier_name": tier.tier_name,
+                        "coverage_details": [
+                            {
+                                "coverage_name": coverage.coverage_name,
+                                "coverage_description": coverage.description,
+                                "coverage_type": coverage.coverage_name,
+                                "coverage_limit": str(coverage.coverage_limit),
+                            }
+                            for coverage in tier.coverages.all()
+                        ],
+                        "exclusions": tier.exclusions or "",
+                        "benefits": tier.benefits or "",
+                        "product_type": product.product_type,
+                        "available_tiers": all_tier_names,  # All addons available for this product
+                    },
+                    origin="Internal",
+                    provider=product.provider.name,
                 )
-            else:
-                logger.info(
-                    f"Updated existing quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
-                )
-            return quote.quote_code
+                if created:
+                    logger.info(
+                        f"Created new quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                    )
+                else:
+                    logger.info(
+                        f"Updated existing quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                    )
+                return quote.quote_code
+            except Exception as e:
+                logger.error(f'Failed to create/update quote for "{product.name}": {e}')
+                raise e
 
     async def _create_quote_for_internal_product(self, product: Product) -> list[str]:
         """
