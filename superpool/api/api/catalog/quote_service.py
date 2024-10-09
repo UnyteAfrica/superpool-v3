@@ -264,7 +264,7 @@ class QuoteService:
         #     quote_ids.extend(await self._create_quote_for_internal_product(product))
 
         flattened_ids = [quote_id for sublist in quote_ids for quote_id in sublist]
-        print(f"Quote IDs: {flattened_ids}")
+        logger.info(f"Quote IDs: {flattened_ids}")
 
         internal_quotes = Quote.objects.filter(quote_code__in=flattened_ids)
         logger.info(f"Retrieved {internal_quotes.count()} internal quotes")
