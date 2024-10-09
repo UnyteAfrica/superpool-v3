@@ -23,6 +23,9 @@ class QuoteService:
         "Travel": "Travel",
     }
 
+    # @warnings.warn(
+    #     "This function is experimental and may be removed in future versions. Also not meant for production use."
+    # )
     async def _get_active_external_providers(self) -> list[str]:
         """
         Fetch active external providers from the database.
@@ -111,11 +114,11 @@ class QuoteService:
                 # Run both tasks concurrently
                 external_quotes, internal_quotes = await asyncio.gather(*tasks)
             else:
-                # Only run internal_quotes task
+                # Otherwise, we should only run internal_quotes task
                 (internal_quotes,) = await asyncio.gather(*tasks)
 
             if external_product_class:
-                # Combine the external and internal QuerySets
+                # Combine the external and internal quote QuerySets
                 all_quotes = external_quotes | internal_quotes
             else:
                 all_quotes = internal_quotes
