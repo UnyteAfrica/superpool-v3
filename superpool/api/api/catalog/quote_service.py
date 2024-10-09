@@ -1,7 +1,7 @@
 import asyncio
+import logging
 from typing import Any, Dict, Optional
 
-import logger
 from asgiref.sync import sync_to_async
 from django.db import transaction
 from django.db.models import Q, QuerySet
@@ -11,7 +11,7 @@ from core.providers.models import Provider as InsurancePartner
 
 from .providers import QuoteProviderFactory
 
-logger = logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class QuoteService:
@@ -23,19 +23,37 @@ class QuoteService:
         "Travel": "Travel",
     }
 
+    async def _fetch_and_save_provider_quotes(
+        self, provider_name: str, validated_data: dict
+    ):
+        """
+        Fetch and save quotes using the specified provider.
+
+        Each provider's `fetch_and_save_quotes` method is responsible for fetching
+        quotes and saving them to the database.
+        """
+        try:
+            provider = QuoteProviderFactory.get_provider(provider_name)
+            await provider.fetch_and_save_quotes(validated_data)
+            logger.info(f"Successfully fetched and saved quotes from {provider_name}")
+        except Exception as e:
+            logger.error(
+                f"Failed to fetch quotes from {provider_name}: {e}", exc_info=True
+            )
+
     def _retrieve_external_quotes(self, validated_data: Dict[str, Any]) -> QuerySet:
         """
         Retrieve quotes from external providers asynchronously.
+
+        External providers are responsible for fetching and saving quotes to the database
+        This method simply triggers the quote fetching process.
         """
-        # NOTE: This list can be extended to include more providers
-        #       as the need arises.
-        #       For now, we only have Heirs as our active external provider
         provider_names = ["Heirs"]
         quotes = []
-
-        # holds the tasks to be executed - think of it like a distributed task queue
-        # we would subitute for celery later.
-        tasks = []
+        tasks = [
+            self._fetch_and_save_provider_quotes(provider_names, validated_data)
+            for provider in provider_names
+        ]
 
         async def gather_quotes():
             for provider_name in provider_names:
@@ -140,60 +158,78 @@ class QuoteService:
         """ The list of supported product class in Heirs API - we should be doing internal mapping """
         return product_type in self.PRODUCT_TYPE_MAPPING
 
+    async def _fetch_products(self, query: Q) -> list[Product]:
+        """
+        Fetch products matching the query asynchronously.
+        """
+        products = await sync_to_async(list)(
+            Product.objects.filter(query).prefetch_related("tiers", "tiers__coverages")
+        )
+        logger.info(f"Fetched products: {[product.name for product in products]}")
+        return products
+
+    def _create_quote(self, product: Product, tier: ProductTier) -> Optional[str]:
+        """
+        Create a single Quote object for the given product and tier.
+
+        Returns the quote ID if creation is successful, else None.
+        """
+        all_tier_names = [tier.tier_name for tier in product.tiers.all()]
+        with transaction.atomic():
+            premium = Price.objects.create(
+                amount=tier.base_premium,
+                description=f"{product.name} - {tier.tier_name} Premium",
+            )
+
+            logger.info(
+                f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
+            )
+
+            quote, created = Quote.objects.update_or_create(
+                product=product,
+                premium=premium,
+                base_price=tier.base_premium,
+                additional_metadata={
+                    "tier_name": tier.tier_name,
+                    "coverage_details": [
+                        {
+                            "coverage_name": coverage.coverage_name,
+                            "coverage_description": coverage.description,
+                            "coverage_type": coverage.coverage_name,
+                            "coverage_limit": str(coverage.coverage_limit),
+                        }
+                        for coverage in tier.coverages.all()
+                    ],
+                    "exclusions": tier.exclusions or "",
+                    "benefits": tier.benefits or "",
+                    "product_type": product.product_type,
+                    "available_tiers": all_tier_names,  # All addons available for this product
+                },
+                origin="Internal",
+                provider=product.provider,
+            )
+            if created:
+                logger.info(
+                    f"Created new quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                )
+            else:
+                logger.info(
+                    f"Updated existing quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                )
+            return quote.quote_code
+
     async def _create_quote_for_internal_product(self, product: Product) -> list[str]:
         """
         Create Quote objects for each tier of a given product
         """
-
-        def create_quote() -> str:
-            with transaction.atomic():
-                premium = Price.objects.create(
-                    amount=tier.base_premium,
-                    description=f"{product.name} - {tier.tier_name} Premium",
-                )
-
-                logger.info(
-                    f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
-                )
-
-                quote, _ = Quote.objects.update_or_create(
-                    product=product,
-                    premium=premium,
-                    base_price=tier.base_premium,
-                    additional_metadata={
-                        "tier_name": tier.tier_name,
-                        "coverage_details": [
-                            {
-                                "coverage_name": coverage.coverage_name,
-                                "coverage_description": coverage.description,
-                                "coverage_type": coverage.coverage_name,
-                                "coverage_limit": str(coverage.coverage_limit),
-                            }
-                            for coverage in tier.coverages.all()
-                        ],
-                        "exclusions": tier.exclusions or "",
-                        "benefits": tier.benefits or "",
-                        "product_type": product.product_type,
-                        "available_tiers": all_tier_names,  # All addons available for this product
-                    },
-                    origin="Internal",
-                    provider=product.provider,
-                )
-                logger.info(
-                    f"Created quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
-                )
-                return quote.quote_code
-
-        ## ACTUAL IMPLEMENTATION
         quote_ids: list[str] = []
-        all_tier_names = [tier.tier_name for tier in product.tiers.all()]
         for tier in product.tiers.all():
             logger.info(f"Processing product: {product.name}, Tier: {tier.tier_name}")
-            print(f"Product: {product.name}")
-            print(f"Tier: {tier.tier_name}")
-            quote_id = await sync_to_async(create_quote)()
-            quote_ids.append(quote_id)
 
+            quote_id = await sync_to_async(self._create_quote)(product, tier)
+
+            if quote_id:
+                quote_ids.append(quote_id)
         return quote_ids
 
     async def _retrieve_internal_quotes(
@@ -201,7 +237,7 @@ class QuoteService:
         product_type: str,
         product_name: Optional[str],
         providers_list: list[str],
-        validated_data: dict,
+        validated_data: dict[str, Any],
     ) -> list[str]:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
@@ -239,7 +275,7 @@ class QuoteService:
         return quote_ids
 
     async def _retrieve_quotes_from_db(
-        self, validated_data: dict[str, Any]
+        self, validated_data: dict[str, Any], origin: Optional[str] = None
     ) -> QuerySet:
         """
         Retrieve quotes from the database based on the validated data
@@ -256,6 +292,13 @@ class QuoteService:
             # TODO: filter quotes based on the coverage preferences
             pass
 
+        # we never know
+        if origin:
+            query &= Q(origin=origin)
+
         # fetch all quotes for the products matching the product information
         quotes = await sync_to_async(lambda: Quote.objects.filter(query).distinct())()
+        logger.info(
+            f"Retrieved {quotes.count()} {'external' if origin == 'External' else 'internal'} quotes from DB"
+        )
         return quotes
