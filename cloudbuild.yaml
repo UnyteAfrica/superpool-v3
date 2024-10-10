@@ -1,5 +1,4 @@
 steps:
-  # Build the docker image
   - name: "gcr.io/cloud-builders/docker"
     args: ["build", "-t", "gcr.io/$PROJECT_ID/superpool-api", "."]
     id: "Build Image"
@@ -53,7 +52,7 @@ steps:
 
     # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
-    id: Deploy Flower
+    id: "Deploy Flower"
     args:
       [
         "run",
