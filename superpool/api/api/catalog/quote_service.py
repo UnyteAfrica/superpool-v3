@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from asgiref.sync import sync_to_async
 from django.db import transaction
 from django.db.models import Q, QuerySet
+from typing_extensions import deprecated
 
 from core.catalog.models import Price, Product, ProductTier, Quote
 from core.providers.models import Provider as InsurancePartner
@@ -23,9 +24,9 @@ class QuoteService:
         "Travel": "Travel",
     }
 
-    # @warnings.warn(
-    #     "This function is experimental and may be removed in future versions. Also not meant for production use."
-    # )
+    @deprecated(
+        "This function is experimental and may be removed in future versions. Also not meant for production use."
+    )
     async def _get_active_external_providers(self) -> list[str]:
         """
         Fetch active external providers from the database.

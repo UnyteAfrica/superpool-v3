@@ -108,7 +108,7 @@ class ExternalQuoteProvider(BaseQuoteProvider):
         sub_products = await self.service.fetch_insurance_products(category)
 
         product_info_tasks = [
-            self.service.get_product_info(product["productId"])
+            self.service.fetch_product_info(product["productId"])
             for product in sub_products
         ]
         product_info_responses = await asyncio.gather(*product_info_tasks)
@@ -250,7 +250,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         """
         Fetch product info and quote for a specific product
         """
-        product_info = await self.client.get_product_info(product_id)
+        product_info = await self.client.fetch_product_info(product_id)
         quote = self.client.get_quote(product_class, **params)
 
         print(f"Product Info: {product_info}")

@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Any, Dict, List
 
 import requests
+from typing_extensions import deprecated
 
 from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
 from api.integrations.heirs.exceptions import HeirsAPIException
@@ -27,6 +28,20 @@ from core.providers.integrations.heirs.registry import (
 logger = logging.getLogger("api_client")
 
 
+RECOGNIZED_INSURANCE_CATEGORIES = [
+    "Motor",
+    "TenantProtect",
+    "HomeProtect",
+    "BusinessProtect",
+    "Personal Accident",
+    "Marine Cargo",
+    "Device",
+    "Travel",
+]
+
+INTERNAL_RECOGNIZED_CLASSES = ("Auto", "Travel", "Personal_Accident", "Device", "Home")
+
+
 class HeirsAssuranceService:
     def __init__(self) -> None:
         self.client = HeirsLifeAssuranceClient()
@@ -40,6 +55,7 @@ class HeirsAssuranceService:
         """
         return all(key in response for key in ["type", "title", "detail", "status"])
 
+    @deprecated("This method is deprecated. Use `_sanitize_params` instead.")
     def _validate_params(
         self, required_params: list, category: str, params: dict
     ) -> None:
@@ -51,6 +67,7 @@ class HeirsAssuranceService:
             for param in required_params
             if param not in params or params.get(param) is None
         ]
+
         if missing_params:
             logger.error(
                 f"Missing required parameters {missing_params} for category {category}"
@@ -59,38 +76,71 @@ class HeirsAssuranceService:
                 f"Missing required parameters for category '{category}': {missing_params}"
             )
 
-    def get_quote(self, category: str, params: dict[str, Any]) -> QuoteResponse | dict:
+    def _sanitize_params(self, category: str, params: dict) -> dict[str, Any]:
+        """
+        Sanitize and map input parameters to match the required API parameters.
+
+        Arguments:
+            category: The insurance category.
+            params: The input parameters provided by the user.
+
+        Returns:
+            A dictionary containing only the required parameters with correct keys.
+        """
+        mappings = {
+            "travel": {
+                "customer_age": "user_age",
+                "product_name": "category_name",
+            },
+        }
+        category_key = category.lower()
+        mapped_params = {}
+
+        # only apply mappings if the category is recognized
+        if category_key in mappings:
+            for k, v in params.items():
+                mapped_key = mappings[category_key].get(k, k)
+                mapped_params[mapped_key] = v
+        else:
+            mapped_params = params
+
+        # then extract and propate the required keys
+        required_keys = self._get_required_params(category)
+        sanitized_params = {
+            k: mapped_params[k] for k in required_keys if k in mapped_params
+        }
+        return sanitized_params
+
+    def _get_required_params(self, category: str) -> list[str]:
+        """
+        Extract the required parameters for a specific category
+        """
+        required_params = {
+            "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
+            "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
+            "biker": ["product_id", "motor_value", "motor_class"],
+            "travel": ["user_age", "start_date", "end_date", "category_name"],
+            "personal_accident": ["product_id"],
+            "accident": ["product_id"],
+            "device": ["item_value"],
+            "pos": ["item_value"],
+        }
+        return required_params.get(category, [])
+
+    def get_quotes(self, category: str, params: dict[str, Any]) -> QuoteResponse | dict:
         """
         Retrieve an Insurance Quotation from the Heirs API
         """
-        # HEIRS_INSURANCE_CLASSES = (
-        #     "Motor",
-        #     "TenantProtect",
-        #     "HomeProtect",
-        #     "BusinessProtect",
-        #     "Personal Accident",
-        #     "Marine Cargo",
-        #     "Device",
-        #     "Travel",
-        # )
-        # INTERNAL_RECOGNIZED_CLASSES = (
-        #     "auto",
-        #     "biker",
-        #     "travel",
-        #     "personal_accident",
-        #     "device",
-        #     "pos",
-        # )
         if not category:
             logger.error("get_quote called without a category")
             raise ValueError(
                 "Policy category must be provided in order to retrieve quotes"
             )
-        # if category not in RECOGNIZED_INSURANCE_CATEGORIES:
-        #     logger.error(f"Unsupported category received: {category}")
-        #     raise ValueError(
-        #         f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
-        #     )
+        if category not in RECOGNIZED_INSURANCE_CATEGORIES:
+            logger.error(f"Unsupported category received: {category}")
+            raise ValueError(
+                f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
+            )
 
         try:
             products = self.fetch_insurance_products(category)
@@ -111,7 +161,6 @@ class HeirsAssuranceService:
                 quote = self._construct_quote(product, params, category)
                 quotes.append(quote)
             return quotes
-
         except HeirsAPIException as e:
             logger.error(f"Failed to retrieve quote: {e}", exc_info=True)
             logger.error(
@@ -206,12 +255,13 @@ class HeirsAssuranceService:
         fetch_products_url = (
             f"{HEIRS_SERVER_URL}/{company}/class/{product_class}/product"
         )
-        response = self.client.get(fetch_products_url)
-        products = response.json()
+        logger.info(f"Fetching products for class '{product_class}'")
+
+        products = self.client.get(fetch_products_url)
         logger.info(f"Fetched {len(products)} products for class '{product_class}'")
         return products
 
-    def fetch_product_info(self, product_id: str | int) -> dict[str, Any]:
+    def fetch_product_info(self, product_id: int) -> dict[str, Any]:
         """
         Fetch detailed product information about a specific product
 
@@ -249,7 +299,8 @@ class HeirsAssuranceService:
             f"Constructing quote for Product ID: {product_id}, Name: {product_name}"
         )
         product_info = self.fetch_product_info(product_id)
-        premium = self.fetch_premium(product_id, category, **params)
+        logger.info(f'Product info for "{product_name}": {product_info}')
+        premium = self.fetch_premium(product_id, category, params)
 
         quote: Quote = {
             "origin_product_id": product_id,
@@ -260,9 +311,7 @@ class HeirsAssuranceService:
         logger.info(f"Constructed quote: {quote}")
         return quote
 
-    def fetch_premium(
-        self, product_id: str | int, category: str, **params: dict
-    ) -> Decimal:
+    def fetch_premium(self, product_id: int, category: str, params: dict) -> Decimal:
         """
         Fetch the premium for a specific product
 
@@ -274,12 +323,11 @@ class HeirsAssuranceService:
         Returns:
             The premium as a Decimal
         """
-        endpoint = self._get_endpoint_by_category(category, **params)
+        sanitized_params = self._sanitize_params(category, params)
+        endpoint = self._get_endpoint_by_category(category, sanitized_params)
 
         logger.info(f'Fetching premium from endpoint "{endpoint}"')
-        response = self.client.get(endpoint)
-
-        premium_data = response.json()
+        premium_data = self.client.get(endpoint)
 
         if self._is_api_error_response(premium_data):
             api_error = premium_data
@@ -323,61 +371,63 @@ class HeirsAssuranceService:
         Returns:
             The API endpoint as a string
         """
-        required_params = {
-            "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
-            "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
-            "biker": ["product_id", "motor_value", "motor_class"],
-            "travel": ["user_age", "start_date", "end_date", "category_name"],
-            "personal_accident": ["product_id"],
-            "accident": ["product_id"],
-            "device": ["item_value"],
-            "pos": ["item_value"],
-        }
+        # required_params = {
+        #     "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
+        #     "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
+        #     "biker": ["product_id", "motor_value", "motor_class"],
+        #     "travel": ["user_age", "start_date", "end_date", "category_name"],
+        #     "personal_accident": ["product_id"],
+        #     "accident": ["product_id"],
+        #     "device": ["item_value"],
+        #     "pos": ["item_value"],
+        # }
 
-        if category not in required_params:
+        category_key = category.lower().replace(" ", "_")
+        print(f"Category: {category_key}")
+        # if category_key not in required_params:
+        #     logger.error(
+        #         f"Unsupported category for insurance quote: {category} during API call"
+        #     )
+        #     raise ValueError("Unsupported category for insurance quote")
+
+        logger.info(f'Preparing to fetch premium for category "{category}"')
+        # self._validate_params(required_params[category_key], category, params)
+
+        if category_key in ["auto", "motor"]:
+            base_url = f"{HEIRS_SERVER_URL}/motor/quote"
+            endpoint = (
+                f"{base_url}/"
+                f'{params.get("product_id")}/{params.get("motor_value")}/'
+                f'{params.get("motor_class")}/{params.get("motor_type")}'
+            )
+        elif category_key == "biker":
+            base_url = f"{HEIRS_SERVER_URL}/biker/quote"
+            endpoint = (
+                f"{base_url}/"
+                f'{params.get("product_id")}/{params.get("motor_value")}/'
+                f'{params.get("motor_class")}'
+            )
+        elif category_key == "travel":
+            base_url = f"{HEIRS_SERVER_URL}/travel/quote"
+            endpoint = (
+                f"{base_url}/"
+                f'{params.get("user_age")}/{params.get("start_date")}/'
+                f'{params.get("end_date")}/{params.get("category_name")}'
+            )
+        elif category_key in ["personal_accident", "accident"]:
+            base_url = f"{HEIRS_SERVER_URL}/personal-accident/quote"
+            endpoint = f'{base_url}/{params.get("product_id")}'
+        elif category_key == "device":
+            base_url = f"{HEIRS_SERVER_URL}/device/quote"
+            endpoint = f'{base_url}/{params.get("item_value")}'
+        elif category_key == "pos":
+            base_url = f"{HEIRS_SERVER_URL}/pos/quote"
+            endpoint = f'{base_url}/{params.get("item_value")}'
+        else:
             logger.error(
                 f"Unsupported category for insurance quote: {category} during API call"
             )
             raise ValueError("Unsupported category for insurance quote")
-
-        self._validate_params(required_params[category], category, params)
-
-        match category:
-            case "auto" | "motor":
-                base_url = f"{HEIRS_SERVER_URL}/motor/quote"
-                endpoint = (
-                    f"{base_url}/"
-                    f'{params.get("product_id")}/{params.get("motor_value")}/'
-                    f'{params.get("motor_class")}/{params.get("motor_type")}'
-                )
-            case "biker":
-                base_url = f"{HEIRS_SERVER_URL}/biker/quote"
-                endpoint = (
-                    f"{base_url}/"
-                    f'{params.get("product_id")}/{params.get("motor_value")}/'
-                    f'{params.get("motor_class")}'
-                )
-            case "travel":
-                base_url = f"{HEIRS_SERVER_URL}/travel/quote"
-                endpoint = (
-                    f"{base_url}/"
-                    f'{params.get("user_age")}/{params.get("start_date")}/'
-                    f'{params.get("end_date")}/{params.get("category_name")}'
-                )
-            case "personal_accident" | "accident":
-                base_url = f"{HEIRS_SERVER_URL}/personal-accident/quote"
-                endpoint = f'{base_url}/{params.get("product_id")}'
-            case "device":
-                base_url = f"{HEIRS_SERVER_URL}/device/quote"
-                endpoint = f'{base_url}/{params.get("item_value")}'
-            case "pos":
-                base_url = f"{HEIRS_SERVER_URL}/pos/quote"
-                endpoint = f'{base_url}/{params.get("item_value")}'
-            case _:
-                logger.error(
-                    f"Unsupported category for insurance quote: {category} during API call"
-                )
-                raise ValueError("Unsupported category for insurance quote")
 
         logger.info(f"Constructed endpoint for category '{category}': {endpoint}")
         return endpoint

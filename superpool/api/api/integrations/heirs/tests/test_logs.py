@@ -6,7 +6,45 @@ from django.test import TestCase
 from api.integrations.heirs.services import HeirsAssuranceService
 
 
-class HeirsAssuranceServiceTest(TestCase):
+class TestHeirsAssuranceServiceLogs(TestCase):
+    """
+    Ensures the returned logs of the `HeirsAssuranceService.get_quote` method
+    matches the expected logs.
+    """
+
+    def setUp(self) -> None:
+        self.motor_params = {
+            "product_id": 823,
+            "motor_value": 5000000,
+            "motor_class": "Private",
+            "motor_type": "SUV",
+        }
+        self.travel_params = {
+            "product_id": 10811,
+            "start_date": "2024-10-17",
+            "end_date": "2024-10-24",
+            "customer_age": 30,
+            "product_name": "FAMILY (WORLD WIDE)",
+        }
+        # Device Insurance - Ultra-Sheild Device Plan
+        # Let's say, the price of a samsung
+        self.device_params = {
+            "product_id": 1307,
+            "device_value": 2_232_000,
+        }
+        # Home Insurance - Home Protect Plus Plan
+        self.home_params = {
+            "product_id": 1051,
+            "property_value": 9_000_000,
+            "stationary_value": 100_000,
+            "mobile_items_value": 200_000,
+        }
+        # POS Insurance
+        self.pos_device_params = {
+            "product_id": 1286,
+            "device_value": 70000,
+        }
+
     @patch("api.integrations.base.BaseClient.get")
     def test_get_quote_success(self, mock_get):
         # Setup mock response
