@@ -962,7 +962,6 @@ class QuoteService(IQuote):
         quotes = self._create_quotes_from_external_data(external_quotes_data)
         return Quote.objects.filter(pk__in=quotes)
 
-    @transaction.non_atomic_requests
     async def request_quote(self, validated_data: dict) -> QuerySet:
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`

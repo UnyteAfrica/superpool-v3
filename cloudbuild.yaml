@@ -1,19 +1,56 @@
 steps:
- - name: 'docker/compose'
-   args: ['-f', 'docker-compose.yml', 'build']
-   id: Build Services
-
- - name: 'docker/compose'
-   id: Start Services
-   args: ['-f', 'docker-compose.yml', 'up', '-d']
-
+  # Build the docker image
  - name: 'gcr.io/cloud-builders/docker'
-   args: ['tag', 'gcr.io/$PROJECT_ID/superpool', 'gcr.io/$PROJECT_ID/superpool:latest']
-   id: Tag Image
+   args: ['build', '-t', 'gcr.io/$PROJECT_ID/superpool-api', '.']
+   id: Build Image
 
+  # Push Image to Google's Artifact Registr
  - name: 'gcr.io/cloud-builders/docker'
-   args: ['push', 'gcr.io/$PROJECT_ID/superpool-v3:latest']
-   id: Push Image
+   id: Push image to Artifact Registry
+   args: ['push', 'gcr.io/$PROJECT_ID/superpool-api']
+
+  # Ship App Image to Cloud Run
+ - name: 'gcr.io/cloud-builders/docker'
+   id: Deploy Superpool
+   args: [
+      'run', 'deploy', 'superpool-api',
+      '--image', 'gcr.io/$PROJECT_ID/superpool-api',
+      '--platform', 'managed',
+      '--region', 'us-central1',
+      '--allow-unauthenticated',
+      '--port', '8080'
+   ]
+
+  # Ship Celery to Cloud Run
+ - name: 'gcr.io/cloud-builders/gcloud'
+   id: Deploy Celery
+   args: [
+      'run', 'deploy', 'superpool-celery-worker',
+      '--image', 'gcr.io/$PROJECT_ID/superpool-api',
+      '--platform', 'managed',
+      '--region', 'us-central1',
+      '--allow-unauthenticated',
+      '--command', 'celery',
+      '--args', ['-A', 'superpool.api.celery', 'worker', '--loglevel=info'],
+      '--port', '8080'
+   ]
+
+  # Deploy Flower on Cloud Run
+ - name: 'gcr.io/cloud-builders/gcloud'
+   id: Deploy Flower
+   args: [
+      'run', 'deploy', 'superpool-flower',
+      '--image', 'gcr.io/$PROJECT_ID/superpool-api',
+      '--platform', 'managed',
+      '--region', 'us-central1',
+      '--allow-unauthenticated',
+      '--command', 'celery',
+      '--args', ['-A', 'superpool.api.celery', 'flower', '--port=5555'],
+      '--port', '5555'
+    ]
+
+images:
+  - 'gcr.io/$PROJECT_ID/superpool-api'
 
 options:
   logging: CLOUD_LOGGING_ONLY
