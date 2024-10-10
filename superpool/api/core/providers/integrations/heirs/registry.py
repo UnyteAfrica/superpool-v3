@@ -1,7 +1,8 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional, Required, TypedDict, Union
+from decimal import Decimal
+from typing import Any, Dict, List, Optional, Required, TypeAlias, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
@@ -36,7 +37,13 @@ class QuoteAPIErrorResponse(dict[str, Any]):
 
 
 class Quote(TypedDict):
-    product_id: str
+    origin_product_id: int
+    product_name: str
+    premium: Decimal
+    additional_information: str
+
+
+QuoteResponse: TypeAlias = list[Quote]
 
 
 @dataclass

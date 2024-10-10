@@ -3,15 +3,14 @@ Heirs Assurance Service
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from decimal import Decimal
+from typing import Any, Dict, List
 
 import requests
-from typing_extensions import deprecated
 
 from api.integrations.heirs.client import HEIRS_SERVER_URL, HeirsLifeAssuranceClient
 from api.integrations.heirs.exceptions import HeirsAPIException
 from core.providers.integrations.heirs.registry import (
-    APIErrorResponse,
     AutoPolicy,
     BikerPolicy,
     DevicePolicy,
@@ -20,10 +19,11 @@ from core.providers.integrations.heirs.registry import (
     PersonalAccidentPolicy,
     PolicyInfo,
     Product,
+    Quote,
+    QuoteResponse,
     TravelPolicyClass,
 )
 
-# logger = logging.getLogger(__name__)
 logger = logging.getLogger("api_client")
 
 
@@ -31,26 +31,6 @@ class HeirsAssuranceService:
     def __init__(self) -> None:
         self.client = HeirsLifeAssuranceClient()
         logger.info("HeirsAssuranceService initialized.")
-
-    @deprecated(
-        "This method is deprecated and will be removed in future versions. Use the appropriate method for the specific policy type"
-    )
-    def get_auto_policy(self, policy_id):
-        policy_data = self.client.get_policy_details(policy_id)
-        return AutoPolicy(
-            id=policy_data["id"],
-            policy_num=policy_data.get("policy_num"),
-            owner=policy_data["owner"],
-            vehicle_make=policy_data["vehicle_make"],
-            vehicle_model=policy_data["vehicle_model"],
-            year=policy_data["year"],
-            chassis_num=policy_data["chassis_num"],
-            vehicle_reg_num=policy_data["vehicle_reg_num"],
-            vehicle_engine_num=policy_data["vehicle_engine_num"],
-            vehicle_designated_use=policy_data["vehicle_designated_use"],
-            vehicle_type=policy_data["vehicle_type"],
-            value=policy_data["value"],
-        )
 
     def _is_api_error_response(self, response: Dict[str, Any]) -> bool:
         """
@@ -79,52 +59,59 @@ class HeirsAssuranceService:
                 f"Missing required parameters for category '{category}': {missing_params}"
             )
 
-    def get_quote(
-        self, category: Optional[str] = None, **params: dict
-    ) -> Union[Dict[str, Any], Dict[str, Any]]:
+    def get_quote(self, category: str, params: dict[str, Any]) -> QuoteResponse | dict:
         """
         Retrieve an Insurance Quotation from the Heirs API
-
-        Arguments:
-            category Product category
-            params Additional parameters passed unto the API call
         """
-        RECOGNIZED_INSURANCE_CATEGORIES = (
-            "auto",
-            "travel",
-            "biker",
-            "personal_accident",
-            "device",
-            "pos",
-        )
+        # HEIRS_INSURANCE_CLASSES = (
+        #     "Motor",
+        #     "TenantProtect",
+        #     "HomeProtect",
+        #     "BusinessProtect",
+        #     "Personal Accident",
+        #     "Marine Cargo",
+        #     "Device",
+        #     "Travel",
+        # )
+        # INTERNAL_RECOGNIZED_CLASSES = (
+        #     "auto",
+        #     "biker",
+        #     "travel",
+        #     "personal_accident",
+        #     "device",
+        #     "pos",
+        # )
         if not category:
             logger.error("get_quote called without a category")
             raise ValueError(
                 "Policy category must be provided in order to retrieve quotes"
             )
-        if category not in RECOGNIZED_INSURANCE_CATEGORIES:
-            logger.error(f"Unsupported category received: {category}")
-            raise ValueError(
-                f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
-            )
+        # if category not in RECOGNIZED_INSURANCE_CATEGORIES:
+        #     logger.error(f"Unsupported category received: {category}")
+        #     raise ValueError(
+        #         f"Product category must be one of {RECOGNIZED_INSURANCE_CATEGORIES} categories."
+        #     )
 
         try:
-            endpoint = self._get_endpoint_by_category(category, **params)
-            logger.info(f"Constructed endpoint for category '{category}': {endpoint}")
-            response = self.client.get(endpoint)
-            logger.info(f"Received response for category '{category}': {response}")
+            products = self.fetch_insurance_products(category)
+            if not products:
+                logger.error(f"No products found for category '{category}'")
+                return {
+                    "error": {
+                        "type": "no_products",
+                        "title": "No products found for the specified category",
+                        "detail": f"No products found for category '{category}'",
+                        "status": "404",
+                    }
+                }
 
-            if self._is_api_error_response(response):
-                api_error = APIErrorResponse(response)
-                # return HeirsAPIException(api_error)
-                raise HeirsAPIException(
-                    type=api_error.get("type"),
-                    title=api_error.get("title"),
-                    detail=api_error.get("detail"),
-                    status=api_error.get("status"),
-                )
+            # collate the quotes
+            quotes: QuoteResponse = []
+            for product in products:
+                quote = self._construct_quote(product, params, category)
+                quotes.append(quote)
+            return quotes
 
-            return response
         except HeirsAPIException as e:
             logger.error(f"Failed to retrieve quote: {e}", exc_info=True)
             logger.error(
@@ -209,7 +196,7 @@ class HeirsAssuranceService:
             )
             return []
 
-    def fetch_insurance_products(self, product_class: str) -> list[Product]:
+    def fetch_insurance_products(self, product_class: str) -> list[dict[str, Any]]:
         """
         Get Insurance products that belongs to a specific product category
 
@@ -220,11 +207,19 @@ class HeirsAssuranceService:
             f"{HEIRS_SERVER_URL}/{company}/class/{product_class}/product"
         )
         response = self.client.get(fetch_products_url)
-        return response
+        products = response.json()
+        logger.info(f"Fetched {len(products)} products for class '{product_class}'")
+        return products
 
-    def get_product_info(self, product_id: str | int):
+    def fetch_product_info(self, product_id: str | int) -> dict[str, Any]:
         """
-        Retrieve information about a specific product from the Heirs API
+        Fetch detailed product information about a specific product
+
+        Arguments:
+            product_id: The ID of the product
+
+        Returns:
+            A dictionary containing product information
         """
         company = "Heirs%20Insurance"
         fetch_product_info_url = (
@@ -232,6 +227,71 @@ class HeirsAssuranceService:
         )
         response = self.client.get(fetch_product_info_url)
         return response
+
+    def _construct_quote(
+        self, product: dict[str, Any], params: dict[str, Any], category: str
+    ) -> Quote:
+        """
+        Construct a Quote hashmap for a single product
+
+        Arguments:
+            product: A dictionary containing product information
+            params: Additional parameters required for the quote
+            category: The category of the product
+
+        Returns:
+            A consolidated information in a Quote dictionary
+        """
+        product_id = product.get("productId")
+        product_name = product.get("productName")
+
+        logger.info(
+            f"Constructing quote for Product ID: {product_id}, Name: {product_name}"
+        )
+        product_info = self.fetch_product_info(product_id)
+        premium = self.fetch_premium(product_id, category, **params)
+
+        quote: Quote = {
+            "origin_product_id": product_id,
+            "product_name": product_name,
+            "premium": premium,
+            "additional_information": product_info.get("info", ""),
+        }
+        logger.info(f"Constructed quote: {quote}")
+        return quote
+
+    def fetch_premium(
+        self, product_id: str | int, category: str, **params: dict
+    ) -> Decimal:
+        """
+        Fetch the premium for a specific product
+
+        Arguments:
+            category: The product category
+            product: The product dictionary
+            params: Additional parameters required for the quote
+
+        Returns:
+            The premium as a Decimal
+        """
+        endpoint = self._get_endpoint_by_category(category, **params)
+
+        logger.info(f'Fetching premium from endpoint "{endpoint}"')
+        response = self.client.get(endpoint)
+
+        premium_data = response.json()
+
+        if self._is_api_error_response(premium_data):
+            api_error = premium_data
+            raise HeirsAPIException(
+                type=api_error.get("type", "unknown_error"),
+                title=api_error.get("title", "Unknown Error"),
+                detail=api_error.get("detail", "An unknown error occurred."),
+                status=str(api_error.get("status", "500")),
+            )
+        premium = Decimal(str(premium_data.get("premium", 0.0)))
+        logger.info(f"Received premium: {premium} for product ID: {product_id}")
+        return premium
 
     def get_policy_details(self, policy_num: str) -> PolicyInfo:
         """
@@ -252,7 +312,7 @@ class HeirsAssuranceService:
                 f"Failed to fetch products from Heirs API. Status Code: {response.status_code}"
             )
 
-    def _get_endpoint_by_category(self, category: str, params: Any) -> str:
+    def _get_endpoint_by_category(self, category: str, params: dict[str, Any]) -> str:
         """
         Contruct the API endpoint based on the category and parameters
 
@@ -260,45 +320,67 @@ class HeirsAssuranceService:
             category: Product category
             params: Additional parameters passed unto the API call
 
+        Returns:
+            The API endpoint as a string
         """
         required_params = {
             "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
+            "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
             "biker": ["product_id", "motor_value", "motor_class"],
             "travel": ["user_age", "start_date", "end_date", "category_name"],
             "personal_accident": ["product_id"],
+            "accident": ["product_id"],
             "device": ["item_value"],
             "pos": ["item_value"],
         }
-        # if category in required_params:
-        #     for param in required_params[category]:
-        #         if param not in params:
-        #             raise ValueError(f"Missing required parameter: {param}")
+
+        if category not in required_params:
+            logger.error(
+                f"Unsupported category for insurance quote: {category} during API call"
+            )
+            raise ValueError("Unsupported category for insurance quote")
+
+        self._validate_params(required_params[category], category, params)
+
         match category:
             case "auto" | "motor":
-                self._validate_params(required_params["auto"], category, params)
-                return f'{HEIRS_SERVER_URL}/motor/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}/{params.get("motor_type")}'
-            case "biker":
-                self._validate_params(required_params["biker"], category, params)
-                return f'{HEIRS_SERVER_URL}/biker/quote/{params.get("product_id")}/{params.get("motor_value")}/{params.get("motor_class")}'
-            case "travel":
-                self._validate_params(required_params["travel"], category, params)
-                return f'{HEIRS_SERVER_URL}/travel/quote/{params.get("user_age")}/{params.get("start_date")}/{params.get("end_date")}/{params.get("category_name")}'
-            case "personal_accident" | "accident":
-                self._validate_params(
-                    required_params["personal_accident"], category, params
+                base_url = f"{HEIRS_SERVER_URL}/motor/quote"
+                endpoint = (
+                    f"{base_url}/"
+                    f'{params.get("product_id")}/{params.get("motor_value")}/'
+                    f'{params.get("motor_class")}/{params.get("motor_type")}'
                 )
-                return f'{HEIRS_SERVER_URL}/personal-accident/quote/{params.get("product_id")}'
+            case "biker":
+                base_url = f"{HEIRS_SERVER_URL}/biker/quote"
+                endpoint = (
+                    f"{base_url}/"
+                    f'{params.get("product_id")}/{params.get("motor_value")}/'
+                    f'{params.get("motor_class")}'
+                )
+            case "travel":
+                base_url = f"{HEIRS_SERVER_URL}/travel/quote"
+                endpoint = (
+                    f"{base_url}/"
+                    f'{params.get("user_age")}/{params.get("start_date")}/'
+                    f'{params.get("end_date")}/{params.get("category_name")}'
+                )
+            case "personal_accident" | "accident":
+                base_url = f"{HEIRS_SERVER_URL}/personal-accident/quote"
+                endpoint = f'{base_url}/{params.get("product_id")}'
             case "device":
-                self._validate_params(required_params["device"], category, params)
-                return f'{HEIRS_SERVER_URL}/device/quote/{params.get("item_value")}'
+                base_url = f"{HEIRS_SERVER_URL}/device/quote"
+                endpoint = f'{base_url}/{params.get("item_value")}'
             case "pos":
-                self._validate_params(required_params["pos"], category, params)
-                return f'{HEIRS_SERVER_URL}/pos/quote/{params.get("item_value")}'
+                base_url = f"{HEIRS_SERVER_URL}/pos/quote"
+                endpoint = f'{base_url}/{params.get("item_value")}'
             case _:
                 logger.error(
                     f"Unsupported category for insurance quote: {category} during API call"
                 )
                 raise ValueError("Unsupported category for insurance quote")
+
+        logger.info(f"Constructed endpoint for category '{category}': {endpoint}")
+        return endpoint
 
     def _get_policy_endpoint(
         self, product_id: str | int, product_class: InsuranceProduct
