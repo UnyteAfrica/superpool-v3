@@ -15,6 +15,8 @@ from core.providers.integrations.heirs.registry import (
     AutoPolicy,
     BikerPolicy,
     DevicePolicy,
+    Error,
+    ErrorResponse,
     InsuranceProduct,
     MotorPolicy,
     PersonalAccidentPolicy,
@@ -145,9 +147,19 @@ class HeirsAssuranceService:
         logger.info(f"Returning required params for {category}: {result}")
         return result
 
-    def get_quotes(self, category: str, params: dict[str, Any]) -> QuoteResponse | dict:
+    def get_quotes(
+        self, category: str, params: dict[str, Any]
+    ) -> QuoteResponse | ErrorResponse:
         """
         Retrieve an Insurance Quotation from the Heirs API
+
+        Args:
+            category (str): Insurance category.
+            params (dict[str, Any]): Additional parameters.
+
+        Returns:
+            QuoteResponse: List of quotes.
+            ErrorResponse: An Error response.
         """
         if not category:
             logger.error("get_quote called without a category")
@@ -185,34 +197,31 @@ class HeirsAssuranceService:
                 f"Heirs API Error | Type: {e.type} | Title: {e.title} | Detail: {e.detail} | Status: {e.status}"
             )
             return {
-                "error": {
-                    "type": e.type,
-                    "title": e.title,
-                    "detail": e.detail,
-                    "status": e.status,
-                }
+                "error": Error(
+                    type=e.type, title=e.title, detail=e.detail, status=e.status
+                )
             }
         except requests.HTTPError as http_err:
             logger.error(
                 f"HTTPError during get_quote | Error: {http_err}", exc_info=True
             )
             return {
-                "error": {
-                    "type": "http_error",
-                    "title": "HTTP Error when get_quote was called to Heirs",
-                    "detail": str(http_err),
-                    "status": "HTTP Error",
-                }
+                "error": Error(
+                    type="http_error",
+                    title="HTTP Error when get_quote was called to Heirs",
+                    detail=str(http_err),
+                    status="HTTP Error",
+                )
             }
         except Exception as e:
             logger.error(f"Unexpected Error in get_quote: {e}", exc_info=True)
             return {
-                "error": {
-                    "type": "unexpected_error",
-                    "title": "An unexpected error occurred when requesting quotes from Heirs",
-                    "detail": str(e),
-                    "status": "500",
-                }
+                "error": Error(
+                    type="unexpected_error",
+                    title="An unexpected error occurred when requesting quotes from Heirs",
+                    detail=str(e),
+                    status="500",
+                )
             }
 
     def register_policy(self, product_id: str | int, product_class: InsuranceProduct):

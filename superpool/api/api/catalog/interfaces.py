@@ -9,11 +9,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Mapping, Optional, Union
 
+from django.db import transaction
 from typing_extensions import deprecated
 
 from api.catalog.serializers import ProductDetailsSerializer
 from api.integrations.heirs.services import HeirsAssuranceService
 from core.catalog.models import Price, Product, Quote
+from core.providers.integrations.heirs.registry import Quote as QuoteType
 from core.providers.models import Provider
 
 logger = logging.getLogger(__name__)
@@ -226,7 +228,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         params = self._extract_params(validated_data)
 
         # Fetch product details and insurance info
-        sub_products = await self.client.fetch_insurance_products(category)
+        sub_products = self.client.fetch_insurance_products(category)
 
         tasks = []
         for product in sub_products:
@@ -245,79 +247,78 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         await asyncio.gather(*tasks)
 
     async def _fetch_product_info_and_save_quote(
-        self, product_id: str, product_class: str, params: dict[str, Any]
+        self, product_id: int, product_class: str, params: dict[str, Any]
     ) -> Union[dict[str, Any], None]:
         """
         Fetch product info and quote for a specific product
         """
-        product_info = await self.client.fetch_product_info(product_id)
-        quote = self.client.get_quote(product_class, **params)
+        quotes = self.client.get_quotes(product_class, params)
+        print(f"Quote Data: {quotes}")
 
-        print(f"Product Info: {product_info}")
-        print(f"Quote Data: {quote}")
-
-        # if quote retrieval fails, return None
-        if not product_info:
+        if isinstance(quotes, dict) and "error" in quotes:
+            logger.warning(f"Error fetching quotes for product id: {product_id}")
+            logger.error(f'Error fetching quotes: {quotes["error"]["detail"]}')
             return None
 
-        # we want some form of consistency
-        # quote_data = QuoteData(
-        #     product_id=product_id,
-        #     product_name=product_info["productName"],
-        #     product_info=product_info["info"],
-        #     premium=quote.get("premium"),
-        #     origin="Heirs",
-        #     contribution=quote.get("contribution"),
-        # )
-        quote_data = {
-            "product_id": product_id,
-            "product_name": product_info["productName"],
-            "product_info": product_info["info"],
-            "premium": quote.get("premium"),
-            "contribution": quote.get("contribution"),
-            "origin": "Heirs",
-        }
+        assert isinstance(quotes, list), ValueError("Invalid response from Heirs API")
+        updated_quotes: list[QuoteType] = [
+            {**quote, "origin": "Heirs"} for quote in quotes
+        ]
+        self._save_quote(updated_quotes)
 
-        if product_info and quote_data:
-            await self._save_quote(product_info, quote_data)
-
-    async def _save_quote(self, product_info: dict, quote_data: dict) -> None:
+    @transaction.atomic
+    def _save_quote(self, quote_data: list[QuoteType]) -> None:
         """
         Save the product, price, quote to the database
         """
         provider_name = quote_data.get("origin", "Heirs")
+
         provider = Provider.objects.filter(name__icontains=provider_name).first()
 
+        if not provider or provider.objects.none():
+            logger.error(f"Could not find provider with name: {provider_name}")
+            provider = Provider.objects.create(name=provider_name)
+
+        logger.info(f"Attempting to create products for provider: {provider_name}")
+
         product_type = self._map_category_to_product_type(product_info["category"])
-        product, _ = await Product.objects.aupdate_or_create(
-            provider=provider,
-            name=product_info["product_name"],
-            defaults={
-                "description": product_info.get("info", ""),
-                "product_type": product_type,
-                "is_live": True,
-            },
-        )
 
-        premium_amount, _ = Price.objects.get_or_create(
-            amount=quote_data["premium"],
-            currency="NGN",
-        )
+        logger.info(f"Product Type: {product_type}")
+        products = [
+            Product(
+                name=quote_data["product_name"],
+                description=quote_data.get("product_info", ""),
+                product_type=product_type,
+                is_live=True,
+            )
+            for quote in quote_data
+        ]
 
-        await Quote.objects.aupdate_or_create(
-            product=product,
-            defaults={
-                "product": product,
-                "premium": premium_amount,
-                "base_price": premium_amount,
-                "origin": "External",
-                "provider": provider.name,
-                "additional_metadata": {
-                    "contribution": quote_data.get("contribution", 0),
-                    "policy_terms": quote_data.get("policy_terms", {}),
-                },
-            },
-        )
+        provider.products.bulk_create(products)
+        logger.info(f'Created all products for provider "{provider_name}"')
+
+        _quotes = []
+        for quote_data in quote_data:
+            product, _ = Product.objects.get_or_create(name=quote_data["product_name"])
+            premium_amount, _ = Price.objects.get_or_create(
+                amount=quote_data["premium"],
+                currency="NGN",
+            )
+            _quotes.append(
+                Quote(
+                    product=product,
+                    premium=premium_amount,
+                    base_price=premium_amount,
+                    origin="External",
+                    provider=provider.name,
+                    additional_metadata={
+                        "contribution": quote_data.get("contribution", 0),
+                        "policy_terms": quote_data.get("policy_terms", {}),
+                    },
+                )
+            )
+        Quote.objects.bulk_create(_quotes)
+        logger.info(f"Created all quotes for provider: {provider_name}")
 
     def _map_product_type_to_category(self, product_type: str) -> str:
         mapping = {
@@ -348,6 +349,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         additional_info = validated_data["insurance_details"].get(
             "additional_information"
         )
+        logger.info(f"Extraacted Additional Info: {additional_info}")
         return additional_info
 
 

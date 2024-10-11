@@ -2,7 +2,7 @@ import abc
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Required, TypeAlias, TypedDict, Union
+from typing import List, Literal, Optional, Required, TypeAlias, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
@@ -28,12 +28,14 @@ class APIErrorResponse(TypedDict, total=False):
     status: str
 
 
-class QuoteAPIErrorResponse(dict[str, Any]):
-    def __init__(self, error: str, type) -> None:
-        self.error = error
+class Error(TypedDict):
+    type: str
+    title: str
+    detail: str
+    status: int | str
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {"error": self.error}
+
+ErrorResponse: TypeAlias = dict[Literal["error"], Error]
 
 
 class Quote(TypedDict):
@@ -41,6 +43,8 @@ class Quote(TypedDict):
     product_name: str
     premium: Decimal
     additional_information: str
+    origin: Optional[str]
+    contribution: Optional[Decimal]
 
 
 QuoteResponse: TypeAlias = list[Quote]
