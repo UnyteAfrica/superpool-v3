@@ -61,10 +61,22 @@ class BaseClient(IClient):
             return response_data
         except requests.RequestException as http_err:
             logger.error(
-                f"GET Request Failed | URL: {full_url} | Params: {params} | Error: {e}",
+                f"GET Request Failed | URL: {full_url} | Params: {params} | Error: {http_err}",
                 exc_info=True,
             )
             raise http_err
+        except ValueError as value_err:
+            logger.error(
+                f"GET Request Failed | URL: {full_url} | Params: {params} | Error: {value_err}",
+                exc_info=True,
+            )
+            raise value_err
+        except Exception as e:
+            logger.error(
+                f"GET Request Failed | URL: {full_url} | Params: {params} | Error: {e}",
+                exc_info=True,
+            )
+            raise e
 
     def post(self, url: str, data: dict):
         full_url = f'{url.lstrip("/")}'

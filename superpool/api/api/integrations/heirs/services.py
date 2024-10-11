@@ -89,11 +89,14 @@ class HeirsAssuranceService:
         """
         mappings = {
             "travel": {
-                "customer_age": "user_age",
-                "product_name": "category_name",
+                "user_age": "user_age",
+                "category_name": "category_name",
+                "start_date": "start_date",
+                "end_date": "end_date",
             },
         }
         category_key = category.lower()
+        logger.debug(f"Category when sanitizing: {category_key}")
         mapped_params = {}
 
         # only apply mappings if the category is recognized
@@ -106,15 +109,28 @@ class HeirsAssuranceService:
 
         # then extract and propate the required keys
         required_keys = self._get_required_params(category)
+        logger.info(f"Required Keys: {required_keys}")
         sanitized_params = {
             k: mapped_params[k] for k in required_keys if k in mapped_params
         }
+        logger.info(f"Sanitized Params: {sanitized_params}")
+
+        # we wnat o ensre all required parameters are present
+        missing_keys = [k for k in required_keys if k not in sanitized_params]
+        if missing_keys:
+            logger.error(f"Missing required keys: {missing_keys}")
+            raise ValueError(
+                f"Missing required keys: {missing_keys} for category:  {category}"
+            )
+
+        # only reeturn if we have all required keys in the sanitized params
         return sanitized_params
 
     def _get_required_params(self, category: str) -> list[str]:
         """
         Extract the required parameters for a specific category
         """
+        logger.debug(f"Getting required params for category: {category}")
         required_params = {
             "auto": ["product_id", "motor_value", "motor_class", "motor_type"],
             "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
@@ -125,7 +141,9 @@ class HeirsAssuranceService:
             "device": ["item_value"],
             "pos": ["item_value"],
         }
-        return required_params.get(category, [])
+        result = required_params.get(category.lower(), [])
+        logger.info(f"Returning required params for {category}: {result}")
+        return result
 
     def get_quotes(self, category: str, params: dict[str, Any]) -> QuoteResponse | dict:
         """
@@ -323,7 +341,13 @@ class HeirsAssuranceService:
         Returns:
             The premium as a Decimal
         """
+
         sanitized_params = self._sanitize_params(category, params)
+
+        if sanitized_params is None or sanitized_params == {}:
+            logger.error("Sanitized params are empty. Cannot fetch premium")
+            raise ValueError("Sanitized params are empty. Cannot fetch premium")
+
         endpoint = self._get_endpoint_by_category(category, sanitized_params)
 
         logger.info(f'Fetching premium from endpoint "{endpoint}"')
