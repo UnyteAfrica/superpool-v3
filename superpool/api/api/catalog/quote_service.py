@@ -123,27 +123,24 @@ class QuoteService:
 
                 if isinstance(external_quotes, Exception):
                     logger.error(f"Error retrieving external quotes: {external_quotes}")
-                    external_quotes = Quote.objects.none()
+                    external_quotes = [] or Quote.objects.none()
                 if isinstance(internal_quotes, Exception):
                     logger.error(f"Error retrieving internal quotes: {internal_quotes}")
-                    internal_quotes = Quote.objects.none()
+                    internal_quotes = [] or Quote.objects.none()
 
                 # Combine the external and internal quote QuerySets
                 print(f"Type of external quotes: {type(external_quotes)}")
                 print(f"Type of interanl quotes: {type(internal_quotes)}")
 
-                external_quotes = list(external_quotes)
-                internal_quotes = list(internal_quotes)
-
                 logger.info(f"External quotes: {external_quotes}")
                 logger.info(f"Internal quotes: {internal_quotes}")
-                all_quotes = external_quotes + internal_quotes
+                combined_quotes = external_quotes + internal_quotes
             else:
                 # Otherwise, we should only run internal_quotes task
                 internal_quotes = await tasks[0]
-                all_quotes = internal_quotes
+                combined_quotes = internal_quotes
 
-            return all_quotes
+            return combined_quotes
         except Exception as e:
             logger.error(f"Failed to retrieve quotes: {e}", exc_info=True)
             raise
@@ -267,14 +264,14 @@ class QuoteService:
         product_type: str,
         validated_data: dict[str, Any],
         product_name: Optional[str] = None,
-    ) -> QuerySet:
+    ) -> list:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
         """
         providers = self._get_providers_for_product_type(product_type)
         if not providers:
             logger.info(f"No internal providers found for product type: {product_type}")
-            return Quote.objects.none()
+            return []
 
         query = Q(product_type=product_type, provider__name__in=providers)
         if product_name:
@@ -286,7 +283,7 @@ class QuoteService:
         products = await self._fetch_products(query)
         if not products:
             logger.info("No products found for the given criteria.")
-            return Quote.objects.none()
+            return []
 
         # quote_ids: list[str] = []
         quote_ids = await asyncio.gather(
@@ -298,13 +295,15 @@ class QuoteService:
         flattened_ids = [quote_id for sublist in quote_ids for quote_id in sublist]
         logger.info(f"Quote IDs: {flattened_ids}")
 
-        internal_quotes = Quote.objects.filter(quote_code__in=flattened_ids)
-        logger.info(f"Retrieved {internal_quotes.count()} internal quotes")
+        internal_quotes = await sync_to_async(list)(
+            Quote.objects.filter(quote_code__in=flattened_ids)
+        )
+        logger.info(f"Retrieved {len(internal_quotes)} internal quotes")
         return internal_quotes
 
     async def _retrieve_quotes_from_db(
         self, validated_data: dict[str, Any], origin: Optional[str] = None
-    ) -> QuerySet:
+    ) -> list:
         """
         Retrieve quotes from the database based on the validated data
         """
@@ -328,8 +327,10 @@ class QuoteService:
             query &= Q(origin=origin)
 
         # fetch all quotes for the products matching the product information
-        quotes = await sync_to_async(lambda: Quote.objects.filter(query).distinct())()
+        quotes = await sync_to_async(
+            lambda: list(Quote.objects.filter(query).distinct())
+        )()
         logger.info(
-            f"Retrieved {quotes.count()} {'external' if origin == 'External' else 'internal'} quotes from DB"
+            f"Retrieved {len(quotes)} {'external' if origin == 'External' else 'internal'} quotes from DB"
         )
         return quotes
