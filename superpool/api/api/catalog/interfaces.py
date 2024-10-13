@@ -272,20 +272,96 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         """
         Save the product, price, quote to the database
         """
-        # we just have to hard-code this for now
+
+        #     # we just have to hard-code this for now
+        #     provider_name_alias = "Heirs"
+        #
+        #     provider = Provider.objects.filter(name__icontains=provider_name_alias).first()
+        #     provider_name = provider.name
+        #
+        #     if not provider:
+        #         logger.error(f"Could not find provider with name: {provider_name}")
+        #         provider = Provider.objects.create(name=provider_name)
+        #
+        #     logger.info(f"Attempting to create products for provider: {provider_name}")
+        #     product_type = self._map_category_to_product_type(product_class)
+        #
+        #     logger.info(f"Product Type: {product_type}")
+        #     products = [
+        #         Product(
+        #             name=quote["product_name"],
+        #             description=quote.get("product_info", ""),
+        #             product_type=product_type,
+        #             is_live=True,
+        #             provider=provider,
+        #         )
+        #         for quote in quote_data
+        #     ]
+        #
+        #     # provider.products.bulk_create(products)
+        #     Product.objects.bulk_create(products)
+        #     logger.info(f'Created all products for provider "{provider_name}"')
+        #
+        #     _quotes = []
+        #     for quote in quote_data:
+        #         product, created = Product.objects.get_or_create(name=quote["product_name"])
+        #         if created:
+        #             logger.info("Product already exists. Skipping creation...")
+        #
+        #         premium_amount, _ = Price.objects.get_or_create(
+        #             amount=quote["premium"],
+        #             currency="NGN",
+        #         )
+        #         _quotes.append(
+        #             Quote(
+        #                 product=product,
+        #                 premium=premium_amount,
+        #                 base_price=quote["premium"],
+        #                 origin="External",
+        #                 provider=provider.name,
+        #                 additional_metadata={
+        #                     "contribution": quote.get("contribution", 0),
+        #                     "policy_terms": quote.get("policy_terms", {}),
+        #                 },
+        #             )
+        #         )
+        #
+        #     quotes_to_update = []
+        #     quotes_to_create = []
+        #
+        #     for quote in _quotes:
+        #         existing_quote = Quote.objects.filter(quote_code=quote.quote_code).first()
+        #         if existing_quote:
+        #             existing_quote.premium = quote.premium
+        #             existing_quote.base_price = quote.base_price
+        #             existing_quote.additional_metadata = quote.additional_metadata
+        #             quotes_to_update.append(existing_quote)
+        #         else:
+        #             quotes_to_create.append(quote)
+        #
+        #     if quotes_to_update:
+        #         Quote.objects.bulk_update(
+        #             quotes_to_update,
+        #             fields=["premium", "base_price", "additional_metadata"],
+        #         )
+        #
+        #     if quotes_to_create:
+        #         Quote.objects.bulk_create(quotes_to_create)
+        #
+        #     logger.info(f"Created all quotes for provider: {provider_name}")
+        #
+
         provider_name_alias = "Heirs"
+        provider, created = Provider.objects.get_or_create(name=provider_name_alias)
 
-        provider = Provider.objects.filter(name__icontains=provider_name_alias).first()
-        provider_name = provider.name
+        if created:
+            logger.info(f"Created provider: {provider_name_alias}")
+        else:
+            logger.info(f"Using existing provider: {provider_name_alias}")
 
-        if not provider:
-            logger.error(f"Could not find provider with name: {provider_name}")
-            provider = Provider.objects.create(name=provider_name)
-
-        logger.info(f"Attempting to create products for provider: {provider_name}")
         product_type = self._map_category_to_product_type(product_class)
-
         logger.info(f"Product Type: {product_type}")
+
         products = [
             Product(
                 name=quote["product_name"],
@@ -296,36 +372,49 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             )
             for quote in quote_data
         ]
-
-        # provider.products.bulk_create(products)
         Product.objects.bulk_create(products)
-        logger.info(f'Created all products for provider "{provider_name}"')
 
-        _quotes = []
-        for quote in quote_data:
-            product, created = Product.objects.get_or_create(name=quote["product_name"])
-            if created:
-                logger.info("Product already exists. Skipping creation...")
+        logger.info(f'Created all products for provider "{provider_name_alias}"')
 
-            premium_amount, _ = Price.objects.get_or_create(
+        prices = [
+            Price(
                 amount=quote["premium"],
                 currency="NGN",
             )
-            _quotes.append(
-                Quote(
-                    product=product,
-                    premium=premium_amount,
-                    base_price=premium_amount,
-                    origin="External",
-                    provider=provider.name,
-                    additional_metadata={
+            for quote in quote_data
+        ]
+        Price.objects.bulk_create(prices)
+        logger.info(f"Created all prices for provider: {provider_name_alias}")
+
+        products_dict = {
+            p.name: p
+            for p in Product.objects.filter(
+                name__in=[q["product_name"] for q in quote_data]
+            )
+        }
+        prices_dict = {
+            p.amount: p
+            for p in Price.objects.filter(amount__in=[q["premium"] for q in quote_data])
+        }
+
+        for quote in quote_data:
+            product = products_dict[quote["product_name"]]
+            premium_amount = prices_dict[quote["premium"]]
+
+            Quote.objects.update_or_create(
+                product=product,
+                origin="External",
+                provider=provider.name,
+                defaults={
+                    "premium": premium_amount,
+                    "base_price": quote["premium"],
+                    "additional_metadata": {
                         "contribution": quote.get("contribution", 0),
                         "policy_terms": quote.get("policy_terms", {}),
                     },
-                )
+                },
             )
-        Quote.objects.bulk_create(_quotes)
-        logger.info(f"Created all quotes for provider: {provider_name}")
+        logger.info(f"Created all quotes for provider: {provider_name_alias}")
 
     def _map_product_type_to_category(self, product_type: str) -> str:
         mapping = {

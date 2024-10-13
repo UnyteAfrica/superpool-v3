@@ -113,35 +113,33 @@ class QuoteService:
                 validated_data=validated_data,
             )
         )
-
         logger.info(f"Running tasks: {tasks}")
-
-        import pdb
-
-        pdb.set_trace()
 
         try:
             if external_product_class:
                 # Run both tasks concurrently
-                external_quotes, internal_quotes = await asyncio.gather(
-                    *tasks, return_exceptions=True
-                )
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                external_quotes, internal_quotes = results
+
+                if isinstance(external_quotes, Exception):
+                    logger.error(f"Error retrieving external quotes: {external_quotes}")
+                    external_quotes = Quote.objects.none()
+                if isinstance(internal_quotes, Exception):
+                    logger.error(f"Error retrieving internal quotes: {internal_quotes}")
+                    internal_quotes = Quote.objects.none()
+
                 # Combine the external and internal quote QuerySets
                 print(f"Type of external quotes: {type(external_quotes)}")
                 print(f"Type of interanl quotes: {type(internal_quotes)}")
-                # all_quotes = QuerySet.all(external_quotes) | QuerySet.all(
-                #     internal_quotes
-                # )
+
                 external_quotes = list(external_quotes)
-                logger.info(f"External quotes: {external_quotes}")
                 internal_quotes = list(internal_quotes)
+
+                logger.info(f"External quotes: {external_quotes}")
                 logger.info(f"Internal quotes: {internal_quotes}")
                 all_quotes = external_quotes + internal_quotes
             else:
                 # Otherwise, we should only run internal_quotes task
-                # (internal_quotes,) = await asyncio.gather(
-                #     *tasks, return_exceptions=True
-                # )
                 internal_quotes = await tasks[0]
                 all_quotes = internal_quotes
 
@@ -149,12 +147,6 @@ class QuoteService:
         except Exception as e:
             logger.error(f"Failed to retrieve quotes: {e}", exc_info=True)
             raise
-
-        # results = await asyncio.gather(*tasks, return_exceptions=True)
-        # external_quotes = results[0] if external_product_class else Quote.objects.none()
-        # internal_quotes = results[1]
-        # print(f"External quotes: {external_quotes}")
-        # print(f"Internal quotes: {internal_quotes}")
 
     def _get_providers_for_product_type(self, product_type: str) -> list[str]:
         """
