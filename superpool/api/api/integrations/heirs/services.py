@@ -93,8 +93,8 @@ class HeirsAssuranceService:
             "travel": {
                 "user_age": "user_age",
                 "category_name": "category_name",
-                "start_date": "start_date",
-                "end_date": "end_date",
+                "departure_date": "start_date",
+                "return_date": "end_date",
             },
         }
         category_key = category.lower()

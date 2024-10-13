@@ -97,8 +97,7 @@ class QuoteService:
             logger.error("Product type is missing in the request.")
             raise ValueError("Product type is required. It cannot be empty.")
 
-        providers = self._get_providers_for_product_type(product_type)
-
+        # providers = self._get_providers_for_product_type(product_type)
         # determine if the product type requires external API calls, if it does match
         external_product_class = self._map_product_type_to_external_class(product_type)
         tasks = []
@@ -108,22 +107,45 @@ class QuoteService:
         else:
             external_quotes = Quote.objects.none()
 
-        tasks.append(self._retrieve_internal_quotes(validated_data))
+        tasks.append(
+            self._retrieve_internal_quotes(
+                product_type=product_type,
+                validated_data=validated_data,
+            )
+        )
+
+        logger.info(f"Running tasks: {tasks}")
+
+        import pdb
+
+        pdb.set_trace()
 
         try:
             if external_product_class:
                 # Run both tasks concurrently
-                external_quotes, internal_quotes = await asyncio.gather(*tasks)
+                external_quotes, internal_quotes = await asyncio.gather(
+                    *tasks, return_exceptions=True
+                )
+                # Combine the external and internal quote QuerySets
+                print(f"Type of external quotes: {type(external_quotes)}")
+                print(f"Type of interanl quotes: {type(internal_quotes)}")
+                # all_quotes = QuerySet.all(external_quotes) | QuerySet.all(
+                #     internal_quotes
+                # )
+                external_quotes = list(external_quotes)
+                logger.info(f"External quotes: {external_quotes}")
+                internal_quotes = list(internal_quotes)
+                logger.info(f"Internal quotes: {internal_quotes}")
+                all_quotes = external_quotes + internal_quotes
             else:
                 # Otherwise, we should only run internal_quotes task
-                (internal_quotes,) = await asyncio.gather(*tasks)
-
-            if external_product_class:
-                # Combine the external and internal quote QuerySets
-                all_quotes = external_quotes | internal_quotes
-            else:
+                # (internal_quotes,) = await asyncio.gather(
+                #     *tasks, return_exceptions=True
+                # )
+                internal_quotes = await tasks[0]
                 all_quotes = internal_quotes
 
+            return all_quotes
         except Exception as e:
             logger.error(f"Failed to retrieve quotes: {e}", exc_info=True)
             raise
@@ -133,13 +155,12 @@ class QuoteService:
         # internal_quotes = results[1]
         # print(f"External quotes: {external_quotes}")
         # print(f"Internal quotes: {internal_quotes}")
-        return all_quotes
 
-    async def _get_providers_for_product_type(self, product_type: str) -> list[str]:
+    def _get_providers_for_product_type(self, product_type: str) -> list[str]:
         """
         Fetch all insurance providers that offer some product for the given product type
         """
-        providers = await sync_to_async(list)(
+        providers = list(
             InsurancePartner.objects.filter(product__product_type=product_type)
             .values_list("name", flat=True)
             .distinct()
@@ -251,15 +272,14 @@ class QuoteService:
 
     async def _retrieve_internal_quotes(
         self,
+        product_type: str,
         validated_data: dict[str, Any],
+        product_name: Optional[str] = None,
     ) -> QuerySet:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
         """
-        product_type = validated_data["insurance_details"]["product_type"]
-        product_name = validated_data["insurance_details"].get("product_name")
         providers = self._get_providers_for_product_type(product_type)
-
         if not providers:
             logger.info(f"No internal providers found for product type: {product_type}")
             return Quote.objects.none()

@@ -128,7 +128,7 @@ else:
             "Please provide a DATABASE_URL or DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD,"
             "DATABASE_HOST, DATABASE_PORT to startup application",
         )
-DATABASES["default"]["ATOMIC_REQUESTS"] = False
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

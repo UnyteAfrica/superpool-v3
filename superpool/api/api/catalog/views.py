@@ -40,6 +40,7 @@ from .openapi import (
     quote_request_example,
 )
 from .quote_service import QuoteService
+from .quote_service import QuoteService as QuoteServiceV2
 from .serializers import (
     CoverageSerializer,
     FullCoverageSerializer,
@@ -956,19 +957,16 @@ class QuoteRequestView(views.APIView):
     def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
 
-        # is_valid = await sync_to_async(serializer.is_valid)()
-        is_valid = serializer.is_valid()
-        if not is_valid:
+        if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
-        # validated_data = await sync_to_async(lambda: serializer.validated_data)()
-        service = QuoteService()
+        service = QuoteServiceV2()
 
         try:
             quote_data = async_to_sync(service.request_quote)(validated_data)
-            logger.info(f"Quote Data: {quote_data}")
-
+            logger.info(f"Retrieved Quote Data: {quote_data}")
+            print(f"Type of quote_data: {type(quote_data)}")
             paginator = LimitOffsetPagination()
             paginated_quotes = paginator.paginate_queryset(quote_data, request)
 
@@ -977,8 +975,6 @@ class QuoteRequestView(views.APIView):
                     paginated_quotes, many=True
                 )
                 serializer_data = response_serializer.data
-                # response = paginator.get_paginated_response(serializer_data)
-                # return response
                 return paginator.get_paginated_response(serializer_data)
 
             response_serializer = QuoteResponseSerializerV2(quote_data, many=True)
@@ -990,8 +986,11 @@ class QuoteRequestView(views.APIView):
                 },
                 status=status.HTTP_200_OK,
             )
+        except ValueError as exc:
+            logger.error(f"Validation error: {exc}", exc_info=True)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as exc:
-            logger.error(f"Error occurred: {exc}", exc_info=True)
+            logger.critical(f"Error occurred: {exc}", exc_info=True)
             return Response(
                 {"error": "An error occurred while processing your request."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

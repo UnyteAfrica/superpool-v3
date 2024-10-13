@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Mapping, Optional, Union
 
+from asgiref.sync import sync_to_async
 from django.db import transaction
 from typing_extensions import deprecated
 
@@ -223,7 +224,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         """
         Fetch quotes from Heirs Assurance.
         """
-        product_type = validated_data["insurance_details"]["product_type"].lower()
+        product_type = validated_data["insurance_details"]["product_type"]
         category = self._map_product_type_to_category(product_type)
         params = self._extract_params(validated_data)
 
@@ -264,44 +265,50 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         updated_quotes: list[QuoteType] = [
             {**quote, "origin": "Heirs"} for quote in quotes
         ]
-        self._save_quote(updated_quotes)
+        await sync_to_async(self._save_quote)(updated_quotes, product_class)
 
     @transaction.atomic
-    def _save_quote(self, quote_data: list[QuoteType]) -> None:
+    def _save_quote(self, quote_data: list[QuoteType], product_class: str) -> None:
         """
         Save the product, price, quote to the database
         """
-        provider_name = quote_data.get("origin", "Heirs")
+        # we just have to hard-code this for now
+        provider_name_alias = "Heirs"
 
-        provider = Provider.objects.filter(name__icontains=provider_name).first()
+        provider = Provider.objects.filter(name__icontains=provider_name_alias).first()
+        provider_name = provider.name
 
-        if not provider or provider.objects.none():
+        if not provider:
             logger.error(f"Could not find provider with name: {provider_name}")
             provider = Provider.objects.create(name=provider_name)
 
         logger.info(f"Attempting to create products for provider: {provider_name}")
-
-        product_type = self._map_category_to_product_type(product_info["category"])
+        product_type = self._map_category_to_product_type(product_class)
 
         logger.info(f"Product Type: {product_type}")
         products = [
             Product(
-                name=quote_data["product_name"],
-                description=quote_data.get("product_info", ""),
+                name=quote["product_name"],
+                description=quote.get("product_info", ""),
                 product_type=product_type,
                 is_live=True,
+                provider=provider,
             )
             for quote in quote_data
         ]
 
-        provider.products.bulk_create(products)
+        # provider.products.bulk_create(products)
+        Product.objects.bulk_create(products)
         logger.info(f'Created all products for provider "{provider_name}"')
 
         _quotes = []
-        for quote_data in quote_data:
-            product, _ = Product.objects.get_or_create(name=quote_data["product_name"])
+        for quote in quote_data:
+            product, created = Product.objects.get_or_create(name=quote["product_name"])
+            if created:
+                logger.info("Product already exists. Skipping creation...")
+
             premium_amount, _ = Price.objects.get_or_create(
-                amount=quote_data["premium"],
+                amount=quote["premium"],
                 currency="NGN",
             )
             _quotes.append(
@@ -312,8 +319,8 @@ class HeirsQuoteProvider(BaseQuoteProvider):
                     origin="External",
                     provider=provider.name,
                     additional_metadata={
-                        "contribution": quote_data.get("contribution", 0),
-                        "policy_terms": quote_data.get("policy_terms", {}),
+                        "contribution": quote.get("contribution", 0),
+                        "policy_terms": quote.get("policy_terms", {}),
                     },
                 )
             )
