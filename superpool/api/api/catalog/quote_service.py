@@ -60,9 +60,7 @@ class QuoteService:
                 f"Failed to fetch quotes from {provider_name}: {e}", exc_info=True
             )
 
-    async def _retrieve_external_quotes(
-        self, validated_data: Dict[str, Any]
-    ) -> QuerySet:
+    async def _retrieve_external_quotes(self, validated_data: Dict[str, Any]) -> list:
         """
         Retrieve quotes from external providers asynchronously.
 
@@ -105,7 +103,7 @@ class QuoteService:
         if external_product_class:
             tasks.append(self._retrieve_external_quotes(validated_data))
         else:
-            external_quotes = Quote.objects.none()
+            external_quotes = []
 
         tasks.append(
             self._retrieve_internal_quotes(
@@ -123,10 +121,10 @@ class QuoteService:
 
                 if isinstance(external_quotes, Exception):
                     logger.error(f"Error retrieving external quotes: {external_quotes}")
-                    external_quotes = [] or Quote.objects.none()
+                    external_quotes = []
                 if isinstance(internal_quotes, Exception):
                     logger.error(f"Error retrieving internal quotes: {internal_quotes}")
-                    internal_quotes = [] or Quote.objects.none()
+                    internal_quotes = []
 
                 # Combine the external and internal quote QuerySets
                 print(f"Type of external quotes: {type(external_quotes)}")
