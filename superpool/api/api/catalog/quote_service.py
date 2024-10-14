@@ -22,6 +22,7 @@ class QuoteService:
         "Personal_Accident": "Personal Accident",
         "Gadget": "Device",
         "Travel": "Travel",
+        "Cargo": "Marine Cargo",
     }
 
     @deprecated(
