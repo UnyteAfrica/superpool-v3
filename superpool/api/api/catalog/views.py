@@ -105,7 +105,7 @@ class PolicyListView(generics.ListAPIView):
     description="List all products available in the system",
     responses={
         200: OpenApiResponse(
-            response=ProductSerializer(many=True),
+            response=ProductSerializerV2(many=True),
             examples=[products_response_example],
         ),
         404: OpenApiResponse(
@@ -126,6 +126,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductSerializer
+    pagination_class = LimitOffsetPagination
     # authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
@@ -135,12 +136,15 @@ class ProductListView(generics.ListAPIView):
         queryset = self.get_queryset()
 
         # if we do not have any products, we will return a 404
-        if not queryset.exists():
+        if not queryset:
             return Response(
                 {"error": "No products are currently available"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
