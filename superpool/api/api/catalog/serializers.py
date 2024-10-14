@@ -471,6 +471,40 @@ class HomeInsuranceSerializer(serializers.Serializer):
     security_details = serializers.JSONField(required=False)
 
 
+class ShipmentInsuranceSerializer(serializers.Serializer):
+    """
+    Validate the shipment insurance quote request payload
+    """
+
+    class ShipmentTypeChoices(models.TextChoices):
+        DOMESTIC = "domestic", "Domestic"
+        INTERNATIONAL = "international", "International"
+
+    shipment_type = serializers.ChoiceField(
+        choices=ShipmentTypeChoices.choices,
+        help_text="Type of shipment e.g Domestic, International",
+    )
+    shipment_value = serializers.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Estimated value of the shipment"
+    )
+    shipment_origin = serializers.CharField(
+        max_length=255, help_text="Location where the shipment originates"
+    )
+    shipment_destination = serializers.CharField(
+        max_length=255, help_text="Location where the shipment is destined"
+    )
+    shipment_carrier = serializers.CharField(
+        max_length=255, help_text="Carrier company handling the shipment"
+    )
+    shipment_carrier_details = serializers.JSONField(required=False)
+    exchange_rate = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        help_text="Current Exchange rate for international shipments",
+    )
+
+
 class GadgetInsuranceSerializer(serializers.Serializer):
     """
     Validate the gadget (Device) insurance quote request payload
