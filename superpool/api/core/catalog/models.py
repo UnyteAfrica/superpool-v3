@@ -46,6 +46,7 @@ class ProductTier(models.Model):
         help_text="Insurance package the tier belongs to",
         related_name="tiers",
         related_query_name="tier",
+        db_index=True,
     )
     tier_name = models.CharField(
         max_length=255,
@@ -140,6 +141,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         Partner,
         on_delete=models.CASCADE,
         help_text="Insurance provider offering the package",
+        db_index=True,
     )
     name: models.CharField = models.CharField(
         max_length=255,

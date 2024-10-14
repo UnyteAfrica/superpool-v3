@@ -105,7 +105,7 @@ class PolicyListView(generics.ListAPIView):
     description="List all products available in the system",
     responses={
         200: OpenApiResponse(
-            response=ProductSerializerV2(many=True),
+            response=ProductSerializer(many=True),
             examples=[products_response_example],
         ),
         404: OpenApiResponse(

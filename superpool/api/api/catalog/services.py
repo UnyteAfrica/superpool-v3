@@ -36,7 +36,32 @@ class ProductService:
         """
         Returns a queryset of all products
         """
-        return Product.objects.all()
+        # qs = (
+        #     Product.objects.select_related("provider")
+        #     .prefetch_related(
+        #         Prefetch(
+        #             "tiers",
+        #             # queryset=ProductTier.objects.all(),
+        #             to_attr="prefetched_tiers",
+        #         ),
+        #         Prefetch(
+        #             "coverages",
+        #             # queryset=Coverage.objects.all(),
+        #             to_attr="prefetched_coverages",
+        #         ),
+        #     )
+        #     .distinct()
+        #     .only(
+        #         "id",
+        #         "name",
+        #         "product_type",
+        #         "updated_at",
+        #         "created_at",
+        #         "provider__id",
+        #         "provider__name",
+        #     )
+        # )
+        return Product.objects.all().distinct()
 
     @staticmethod
     def get_product_by_name(product_name: str) -> QuerySet:

@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError
 
-from core.catalog.models import Beneficiary, Policy, Price, Product, Quote
+from core.catalog.models import Beneficiary, Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
 from core.models import Coverage
 from core.providers.models import Provider
@@ -109,6 +109,66 @@ class ProductSerializer(ModelSerializer):
             ).data
 
         return representation
+
+
+class ProductSerializerV2(serializers.ModelSerializer):
+    """
+    Data serilaiser for the Product model
+
+    Designed to handle optimized data serialization for the Product model
+    """
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "product_type",
+            "coverages",
+            "tiers",
+            "provider",
+            "base_premium",
+            "updated_at",
+            "created_at",
+        ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        representation["updated_at"] = instance.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+        representation["created_at"] = instance.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+        if instance.provider:
+            representation["provider"] = PolicyProviderSerializer(
+                instance.provider
+            ).data
+
+        if instance.coverages.exists():
+            representation["coverages"] = CoverageSerializer(
+                instance.prefetched_coverages, many=True
+            ).data
+
+        if instance.tiers.exists():
+            representation["tiers"] = TierSerializer(
+                instance.prefetched_tiers, many=True
+            ).data
+
+        return representation
+
+
+class TierSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the a given  product Tier model
+    """
+
+    tier_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, source="base_premium"
+    )
+
+    class Meta:
+        model = ProductTier
+        fields = ["tier_name", "description", "tier_price", "pricing"]
+        read_only_fields = fields
 
 
 class PolicyPurchaseResponseSerializer(serializers.ModelSerializer):
