@@ -87,6 +87,19 @@ files = [
     {file = "billiard-4.2.1.tar.gz", hash = "sha256:12b641b0c539073fc8d3f5b8b7be998956665c4233c7c1fcd66a7e677c4fb36f"},
 ]
 
+name = "autopep8"
+version = "2.3.1"
+description = "A tool that automatically formats Python code to conform to the PEP 8 style guide"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "autopep8-2.3.1-py2.py3-none-any.whl", hash = "sha256:a203fe0fcad7939987422140ab17a930f684763bf7335bdb6709991dd7ef6c2d"},
+    {file = "autopep8-2.3.1.tar.gz", hash = "sha256:8d6c87eba648fdcfc83e29b788910b8643171c395d9c4bcf115ece035b9c9dda"},
+]
+
+[package.dependencies]
+pycodestyle = ">=2.12.0"
+
 [[package]]
 name = "cachetools"
 version = "5.3.3"
@@ -649,6 +662,23 @@ redis = ">=3,<4.0.0 || >4.0.0,<4.0.1 || >4.0.1"
 
 [package.extras]
 hiredis = ["redis[hiredis] (>=3,!=4.0.0,!=4.0.1)"]
+
+[[package]]
+name = "django-silk"
+version = "5.2.0"
+description = "Silky smooth profiling for the Django Framework"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "django_silk-5.2.0-py3-none-any.whl", hash = "sha256:b3f01ccbf46611073603a6ac2b84f578bde978ad44785f42994c3d6f81398fdc"},
+    {file = "django_silk-5.2.0.tar.gz", hash = "sha256:39ddeda80469d5495d1cbb53590a9bdd4ce30a7474dc16ac26b6cbc0d9521f50"},
+]
+
+[package.dependencies]
+autopep8 = "*"
+Django = ">=3.2"
+gprof2dot = ">=2017.09.19"
+sqlparse = "*"
 
 [[package]]
 name = "django-storages"
@@ -1297,6 +1327,16 @@ files = [
 [package.extras]
 docs = ["Sphinx", "furo"]
 test = ["objgraph", "psutil"]
+
+name = "gprof2dot"
+version = "2024.6.6"
+description = "Generate a dot graph from the output of several profilers."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "gprof2dot-2024.6.6-py2.py3-none-any.whl", hash = "sha256:45b14ad7ce64e299c8f526881007b9eb2c6b75505d5613e96e66ee4d5ab33696"},
+    {file = "gprof2dot-2024.6.6.tar.gz", hash = "sha256:fa1420c60025a9eb7734f65225b4da02a10fc6dd741b37fa129bc6b41951e5ab"},
+]
 
 [[package]]
 name = "gunicorn"

@@ -45,6 +45,7 @@ pytest-mock = "^3.14.0"
 pytest-xdist = "^3.6.1"
 requests-mock = "^1.12.1"
 werkzeug = "^3.0.4"
+django-silk = "^5.2.0"
 
 [tool.pytest.ini_options]
 addopts = "--reuse-db -p no:warnings"
