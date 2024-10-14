@@ -118,6 +118,7 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         LIFE = "Life", "Life Insurance"
         HEALTH = "Health", "Health Insurance"
         AUTO = "Auto", "Auto Insurance"
+        CARGO = "Cargo", "Cargo (Shipment) Insurance"
         GADGET = "Gadget", "Gadget Insurance"
         TRAVEL = "Travel", "Travel Insurance"
         HOME = "Home", "Home Insurance"
