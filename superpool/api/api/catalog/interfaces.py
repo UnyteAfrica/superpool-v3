@@ -336,6 +336,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             "Personal_Accident": "Personal Accident",
             "Gadget": "Device",
             "Travel": "Travel",
+            "Cargo": "Marine Cargo",
         }
         # return the original product type if no mapping is found
         return mapping.get(product_type, product_type)
@@ -347,6 +348,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             "Personal Accident": "Personal_Accident",
             "Device": "Gadget",
             "Travel": "Travel",
+            "Marine Cargo": "Cargo",
         }
         # return the category if no mapping is found
         return reverse_mapping.get(category, category)

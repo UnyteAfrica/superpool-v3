@@ -116,7 +116,7 @@ class HeirsAssuranceService:
             },
             "cargo": {
                 "product_id": "product_id",
-                "cargo_value": "cargo_value",
+                "shipment_value": "cargo_value",
                 "exchange_rate": "exchange_rate",
             },
         }
@@ -161,6 +161,7 @@ class HeirsAssuranceService:
             "motor": ["product_id", "motor_value", "motor_class", "motor_type"],
             "biker": ["product_id", "motor_value", "motor_class"],
             "travel": ["user_age", "start_date", "end_date", "category_name"],
+            "cargo": ["product_id", "shipment_value", "exchange_rate"],
             "personal_accident": ["product_id"],
             "accident": ["product_id"],
             "device": ["item_value"],
