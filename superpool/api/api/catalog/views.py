@@ -907,41 +907,8 @@ class QuoteRequestView(views.APIView):
 
     @extend_schema(
         summary="Request a quote for an insurance policy or product",
-        # description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
+        description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
         tags=["Quotes"],
-        # parameters=[
-        #     OpenApiParameter(
-        #         name="provider_name",
-        #         description="Filter quotes by insurance provider (e.g., 'AXA', 'Universal Insurance')",
-        #         required=False,
-        #         type=OpenApiTypes.STR,
-        #     ),
-        #     OpenApiParameter(
-        #         name="coverage_type",
-        #         description="Filter quotes by Coverage Type",
-        #         required=False,
-        #         type=OpenApiTypes.STR,
-        #     ),
-        #     OpenApiParameter(
-        #         name="min_price",
-        #         description="Filter quotes with a minimum premium amount",
-        #         required=False,
-        #         type=OpenApiTypes.FLOAT,
-        #     ),
-        #     OpenApiParameter(
-        #         name="max_price",
-        #         description="Filter quotes with a maximum premium amount",
-        #         required=False,
-        #         type=OpenApiTypes.FLOAT,
-        #     ),
-        #     OpenApiParameter(
-        #         name="sort_by",
-        #         description="Sort quotes by either 'cheapest' (lowest premium) or 'best_value' (premium-to-coverage ratio)",
-        #         required=False,
-        #         type=OpenApiTypes.STR,
-        #         enum=["cheapest", "best_coverage"],
-        #     ),
-        # ],
         request=OpenApiRequest(
             request=QuoteRequestSerializerV2(many=True),
             examples=[quote_request_example],
@@ -953,7 +920,6 @@ class QuoteRequestView(views.APIView):
             )
         },
     )
-    # @transaction.non_atomic_requests
     def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
 
@@ -1020,7 +986,6 @@ class QuoteRequestView(views.APIView):
             filtered_qs = filtered_qs.order_by("premium__amount")
         elif sort_by == "best_coverage":
             # HERE WE ARE RETRIEVEING THE LIMIT OF THE QUOTE COVERAGE
-            #
             # FROM THE ADDITONAL_METADATA FIELD ON THE QUOTE OBJECT
             # WHICH IS A JSON FILED, WE WANT TO HOWEVER PASS DECIMAL
             # OBJECT INTO THE QUERYSET MANAGER

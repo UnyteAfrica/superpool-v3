@@ -96,6 +96,29 @@ class HeirsAssuranceService:
                 "departure_date": "start_date",
                 "return_date": "end_date",
             },
+            "device": {"item_value": "item_value"},
+            "pos": {"item_value": "item_value"},
+            "home": {
+                "property_value": "property_value",
+                "stationary_items_value": "stationary_items_value",
+                "mobile_items_value": "mobile_items_value",
+            },
+            "auto": {
+                "product_id": "product_id",
+                "motor_value": "motor_value",
+                "motor_class": "motor_class",
+                "motor_type": "motor_type",
+            },
+            "biker": {
+                "product_id": "product_id",
+                "motor_value": "motor_value",
+                "motor_class": "motor_class",
+            },
+            "cargo": {
+                "product_id": "product_id",
+                "cargo_value": "cargo_value",
+                "exchange_rate": "exchange_rate",
+            },
         }
         category_key = category.lower()
         logger.debug(f"Category when sanitizing: {category_key}")

@@ -1513,8 +1513,9 @@ class QuoteResponseSerializer(serializers.Serializer):
 
 
 class QuoteResponseSerializerV2(serializers.ModelSerializer):
-    provider = serializers.CharField(source="provider.name")
+    provider = serializers.CharField()
     product = serializers.CharField(source="product.name")
+    product_type = serializers.CharField(source="product.product_type")
     premium = serializers.DecimalField(
         source="premium.amount", max_digits=10, decimal_places=2
     )
@@ -1525,6 +1526,7 @@ class QuoteResponseSerializerV2(serializers.ModelSerializer):
             "quote_code",
             "provider",
             "product",
+            "product_type",
             "base_price",
             "premium",
             "purchase_id",
