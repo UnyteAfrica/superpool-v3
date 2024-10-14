@@ -131,7 +131,7 @@ steps:
       - "--args"
       - "-A superpool.api.celery flower --port=5555"
       - "--port"
-      - "5555"
+      - "8080" #"5555"
 
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
