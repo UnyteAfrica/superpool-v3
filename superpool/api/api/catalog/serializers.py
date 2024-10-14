@@ -464,6 +464,16 @@ class HomeInsuranceSerializer(serializers.Serializer):
     property_value = serializers.DecimalField(
         max_digits=10, decimal_places=2, help_text="Estimated value of the property"
     )
+    stationary_items_value = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Estimated value of stationary (immobile) items in the property",
+    )
+    mobile_items_value = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Estimated value of mobile items in the property",
+    )
     property_location = serializers.CharField(
         max_length=255,
         help_text="Location of the property in format: State, Country",
