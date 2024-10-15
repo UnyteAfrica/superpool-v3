@@ -406,22 +406,29 @@ class AutoInsuranceSerializer(serializers.Serializer):
     """
 
     class VehicleUsageChoices(models.TextChoices):
-        PERSONAL = "personal", "Personal"
-        COMMERCIAL = "commercial", "Commercial"
-        RIDESHARE = "rideshare", "Ride Share"
+        PERSONAL = "Personal", "Personal"
+        COMMERCIAL = "Commercial", "Commercial"
+        RIDESHARE = "Rideshare", "Ride Share"
 
     class VehicleUsageMetadata(models.TextChoices):
-        PRIVATE = "private", "Private"
-        PUBLIC = "public", "Public"
-        COMMERCIAL = "commercial", "Commercial"
+        PRIVATE = "Private", "Private"
+        PUBLIC = "Public", "Public"
+        COMMERCIAL = "Commercial", "Commercial"
 
     class VehicleTypeChoices(models.TextChoices):
-        CAR = "car", "Car"
-        BIKE = "bike", "Bike"
+        CAR = "Car", "Car"
+        BIKE = "Bike", "Bike"
 
     class VehiclePurposeChoices(models.TextChoices):
-        BUSINESS = "business", "Business"
-        COMMUTE = "commute", "Commute"
+        BUSINESS = "Business", "Business"
+        COMMUTE = "Commute", "Commute"
+
+    class VehicleCategory(models.TextChoices):
+        SALOON = "Saloon", "Saloon"
+        SUV = "Suv", "SUV"
+        TRUCK = "Truck", "Truck"
+        VAN = "Van", "Van"
+        MOTORCYCLE = "Motorcycle", "Motorcycle"
 
     vehicle_type = serializers.ChoiceField(
         choices=VehicleTypeChoices.choices, help_text="Type of vehicle e.g Car, Bike"
@@ -429,7 +436,7 @@ class AutoInsuranceSerializer(serializers.Serializer):
     vehicle_make = serializers.CharField(max_length=100, required=False)
     vehicle_model = serializers.CharField(max_length=100, required=False)
     vehicle_year = serializers.IntegerField(
-        min_value=1900,
+        min_value=1950,
         max_value=datetime.now().year,
         help_text="Year of manufacture of the vehicle",
     )
@@ -478,6 +485,62 @@ class AutoInsuranceSerializer(serializers.Serializer):
         choices=VehiclePurposeChoices.choices,
         required=False,
     )
+    vehicle_category = serializers.ChoiceField(
+        choices=VehicleCategory.choices,
+        required=False,
+        help_text="Category of the vehicle e.g Saloon, SUV, Truck, Van, Motorcycle",
+    )
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate the auto insurance quote request payload
+        """
+        # We want to use this opportunity to handle how we would
+        # be passing information from API layer to the service layer
+        # depending on the vehicle choices
+
+        # If vehicle is Bike - we would want to ensure that the vehicle
+        # the value, usage, model and year are provided
+
+        # Otherwise if vehicle is Car - we would want to ensure that the vehicle
+        # make, value, usage, model and year are provided
+
+        vehicle_type = attrs.get("vehicle_type")
+        vehicle_make = attrs.get("vehicle_make")
+        vehicle_class = attrs.get("vehicle_category")
+
+        is_bike = vehicle_type == self.VehicleTypeChoices.BIKE
+        is_car = vehicle_type == self.VehicleTypeChoices.CAR
+
+        if is_bike:
+            required_fields = ["vehicle_value", "vehicle_usage", "vehicle_year"]
+            for field in required_fields:
+                if field not in attrs:
+                    raise ValidationError(f"{field} is required for a bike")
+
+        if is_car:
+            required_fields = [
+                "vehicle_make",
+                "vehicle_value",
+                "vehicle_usage",
+                "vehicle_year",
+            ]
+            for field in required_fields:
+                if field not in attrs:
+                    raise ValidationError(f"{field} is required for a car")
+
+            unsupported_brands = {"Ferrari", "Lamborghini", "Bugatti", "Toyota"}
+            if vehicle_make in unsupported_brands:
+                raise ValidationError(f"We do not insure {vehicle_make} vehicles")
+
+            _TRUCK_MAPPING = {
+                "Van": "Light Truck",
+                "Truck": "Heavy Duty Truck",
+            }
+            if vehicle_class in _TRUCK_MAPPING:
+                attrs["vehicle_class"] = _TRUCK_MAPPING[vehicle_class]
+
+        return attrs
 
 
 class PersonalAccidentInsuranceSerializer(serializers.Serializer):
