@@ -287,3 +287,13 @@ HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1"
 HEIRS_ASSURANCE_STAGING_URL = "https://public-api.staging.heirsinsurance.com/v1"
 HEIRS_ASSURANCE_API_KEY = env("HEIRS_API_KEY")
 HEIRS_ASSURANCE_APP_ID = env("HEIRS_APP_ID")
+HEIRS_PRODUCT_MAPPING = {
+    "Auto": {
+        "Third Party": 821,
+        "Comprehensive": 823,
+        "Flexi 25 (25k)": 1043,
+        "Flexi 35 (35k)": 1044,
+        "Flexi 70 (70k)": 1045,
+        "Her Motor": 941,
+    },
+}
