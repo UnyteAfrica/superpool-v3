@@ -6,6 +6,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Mapping, Optional, Union
 
@@ -358,8 +359,22 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         additional_info = validated_data["insurance_details"].get(
             "additional_information"
         )
-        logger.info(f"Extraacted Additional Info: {additional_info}")
-        return additional_info
+        customer_info = validated_data.get("customer_metadata", {})
+        date_of_birth = customer_info.get("date_of_birth")
+        if date_of_birth:
+            today = datetime.today().date()
+            user_age = (
+                today.year
+                - date_of_birth.year
+                - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+            )
+        else:
+            user_age = None
+
+        extracted = {**additional_info, "user_age": user_age}
+        logger.info(f"Computed user age: {user_age}")
+        logger.info(f"Extraacted Additional Info: {extracted}")
+        return extracted
 
 
 # @warnings.warn("This class has not been implemented yet")

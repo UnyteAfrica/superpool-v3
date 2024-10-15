@@ -3,6 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Union
 
+from django.conf import settings
 from django.db import models, transaction
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -16,6 +17,8 @@ from core.providers.models import Provider
 from core.user.models import Customer
 
 logger = logging.getLogger(__name__)
+
+HEIRS_PRODUCT_MAPPING = settings.HEIRS_PRODUCT_MAPPING
 
 
 class CoverageSerializer(serializers.ModelSerializer):
@@ -333,6 +336,14 @@ class TravelInsuranceSerializer(serializers.Serializer):
         ONE_WAY = "one_way", "One Way"
         ROUND_TRIP = "round_trip", "Round Trip"
 
+    class TravelInsuranceOptions(models.TextChoices):
+        EUROPE_SCHENGEN = "EUROPE SCHENGEN", "Europe Schengen"
+        ECONOMY_WORLD_WIDE = "ECONOMY (WORLD WIDE)", "Economy (World Wide)"
+        SCHENGEN_ONLY = "SCHENGEN ONLY", "Schengen Only"
+        TRAVELLER_WORLD_WIDE = "TRAVELLER (WORLD WIDE)", "Traveller (World Wide)"
+        PEARL_WORLD_WIDE = "PEARL (WORLD WIDE)", "Pearl (World Wide)"
+        FAMILY_WORLD_WIDE = "FAMILY (WORLD WIDE)", "Family (World Wide)"
+
     destination = serializers.CharField(
         max_length=255, help_text="Destination of travel"
     )
@@ -360,6 +371,35 @@ class TravelInsuranceSerializer(serializers.Serializer):
         help_text="Is this insurance for an international flight?",
         required=False,
     )
+    insurance_options = serializers.ChoiceField(
+        choices=TravelInsuranceOptions.choices,
+        required=False,
+        help_text="Select a specific insurance option",
+    )
+
+    def validate(self, attrs):
+        international_flight = attrs.get("international_flight")
+
+        attrs["departure_date"] = attrs["departure_date"].isoformat()
+        attrs["return_date"] = attrs["return_date"].isoformat()
+
+        # if `international_flight` is True, an `insurance_options` is provided
+        if attrs.get("international_flight") and not attrs.get("insurance_options"):
+            raise serializers.ValidationError(
+                {
+                    "insurance_options": "This field is required when requesting travel insurance with 'international_flight' set to True."
+                }
+            )
+
+        # right now we do not support local travel insurance
+        if not international_flight:
+            raise serializers.ValidationError(
+                {
+                    "international_flight": "We currently only support international travel insurance. Please explore other options."
+                }
+            )
+
+        return attrs
 
 
 class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
@@ -406,7 +446,7 @@ class AutoInsuranceSerializer(serializers.Serializer):
     """
 
     class VehicleUsageChoices(models.TextChoices):
-        PERSONAL = "Personal", "Personal"
+        PRIVATE = "Private", "Private"
         COMMERCIAL = "Commercial", "Commercial"
         RIDESHARE = "Rideshare", "Ride Share"
 
@@ -447,7 +487,7 @@ class AutoInsuranceSerializer(serializers.Serializer):
     )
     vehicle_usage = serializers.ChoiceField(
         choices=VehicleUsageChoices.choices,
-        help_text="How the vehicle is used e.g Personal, Commercial",
+        help_text="How the vehicle is used e.g Private, Commercial",
         required=False,
     )
     vehicle_usage_details = serializers.ChoiceField(
@@ -489,6 +529,12 @@ class AutoInsuranceSerializer(serializers.Serializer):
         choices=VehicleCategory.choices,
         required=False,
         help_text="Category of the vehicle e.g Saloon, SUV, Truck, Van, Motorcycle",
+    )
+
+    insurance_type = serializers.ChoiceField(
+        choices=[key for key in HEIRS_PRODUCT_MAPPING["Auto"].keys()],
+        help_text="Preferred insurance type e.g Third Party, Comprehensive, etc",
+        required=False,
     )
 
     def validate(self, attrs: dict) -> dict:
@@ -539,6 +585,13 @@ class AutoInsuranceSerializer(serializers.Serializer):
             }
             if vehicle_class in _TRUCK_MAPPING:
                 attrs["vehicle_class"] = _TRUCK_MAPPING[vehicle_class]
+
+        insurance_type = attrs.get("insurance_type")
+        if insurance_type:
+            product_id = HEIRS_PRODUCT_MAPPING["Auto"].get(insurance_type)
+            if not product_id:
+                raise ValidationError(f"Invalid insurance type: {insurance_type}")
+            attrs["product_id"] = product_id
 
         return attrs
 
