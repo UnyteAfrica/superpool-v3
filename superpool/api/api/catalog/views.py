@@ -940,6 +940,14 @@ class QuoteRequestView(views.APIView):
             paginator = LimitOffsetPagination()
             paginated_quotes = paginator.paginate_queryset(quote_data, request)
 
+            if quote_data == []:
+                return Response(
+                    {
+                        "error": "No quotes found for the provided criteria. Try query again"
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
             if paginated_quotes is not None:
                 response_serializer = QuoteResponseSerializerV2(
                     paginated_quotes, many=True
