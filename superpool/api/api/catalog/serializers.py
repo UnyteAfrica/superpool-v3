@@ -443,6 +443,8 @@ class HealthInsuranceSerializer(BaseQuoteRequestSerializer):
 class AutoInsuranceSerializer(serializers.Serializer):
     """
     Validate the auto insurance quote request payload
+
+    Handles both Bike and Car types under the Auto product type.
     """
 
     class VehicleUsageChoices(models.TextChoices):

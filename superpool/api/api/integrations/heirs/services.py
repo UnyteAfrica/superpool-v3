@@ -78,6 +78,19 @@ class HeirsAssuranceService:
                 f"Missing required parameters for category '{category}': {missing_params}"
             )
 
+    def _map_vehicle_type_to_category(self, vehicle_type: str) -> str:
+        """
+        Maps the vehicle_type to the corresponding category expected by HeirsAssuranceService.
+        """
+        mapping = {
+            "Car": "auto",
+            "Bike": "biker",
+        }
+        category = mapping.get(vehicle_type)
+        if not category:
+            raise ValueError(f"Unsupported vehicle_type: {vehicle_type}")
+        return category
+
     def _sanitize_params(self, category: str, params: dict) -> dict[str, Any]:
         """
         Sanitize and map input parameters to match the required API parameters.
@@ -123,6 +136,18 @@ class HeirsAssuranceService:
         logger.info(
             f"Sanitizing parameters for category '{category}'. Incoming params: {params}"
         )
+
+        if params["insurance_details"]["additional_inforation"].get("vehicle_type") in [
+            "Car",
+            "Bike",
+        ]:
+            # call a function  or do a simple something to process the params for the vehicle
+            # to call the right mapping category in the mappings dict
+            category = self._map_vehicle_type_to_category(
+                vehicle_type=params["insurance_details"]["additional_information"][
+                    "vehicle_type"
+                ]
+            )
 
         # then extract and propate the required keys
         required_keys = self._get_required_params(category)
