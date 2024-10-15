@@ -360,6 +360,8 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             "additional_information"
         )
         customer_info = validated_data.get("customer_metadata", {})
+        category_name = additional_info.get("insurance_options")
+
         date_of_birth = customer_info.get("date_of_birth")
         if date_of_birth:
             today = datetime.today().date()
@@ -371,7 +373,11 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         else:
             user_age = None
 
-        extracted = {**additional_info, "user_age": user_age}
+        extracted = {
+            **additional_info,
+            "user_age": user_age,
+            "category_name": category_name,
+        }
         logger.info(f"Computed user age: {user_age}")
         logger.info(f"Extraacted Additional Info: {extracted}")
         return extracted
