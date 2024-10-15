@@ -267,7 +267,7 @@ class QuoteService:
         """
         Fetches quotes from traditional internal insurance providers based on stored data
         """
-        providers = self._get_providers_for_product_type(product_type)
+        providers = sync_to_async(self._get_providers_for_product_type)(product_type)
         if not providers:
             logger.info(f"No internal providers found for product type: {product_type}")
             return []
