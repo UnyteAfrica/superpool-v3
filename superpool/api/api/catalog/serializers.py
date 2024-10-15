@@ -472,6 +472,14 @@ class AutoInsuranceSerializer(serializers.Serializer):
         VAN = "Van", "Van"
         MOTORCYCLE = "Motorcycle", "Motorcycle"
 
+    # class VehicleInsuranceOptions(models.TextChoices):
+    #     THIRD_PARTY = "Third Party (From 15k)", "Third Party (From 15k)"
+    #     COMPREHENSIVE = "Comprehensive", "Comprehensive"
+    #     FLEXI_TIER_1 = 'Flexi 25 (25k)', 'Flexi 25 (25k)'
+    #     FLEXI_TIER_2 = 'Flexi 35 (35k)', 'Flexi 50 (35k)'
+    #     FLEXI_TIER_3 = 'Flexi 70 (70k)', 'Flexi 70 (70k)'
+    #     HER_MOTOR =  'Her Motor', 'Her Motor'
+
     vehicle_type = serializers.ChoiceField(
         choices=VehicleTypeChoices.choices, help_text="Type of vehicle e.g Car, Bike"
     )
@@ -533,9 +541,9 @@ class AutoInsuranceSerializer(serializers.Serializer):
         help_text="Category of the vehicle e.g Saloon, SUV, Truck, Van, Motorcycle",
     )
 
-    insurance_type = serializers.ChoiceField(
+    insurance_options = serializers.ChoiceField(
         choices=[key for key in HEIRS_PRODUCT_MAPPING["Auto"].keys()],
-        help_text="Preferred insurance type e.g Third Party, Comprehensive, etc",
+        help_text="Preferred insurance options e.g Third Party, Comprehensive, etc",
         required=False,
     )
 
@@ -588,11 +596,12 @@ class AutoInsuranceSerializer(serializers.Serializer):
             if vehicle_class in _TRUCK_MAPPING:
                 attrs["vehicle_class"] = _TRUCK_MAPPING[vehicle_class]
 
-        insurance_type = attrs.get("insurance_type")
+        insurance_type = attrs.get("insurance_options")
         if insurance_type:
             product_id = HEIRS_PRODUCT_MAPPING["Auto"].get(insurance_type)
             if not product_id:
                 raise ValidationError(f"Invalid insurance type: {insurance_type}")
+
             attrs["product_id"] = product_id
 
         return attrs

@@ -352,6 +352,34 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         # return the category if no mapping is found
         return reverse_mapping.get(category, category)
 
+    def _process_vehicle_params(self, validated_data: dict) -> dict:
+        """
+        Extract vehicle parameters from validated request data.
+        """
+        additional_info = validated_data["insurance_details"].get(
+            "additional_information"
+        )
+        vehicle_type = additional_info.get("vehicle_type")
+
+        car_vehicle_params = {
+            "motor_value": additional_info.get("vehicle_value"),
+            "motor_class": validated_data.get("vehicle_usage"),
+            "motor_type": validated_data.get("vehicle_category"),
+        }
+        bike_vehicle_params = {
+            "motor_value": additional_info.get("vehicle_value"),
+            "motor_class": validated_data.get("vehicle_usage"),
+        }
+        if vehicle_type == "Car":
+            vehicle_params = car_vehicle_params
+        elif vehicle_type == "Bike":
+            vehicle_params = bike_vehicle_params
+        else:
+            raise ValueError(f"Invalid vehicle type: {vehicle_type}")
+
+        logger.info(f"Extracted Vehicle Params: {vehicle_params}")
+        return vehicle_params
+
     def _extract_params(self, validated_data: dict) -> dict:
         """
         Extract required parameters from validated request data.
@@ -361,6 +389,12 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         )
         customer_info = validated_data.get("customer_metadata", {})
         category_name = additional_info.get("insurance_options")
+
+        product_type = validated_data["insurance_details"]["product_type"]
+
+        if product_type == "Auto":
+            additional_info = self._process_vehicle_params(validated_data)
+            logger.info(f'Finished processing vehicle params for "{product_type}"')
 
         date_of_birth = customer_info.get("date_of_birth")
         if date_of_birth:

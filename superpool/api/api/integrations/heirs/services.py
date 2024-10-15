@@ -137,7 +137,9 @@ class HeirsAssuranceService:
             f"Sanitizing parameters for category '{category}'. Incoming params: {params}"
         )
 
-        if params["insurance_details"]["additional_inforation"].get("vehicle_type") in [
+        if params["insurance_details"]["additional_information"].get(
+            "vehicle_type"
+        ) in [
             "Car",
             "Bike",
         ]:
