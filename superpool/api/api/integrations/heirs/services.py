@@ -120,6 +120,14 @@ class HeirsAssuranceService:
                 "exchange_rate": "exchange_rate",
             },
         }
+        logger.info(
+            f"Sanitizing parameters for category '{category}'. Incoming params: {params}"
+        )
+
+        # then extract and propate the required keys
+        required_keys = self._get_required_params(category)
+        logger.info(f"Required Keys: {required_keys}")
+
         category_key = category.lower()
         logger.debug(f"Category when sanitizing: {category_key}")
         mapped_params = {}
@@ -132,13 +140,9 @@ class HeirsAssuranceService:
         else:
             mapped_params = params
 
-        # then extract and propate the required keys
-        required_keys = self._get_required_params(category)
-        logger.info(f"Required Keys: {required_keys}")
         sanitized_params = {
             k: mapped_params[k] for k in required_keys if k in mapped_params
         }
-        logger.info(f"Sanitized Params: {sanitized_params}")
 
         # we wnat o ensre all required parameters are present
         missing_keys = [k for k in required_keys if k not in sanitized_params]
@@ -148,6 +152,7 @@ class HeirsAssuranceService:
                 f"Missing required keys: {missing_keys} for category:  {category}"
             )
 
+        logger.info(f"Sanitized Params: {sanitized_params}")
         # only reeturn if we have all required keys in the sanitized params
         return sanitized_params
 
