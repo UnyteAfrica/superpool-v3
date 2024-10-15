@@ -363,12 +363,12 @@ class HeirsQuoteProvider(BaseQuoteProvider):
 
         car_vehicle_params = {
             "motor_value": additional_info.get("vehicle_value"),
-            "motor_class": validated_data.get("vehicle_usage"),
-            "motor_type": validated_data.get("vehicle_category"),
+            "motor_class": additional_info.get("vehicle_usage"),
+            "motor_type": additional_info.get("vehicle_category"),
         }
         bike_vehicle_params = {
             "motor_value": additional_info.get("vehicle_value"),
-            "motor_class": validated_data.get("vehicle_usage"),
+            "motor_class": additional_info.get("vehicle_usage"),
         }
         if vehicle_type == "Car":
             vehicle_params = car_vehicle_params
