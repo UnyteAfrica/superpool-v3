@@ -380,9 +380,12 @@ class Price(models.Model):
         max_length=20, choices=PriceFrequency.choices, default=PriceFrequency.MONTHLY
     )
 
+    class Meta:
+        unique_together = ("amount", "description")
+
     def __str__(self):
         return (
-            f"{self.amount} {self.currency} ({self.pricing_model} - {self.frequency})"
+            f"{self.amount} {self.currency} - {self.description} - {self.pricing_model}"
         )
 
     def compute_total_price(self):
