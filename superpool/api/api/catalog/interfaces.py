@@ -264,7 +264,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         """
         Save the product, price, quote to the database
         """
-        provider_name_alias = "Heirs"
+        provider_name_alias = "Heirs Insurance Group"
         provider, created = Provider.objects.get_or_create(name=provider_name_alias)
 
         if created:
@@ -275,51 +275,42 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         product_type = self._map_category_to_product_type(product_class)
         logger.info(f"Product Type: {product_type}")
 
-        products = [
-            Product(
-                name=quote["product_name"],
-                description=quote.get("product_info", ""),
-                product_type=product_type,
-                is_live=True,
-                provider=provider,
-            )
-            for quote in quote_data
-        ]
-        Product.objects.bulk_create(products)
-
-        logger.info(f'Created all products for provider "{provider_name_alias}"')
-
-        prices = [
-            Price(
-                amount=quote["premium"],
-                currency="NGN",
-            )
-            for quote in quote_data
-        ]
-        Price.objects.bulk_create(prices)
-        logger.info(f"Created all prices for provider: {provider_name_alias}")
-
-        products_dict = {
-            p.name: p
-            for p in Product.objects.filter(
-                name__in=[q["product_name"] for q in quote_data]
-            )
-        }
-        prices_dict = {
-            p.amount: p
-            for p in Price.objects.filter(amount__in=[q["premium"] for q in quote_data])
-        }
-
         for quote in quote_data:
-            product = products_dict[quote["product_name"]]
-            premium_amount = prices_dict[quote["premium"]]
+            # Update or create Product
+            product, product_created = Product.objects.update_or_create(
+                name=quote["product_name"],
+                provider=provider,
+                defaults={
+                    "description": quote.get("product_info", ""),
+                    "product_type": product_type,
+                    "is_live": True,
+                },
+            )
+            if product_created:
+                logger.info(f"Created product: {product.name}")
+            else:
+                logger.info(f"Updated existing product: {product.name}")
 
-            Quote.objects.update_or_create(
+            # unique description for identiying the Price which belongs to a product
+            description = f"{quote['product_name']} - Premium"
+            price, price_created = Price.objects.update_or_create(
+                amount=quote["premium"],
+                description=description,
+                currency="NGN",
+                defaults={},
+            )
+            if price_created:
+                logger.info(f"Created price: {price.amount} NGN")
+            else:
+                logger.info(f"Updated existing price: {price.amount} NGN")
+
+            # Update or create quote record for the product
+            quote_obj, quote_created = Quote.objects.update_or_create(
                 product=product,
                 origin="External",
                 provider=provider.name,
                 defaults={
-                    "premium": premium_amount,
+                    "premium": price,
                     "base_price": quote["premium"],
                     "additional_metadata": {
                         "contribution": quote.get("contribution", 0),
@@ -327,7 +318,14 @@ class HeirsQuoteProvider(BaseQuoteProvider):
                     },
                 },
             )
-        logger.info(f"Created all quotes for provider: {provider_name_alias}")
+            if quote_created:
+                logger.info(
+                    f"Created new quote: {quote_obj.quote_code} for product: {product.name}"
+                )
+            else:
+                logger.info(
+                    f"Updated existing quote: {quote_obj.quote_code} for product: {product.name}"
+                )
 
     def _map_product_type_to_category(self, product_type: str) -> str:
         mapping = {
