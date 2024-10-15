@@ -472,14 +472,6 @@ class AutoInsuranceSerializer(serializers.Serializer):
         VAN = "Van", "Van"
         MOTORCYCLE = "Motorcycle", "Motorcycle"
 
-    # class VehicleInsuranceOptions(models.TextChoices):
-    #     THIRD_PARTY = "Third Party (From 15k)", "Third Party (From 15k)"
-    #     COMPREHENSIVE = "Comprehensive", "Comprehensive"
-    #     FLEXI_TIER_1 = 'Flexi 25 (25k)', 'Flexi 25 (25k)'
-    #     FLEXI_TIER_2 = 'Flexi 35 (35k)', 'Flexi 50 (35k)'
-    #     FLEXI_TIER_3 = 'Flexi 70 (70k)', 'Flexi 70 (70k)'
-    #     HER_MOTOR =  'Her Motor', 'Her Motor'
-
     vehicle_type = serializers.ChoiceField(
         choices=VehicleTypeChoices.choices, help_text="Type of vehicle e.g Car, Bike"
     )
@@ -564,9 +556,14 @@ class AutoInsuranceSerializer(serializers.Serializer):
         vehicle_type = attrs.get("vehicle_type")
         vehicle_make = attrs.get("vehicle_make")
         vehicle_class = attrs.get("vehicle_category")
+        insurance_option = attrs.get("insurance_options")
 
         is_bike = vehicle_type == self.VehicleTypeChoices.BIKE
         is_car = vehicle_type == self.VehicleTypeChoices.CAR
+
+        # insurance option is mandtory for both bike and car
+        if not insurance_option:
+            raise ValidationError("insurance_options is mandtory for both bike and car")
 
         if is_bike:
             required_fields = ["vehicle_value", "vehicle_usage", "vehicle_year"]
@@ -596,11 +593,10 @@ class AutoInsuranceSerializer(serializers.Serializer):
             if vehicle_class in _TRUCK_MAPPING:
                 attrs["vehicle_class"] = _TRUCK_MAPPING[vehicle_class]
 
-        insurance_type = attrs.get("insurance_options")
-        if insurance_type:
-            product_id = HEIRS_PRODUCT_MAPPING["Auto"].get(insurance_type)
+        if insurance_option:
+            product_id = HEIRS_PRODUCT_MAPPING["Auto"].get(insurance_option)
             if not product_id:
-                raise ValidationError(f"Invalid insurance type: {insurance_type}")
+                raise ValidationError(f"Invalid insurance type: {insurance_option}")
 
             attrs["product_id"] = product_id
 
