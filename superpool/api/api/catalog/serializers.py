@@ -722,17 +722,14 @@ class GadgetInsuranceSerializer(serializers.Serializer):
         OTHER = "other", "Other"
 
     gadget_type = serializers.ChoiceField(
-        choices=[
-            (DeviceTypeChoices.POS, "Point-of-Sale Terminal (POS)"),
-            (DeviceTypeChoices.SMARTPHONE, "Smartphone"),
-            (DeviceTypeChoices.LAPTOP, "Laptop"),
-            (DeviceTypeChoices.TABLET, "Tablet"),
-            (DeviceTypeChoices.SMARTWATCH, "Smartwatch"),
-            (DeviceTypeChoices.CAMERA, "Camera"),
-            (DeviceTypeChoices.HEADPHONES, "Headphones"),
-            (DeviceTypeChoices.OTHER, "Other"),
-        ],
+        choices=DeviceTypeChoices.choices,
         help_text="Type of gadget e.g Smartphone, Laptop, etc",
+    )
+    gadget_value = serializers.DecimalField(
+        min_value=1,
+        max_digits=10,
+        decimal_places=2,
+        help_text="Estimated value of the gadget",
     )
     gadget_information = serializers.JSONField(
         required=False,
@@ -769,9 +766,10 @@ class GadgetInsuranceSerializer(serializers.Serializer):
         """
         Validate the gadget insurance quote request payload
         """
-        gadget_type = attrs.get("gadget_type")
-        if gadget_type:
-            attrs["gadget_category"] = self.get_device_category(gadget_type)
+        gadget_type = attrs["gadget_type"]
+        attrs["gadget_category"] = self.get_device_category(gadget_type)
+        attrs["item_value"] = attrs.pop("gadget_value")
+        attrs["product_id"] = HEIRS_PRODUCT_MAPPING["Gadget"].get(gadget_type)
         return attrs
 
 
