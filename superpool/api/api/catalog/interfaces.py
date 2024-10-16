@@ -356,24 +356,29 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         """
         Extract vehicle parameters from validated request data.
         """
+
+        # extract and convert decimal to its str value
         additional_info = validated_data["insurance_details"].get(
             "additional_information"
         )
         vehicle_type = additional_info.get("vehicle_type")
+        vehicle_value = str(additional_info.get("vehicle_value"))
 
         car_vehicle_params = {
-            "motor_value": additional_info.get("vehicle_value"),
+            "motor_value": vehicle_value,
             "motor_class": additional_info.get("vehicle_usage"),
             "motor_type": additional_info.get("vehicle_category"),
         }
         bike_vehicle_params = {
-            "motor_value": additional_info.get("vehicle_value"),
+            "motor_value": vehicle_value,
             "motor_class": additional_info.get("vehicle_usage"),
         }
+        vehicle_params = {}
+
         if vehicle_type == "Car":
-            vehicle_params = car_vehicle_params
+            vehicle_params = {**car_vehicle_params, "vehicle_type": vehicle_type}
         elif vehicle_type == "Bike":
-            vehicle_params = bike_vehicle_params
+            vehicle_params = {**bike_vehicle_params, "vehicle_type": vehicle_type}
         else:
             raise ValueError(f"Invalid vehicle type: {vehicle_type}")
 
@@ -392,10 +397,6 @@ class HeirsQuoteProvider(BaseQuoteProvider):
 
         product_type = validated_data["insurance_details"]["product_type"]
 
-        if product_type == "Auto":
-            additional_info = self._process_vehicle_params(validated_data)
-            logger.info(f'Finished processing vehicle params for "{product_type}"')
-
         date_of_birth = customer_info.get("date_of_birth")
         if date_of_birth:
             today = datetime.today().date()
@@ -407,6 +408,19 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         else:
             user_age = None
 
+        # process params based on product type
+        #
+        # vehicle params are only required for Auto insurance
+        if product_type == "Auto":
+            _vehicle_params = self._process_vehicle_params(validated_data)
+            logger.info(f'Finished processing vehicle params for "{product_type}"')
+            return {
+                **_vehicle_params,
+                "category_name": category_name,
+                "product_id": additional_info.get("product_id"),
+                **customer_info,
+                "product_type": product_type,
+            }
         extracted = {
             **additional_info,
             "user_age": user_age,
