@@ -397,6 +397,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
 
         product_type = validated_data["insurance_details"]["product_type"]
 
+        logger.info(f'Freshly minted "Additional Info": {additional_info}')
         date_of_birth = customer_info.get("date_of_birth")
         if date_of_birth:
             today = datetime.today().date()
@@ -408,25 +409,29 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         else:
             user_age = None
 
+        logger.info(f"Computed user age: {user_age}")
+
         # process params based on product type
         #
         # vehicle params are only required for Auto insurance
         if product_type == "Auto":
             _vehicle_params = self._process_vehicle_params(validated_data)
             logger.info(f'Finished processing vehicle params for "{product_type}"')
-            return {
+            vehicle_params = {
                 **_vehicle_params,
-                "category_name": category_name,
-                "product_id": additional_info.get("product_id"),
                 **customer_info,
+                "category_name": category_name,
                 "product_type": product_type,
+                "product_id": additional_info["product_id"],
             }
+            logger.info(f'Propagating the following "Vehicle Params": {vehicle_params}')
+            return vehicle_params
+
         extracted = {
             **additional_info,
             "user_age": user_age,
             "category_name": category_name,
         }
-        logger.info(f"Computed user age: {user_age}")
         logger.info(f"Extraacted Additional Info: {extracted}")
         return extracted
 
