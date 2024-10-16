@@ -109,7 +109,7 @@ class HeirsAssuranceService:
                 "departure_date": "start_date",
                 "return_date": "end_date",
             },
-            "device": {"item_value": "item_value"},
+            "device": {"item_value": "item_value", "product_id": "product_id"},
             "pos": {"item_value": "item_value"},
             "home": {
                 "property_value": "property_value",
