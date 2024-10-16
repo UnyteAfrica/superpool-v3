@@ -738,6 +738,10 @@ class GadgetInsuranceSerializer(serializers.Serializer):
     usage_history = serializers.JSONField(
         required=False, help_text="Usage history in JSON"
     )
+    insurance_options = serializers.ChoiceField(
+        choices=[c for c in HEIRS_PRODUCT_MAPPING["Gadget"].keys()],
+        help_text='Preffered insurance options e.g "POS Insurance", "Device Policy", etc',
+    )
 
     def get_device_category(self, gadget_type: str):
         """
