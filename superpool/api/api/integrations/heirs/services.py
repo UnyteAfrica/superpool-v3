@@ -137,19 +137,12 @@ class HeirsAssuranceService:
             f"Sanitizing parameters for category '{category}'. Incoming params: {params}"
         )
 
-        if params["insurance_details"]["additional_information"].get(
-            "vehicle_type"
-        ) in [
-            "Car",
-            "Bike",
-        ]:
+        if params.get("vehicle_type") and params.get("vehicle_type") in ["Car", "Bike"]:
             # call a function  or do a simple something to process the params for the vehicle
             # to call the right mapping category in the mappings dict
-            category = self._map_vehicle_type_to_category(
-                vehicle_type=params["insurance_details"]["additional_information"][
-                    "vehicle_type"
-                ]
-            )
+            vehicle_type = params["vehicle_type"]
+            logger.info(f"FOUND VEHICLE TYPE: {vehicle_type}")
+            category = self._map_vehicle_type_to_category(vehicle_type=vehicle_type)
 
         # then extract and propate the required keys
         required_keys = self._get_required_params(category)
