@@ -296,4 +296,11 @@ HEIRS_PRODUCT_MAPPING = {
         "Flexi 70 (70k)": 1045,
         "Her Motor": 941,
     },
+    "Device": {
+        "POS Insurance": 1286,
+        "Device Policy": 1285,
+        "UltraShield Device Policy": 1307,
+        "MiniGuard Device Policy": 1305,
+        "MegaProtect Device Policy": 1306,
+    },
 }
