@@ -704,29 +704,28 @@ class GadgetInsuranceSerializer(serializers.Serializer):
     """
 
     class DeviceTypeCategory(models.TextChoices):
-        MOBILE = "mobile", "Mobile"
-        COMPUTER = "computer", "Computer"
-        CAMERA = "camera", "Camera"
-        AUDIO = "audio", "Audio"
-        WEARABLE = "wearable", "Wearable"
-        OTHER = "other", "Other"
+        MOBILE = "Mobile", "Mobile"
+        COMPUTER = "Computer", "Computer"
+        CAMERA = "Camera", "Camera"
+        AUDIO = "Audio", "Audio"
+        WEARABLE = "Wearable", "Wearable"
+        OTHER = "Other", "Other"
 
     class DeviceTypeChoices(models.TextChoices):
-        POS = "pos", "Point-of-Sale Terminal (POS)"
-        SMARTPHONE = "smartphone", "Smartphone"
-        LAPTOP = "laptop", "Laptop"
-        TABLET = "tablet", "Tablet"
-        SMARTWATCH = "smartwatch", "Smartwatch"
-        CAMERA = "camera", "Camera"
-        HEADPHONES = "headphones", "Headphones"
-        OTHER = "other", "Other"
+        POS = "Pos", "Point-of-Sale Terminal (POS)"
+        SMARTPHONE = "Smartphone", "Smartphone"
+        LAPTOP = "Laptop", "Laptop"
+        TABLET = "Tablet", "Tablet"
+        SMARTWATCH = "Smartwatch", "Smartwatch"
+        CAMERA = "Camera", "Camera"
+        HEADPHONES = "Headphones", "Headphones"
+        OTHER = "Other", "Other"
 
     gadget_type = serializers.ChoiceField(
         choices=DeviceTypeChoices.choices,
         help_text="Type of gadget e.g Smartphone, Laptop, etc",
     )
     gadget_value = serializers.DecimalField(
-        min_value=1,
         max_digits=10,
         decimal_places=2,
         help_text="Estimated value of the gadget",
@@ -771,14 +770,18 @@ class GadgetInsuranceSerializer(serializers.Serializer):
         Validate the gadget insurance quote request payload
         """
         gadget_type = attrs["gadget_type"]
+        insurance_option = attrs.get("insurance_options")
 
         is_pos: bool = gadget_type == self.DeviceTypeChoices.POS
 
         if is_pos:
             attrs["pos"] = True
         attrs["gadget_category"] = self.get_device_category(gadget_type)
-        attrs["item_value"] = attrs.pop("gadget_value")
-        attrs["product_id"] = HEIRS_PRODUCT_MAPPING["Gadget"].get(gadget_type)
+        attrs["item_value"] = str(attrs.pop("gadget_value"))
+
+        if insurance_option:
+            product_id = HEIRS_PRODUCT_MAPPING["Gadget"].get(insurance_option)
+            attrs["product_id"] = product_id
         return attrs
 
 
