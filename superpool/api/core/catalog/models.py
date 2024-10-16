@@ -480,6 +480,9 @@ class Quote(models.Model):
         blank=True,
     )
 
+    def __str__(self) -> str:
+        return f"{self.quote_code} - {self.origin}: ({self.provider}, {self.product__product_type})"
+
     class Meta:
         verbose_name = "quote"
         verbose_name_plural = "quotes"
