@@ -385,7 +385,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         logger.info(f"Extracted Vehicle Params: {vehicle_params}")
         return vehicle_params
 
-    def _process_device_params(self, validated_data: dict) -> dict:
+    def _process_pos_device_params(self, validated_data: dict) -> dict:
         """
         Extract the device parameters from validated request data.
         """
@@ -448,7 +448,7 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             )
             == "Pos"
         ):
-            device_params = self._process_device_params(validated_data)
+            device_params = self._process_pos_device_params(validated_data)
             logger.info(f'Propagating the following "Device Params": {device_params}')
             return device_params
 
