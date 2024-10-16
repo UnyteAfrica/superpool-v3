@@ -767,6 +767,11 @@ class GadgetInsuranceSerializer(serializers.Serializer):
         Validate the gadget insurance quote request payload
         """
         gadget_type = attrs["gadget_type"]
+
+        is_pos: bool = gadget_type == self.DeviceTypeChoices.POS
+
+        if is_pos:
+            attrs["pos"] = True
         attrs["gadget_category"] = self.get_device_category(gadget_type)
         attrs["item_value"] = attrs.pop("gadget_value")
         attrs["product_id"] = HEIRS_PRODUCT_MAPPING["Gadget"].get(gadget_type)
