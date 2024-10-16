@@ -189,7 +189,7 @@ class HeirsAssuranceService:
             "cargo": ["product_id", "shipment_value", "exchange_rate"],
             "personal_accident": ["product_id"],
             "accident": ["product_id"],
-            "device": ["item_value"],
+            "device": ["item_value", "product_id"],
             "pos": ["item_value"],
         }
         result = required_params.get(category.lower(), [])
@@ -501,7 +501,9 @@ class HeirsAssuranceService:
             endpoint = f'{base_url}/{params.get("product_id")}'
         elif category_key == "device":
             base_url = f"{HEIRS_SERVER_URL}/device/quote"
-            endpoint = f'{base_url}/{params.get("item_value")}'
+            endpoint = (
+                f'{base_url}/{params.get("product_id")}/{params.get("item_value")}'
+            )
         elif category_key == "pos":
             base_url = f"{HEIRS_SERVER_URL}/pos/quote"
             endpoint = f'{base_url}/{params.get("item_value")}'

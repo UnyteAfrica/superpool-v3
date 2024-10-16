@@ -385,6 +385,20 @@ class HeirsQuoteProvider(BaseQuoteProvider):
         logger.info(f"Extracted Vehicle Params: {vehicle_params}")
         return vehicle_params
 
+    def _process_device_params(self, validated_data: dict) -> dict:
+        """
+        Extract the device parameters from validated request data.
+        """
+        device_type = validated_data["insurance_details"]["additional_information"].get(
+            "gadget_type"
+        )
+        item_value = validated_data["insurance_details"]["additional_information"].get(
+            "item_value"
+        )
+        if device_type in ("Pos", "POS"):
+            logger.info(f"Passing device params: {item_value}")
+            return {"item_value": item_value}
+
     def _extract_params(self, validated_data: dict) -> dict:
         """
         Extract required parameters from validated request data.
@@ -426,6 +440,17 @@ class HeirsQuoteProvider(BaseQuoteProvider):
             }
             logger.info(f'Propagating the following "Vehicle Params": {vehicle_params}')
             return vehicle_params
+
+        if (
+            product_type == "Gadget"
+            and validated_data["insurance_details"]["additional_information"].get(
+                "gadget_type"
+            )
+            == "Pos"
+        ):
+            device_params = self._process_device_params(validated_data)
+            logger.info(f'Propagating the following "Device Params": {device_params}')
+            return device_params
 
         extracted = {
             **additional_info,
