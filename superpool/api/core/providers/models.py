@@ -36,7 +36,10 @@ class Provider(models.Model):
         blank=True,
         null=True,
     )
-
+    is_internal = models.BooleanField(
+        default=False,
+        help_text="Indicates if the provider is an internal provider or not - that is if the provider does not have an API",
+    )
     products = models.ManyToManyField(
         "catalog.Product",  # noqa: F405
         related_name="providers",

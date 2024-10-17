@@ -13,7 +13,7 @@ from .views import (
     ProductListView,
     ProductRetrieveView,
     QuoteDetailView,
-    RequestQuoteView,
+    QuoteRequestView,
 )
 
 router = DefaultRouter()
@@ -52,7 +52,7 @@ urlpatterns: typing.List[typing.Union["URLPattern", "URLResolver"]] = [
     ),
     path("policies", PolicyPurchaseView.as_view(), name="purchase-policy"),
     path("policies/cancel", PolicyCancellationView.as_view(), name="policy-cancel"),
-    path("quotes", RequestQuoteView.as_view(), name="request-quote"),
+    path("quotes", QuoteRequestView.as_view(), name="request-quote"),
     path("quotes/<str:quote_code>/", QuoteDetailView.as_view(), name="quote-detail"),
 ]
 

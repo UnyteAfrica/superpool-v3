@@ -1,8 +1,10 @@
 import logging
 from datetime import timedelta
 
+from asgiref.sync import async_to_sync
 from django.core.exceptions import MultipleObjectsReturned
-from django.db.models import Q, QuerySet
+from django.db.models import DecimalField, F, Q, QuerySet, Value
+from django.db.models.functions import Cast, Coalesce, NullIf
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -18,6 +20,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
+from typing_extensions import deprecated
 
 from api.catalog.exceptions import QuoteNotFoundError
 from api.catalog.permissions import AdminOnlyInsurerFilterPermission
@@ -34,7 +37,10 @@ from .openapi import (
     policy_cancellation_request_example,
     policy_cancellation_request_example_2,
     products_response_example,
+    quote_request_example,
 )
+from .quote_service import QuoteService
+from .quote_service import QuoteService as QuoteServiceV2
 from .serializers import (
     CoverageSerializer,
     FullCoverageSerializer,
@@ -47,10 +53,10 @@ from .serializers import (
     ProductSerializer,
     QuoteRequestSerializer,
     QuoteRequestSerializerV2,
-    QuoteResponseSerializer,
+    QuoteResponseSerializerV2,
     QuoteSerializer,
 )
-from .services import PolicyService, ProductService, QuoteService
+from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +126,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductSerializer
+    pagination_class = LimitOffsetPagination
     # authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
@@ -129,12 +136,15 @@ class ProductListView(generics.ListAPIView):
         queryset = self.get_queryset()
 
         # if we do not have any products, we will return a 404
-        if not queryset.exists():
+        if not queryset:
             return Response(
                 {"error": "No products are currently available"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -884,26 +894,137 @@ class RequestQuoteView(views.APIView):
 class QuoteRequestView(views.APIView):
     """
     View to handle insurance quote requests and return aggregated quotes.
+
+    This endpoint allows merchants to request insurance quotes for various insurance products.
+    The system aggregates quotes from different insurance providers based on the provided
+    product type, product name, and coverage preferences. The response includes a list of
+    available quotes, along with detailed information such as coverage, premium, exclusions,
+    and provider information.
+
+    The request body requires customer metadata, insurance product details, and coverage preferences.
+
+    Example Request Body: SEE API REQUEST EXAMPLE
     """
 
-    def post(self, request):
+    # filterset_backend = [DjangoFilterBackend]
+    # filterset_class = QuoteFilter
+
+    @extend_schema(
+        summary="Request a quote for an insurance policy or product",
+        description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
+        tags=["Quotes"],
+        request=OpenApiRequest(
+            request=QuoteRequestSerializerV2(many=True),
+            examples=[quote_request_example],
+        ),
+        responses={
+            200: OpenApiResponse(
+                response=QuoteResponseSerializerV2(many=True),
+                description="The response contains a list of available quotes from different providers.",
+            )
+        },
+    )
+    def post(self, request, *args, **kwargs):
         serializer = QuoteRequestSerializerV2(data=request.data)
+
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
+        service = QuoteServiceV2()
 
-        service = QuoteService()
         try:
-            quotes = service.request_quote(validated_data)
+            quote_data = async_to_sync(service.request_quote)(validated_data)
+            logger.info(f"Retrieved Quote Data: {quote_data}")
+            print(f"Type of quote_data: {type(quote_data)}")
+            paginator = LimitOffsetPagination()
+            paginated_quotes = paginator.paginate_queryset(quote_data, request)
 
-            print(f"Quotes: {quotes}")
-            response_serializer = QuoteResponseSerializer(quotes, many=True)
+            if quote_data == []:
+                return Response(
+                    {
+                        "error": "No quotes found for the provided criteria. Try query again"
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if paginated_quotes is not None:
+                response_serializer = QuoteResponseSerializerV2(
+                    paginated_quotes, many=True
+                )
+                serializer_data = response_serializer.data
+                return paginator.get_paginated_response(serializer_data)
+
+            response_serializer = QuoteResponseSerializerV2(quote_data, many=True)
+            serializer_data = response_serializer.data
+            return Response(
+                {
+                    "message": "Quote successfully retrieved",
+                    "data": serializer_data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ValueError as exc:
+            logger.error(f"Validation error: {exc}", exc_info=True)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as exc:
-            logger.error(f"Error occured: {exc}")
-            return Response({"error": str(exc)})
+            logger.critical(f"Error occurred: {exc}", exc_info=True)
+            return Response(
+                {"error": "An error occurred while processing your request."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+    @deprecated("This method is no longer supported")
+    def _apply_filters(self, request: Request, qs: QuerySet):
+        """
+        Uses QuoteFilter to apply filtering logic onto incoming request
+        """
+        filterset = self.filterset_class(request.query_params, queryset=qs)
+        return filterset.qs
+
+    @deprecated("This method is no longer supported")
+    def _sort_queryset(self, request: Request, filtered_qs: QuerySet):
+        """
+        Apply sorting onto a filtered queryset and returns a filtered quotes
+        """
+        query_params = request.query_params
+
+        # SORTING LOGIC
+        #
+        # SORT BY 'BEST_VALUE' OR 'CHEAPEST'
+        sort_by = query_params.get("sort_by")
+
+        if sort_by == "cheapest":
+            filtered_qs = filtered_qs.order_by("premium__amount")
+        elif sort_by == "best_coverage":
+            # HERE WE ARE RETRIEVEING THE LIMIT OF THE QUOTE COVERAGE
+            # FROM THE ADDITONAL_METADATA FIELD ON THE QUOTE OBJECT
+            # WHICH IS A JSON FILED, WE WANT TO HOWEVER PASS DECIMAL
+            # OBJECT INTO THE QUERYSET MANAGER
+            COVERAGE_LIMIT = F("additional_metadata__coverage_limit")
+            PREMIUM_AMOUNT = F("premium__amount")
+
+            # import pdb
+            #
+            # pdb.set_trace()
+            filtered_qs = filtered_qs.annotate(
+                # See: https://devdocs.io/django~5.0/ref/models/database-functions#django.db.models.functions.Cast
+                # Coalesce here, because initally its found that some of our coverage limit
+                # values have null values been passed into this function hence breaking the feature
+                # coverage_limit=Coalesce(
+                #     Cast(COVERAGE_LIMIT, DecimalField()), Cast(Value(0), DecimalField())
+                # ),
+                # NullIf is used to treat "none" as NULL, and Coalesce ensures it defaults to 0 if NULL.
+                coverage_limit=Coalesce(
+                    Cast(NullIf(COVERAGE_LIMIT, Value("none")), DecimalField()),
+                    Cast(Value(0), DecimalField()),
+                ),
+                value_ratio=(
+                    F("coverage_limit") / Cast(PREMIUM_AMOUNT, DecimalField())
+                ),
+            ).order_by("-value_ratio")
+            print(filtered_qs)
+        return filtered_qs
 
 
 class PolicyPurchaseView(generics.GenericAPIView):

@@ -212,7 +212,7 @@ if REDIS_ENABLED:
 LOG_LEVEL = env.str("LOG_LEVEL").upper()
 # We should dyanmically store logs but keep them under the base directory
 LOG_FILE_NAME = env.str("SUPERPOOL_LOG_FILE_NAME", default="superpool.log")
-LOG_FILE_PATH = BASE_DIR.parent.parent / "logs" / LOG_FILE_NAME
+LOG_FILE_PATH = BASE_DIR.parent.parent / "logs"
 
 # Check if a logs directory exists in the parent directory
 if not LOG_FILE_PATH.exists():
@@ -229,8 +229,13 @@ LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "filename": LOG_FILE_PATH,
+            "filename": f"{LOG_FILE_PATH}/{LOG_FILE_NAME}",
             "formatter": "verbose",
+        },
+        "api_log_file": {
+            "class": "logging.FileHandler",
+            "filename": f"{LOG_FILE_PATH}/api_client.log",
+            "formatter": "standard",
         },
     },
     "formatters": {
@@ -238,20 +243,33 @@ LOGGING = {
             "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
+        "standard": {
+            "format": "[{asctime}] {levelname} [{name}:{lineno}] {message}",
+            "style": "{",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": LOG_LEVEL,
     },
     "loggers": {
         "django": {
-            "handlers": ["console"],
+            "handlers": ["console", "file"],
             "level": LOG_LEVEL,
             "propagate": True,
         },
+        "django.request": {
+            "handlers": ["console", "file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "api_client": {
+            "handlers": ["console", "api_log_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
-
 BACKEND_URL = "https://superpool-v3-dev-ynoamqpukq-uc.a.run.app"
 
 BASE_URL = env("BASE_URL", default="http://localhost:8000/api/v1")
@@ -265,7 +283,24 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 # INSURANCE PARTNERS
 #
 # Heirs Holdings
-HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1/"
-HEIRS_ASSURANCE_STAGING_URL = "https://pubic-api.staging.heirsinsurance.com/v1/"
+HEIRS_ASSURANCE_BASE_URL = "https://api.heirsinsurance.com/v1"
+HEIRS_ASSURANCE_STAGING_URL = "https://public-api.staging.heirsinsurance.com/v1"
 HEIRS_ASSURANCE_API_KEY = env("HEIRS_API_KEY")
 HEIRS_ASSURANCE_APP_ID = env("HEIRS_APP_ID")
+HEIRS_PRODUCT_MAPPING = {
+    "Auto": {
+        "Third Party": 821,
+        "Comprehensive": 823,
+        "Flexi 25 (25k)": 1043,
+        "Flexi 35 (35k)": 1044,
+        "Flexi 70 (70k)": 1045,
+        "Her Motor": 941,
+    },
+    "Gadget": {
+        "POS Insurance": 1286,
+        "Device Policy": 1285,
+        "UltraShield Device Policy": 1307,
+        "MiniGuard Device Policy": 1305,
+        "MegaProtect Device Policy": 1306,
+    },
+}
