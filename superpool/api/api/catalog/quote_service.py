@@ -312,9 +312,9 @@ class QuoteService:
         product_name = validated_data["insurance_details"].get("product_name")
 
         # uses our internal product type mapping if necessary
-        mapped_product_type = self.PRODUCT_TYPE_MAPPING.get(product_type, product_type)
+        # mapped_product_type = self.PRODUCT_TYPE_MAPPING.get(product_type, product_type)
 
-        query = Q(product__product_type=mapped_product_type)
+        query = Q(product__product_type=product_type)
         if product_name:
             query &= Q(product__name__icontains=product_name)
 
