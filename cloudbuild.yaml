@@ -40,7 +40,7 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "[\"-A\", \"superpool.api.celery\", \"worker\", \"--loglevel=info\"]"
+      - "["-A", "superpool.api.celery", "worker", "--loglevel=info"]"
       # - "-A superpool.api.celery worker --loglevel=info"
       - "--port"
       - "8080"
