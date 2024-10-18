@@ -83,8 +83,6 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
-# ENV PYTHONPATH=/app/superpool/api
-
 RUN mkdir /app
 
 WORKDIR /app
@@ -95,9 +93,11 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 COPY . /app
 
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8080
 EXPOSE 5555
 
-# Default to running Gunicorn, but allow overriding the command with Docker arguments
-ENTRYPOINT ["sh", "-c"]
-CMD ["${APP_COMMAND:-gunicorn --chdir /app/superpool/api --workers 3 --bind :8080 config.wsgi:application}"]
+ENTRYPOINT ["/entrypoint.sh"]
