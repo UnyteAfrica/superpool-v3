@@ -26,7 +26,7 @@ steps:
 
   # Ship Celery to Cloud Run
    - name: "gcr.io/cloud-builders/gcloud"
-    args:
+     args:
       - "run"
       - "deploy"
       - "superpool-celery-worker"
