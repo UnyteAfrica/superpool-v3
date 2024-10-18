@@ -8,5 +8,3 @@ app = Celery("superpool", broker=os.getenv("CELERY_BROKER_URL", default="redis:/
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
-if __name__ == "__main__":
-     app.start()
