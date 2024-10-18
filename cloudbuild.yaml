@@ -9,6 +9,7 @@ steps:
 
   # Ship App Image to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
+    id: "Ship app image to Cloud Run"
     args:
       - "run"
       - "deploy"
@@ -39,11 +40,7 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A"
-      - "superpool.api.celery"
-      - "worker"
-      - "--loglevel=info"
-      # - "-A superpool.api.celery worker --loglevel=info"
+      - "-A superpool.api.celery worker --loglevel=info"
       - "--port"
       - "8080"
       
@@ -64,8 +61,7 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A"
-      - "superpool.api.celery"
+      - "-A superpool.api.celery flower --port=8080"
       - "flower"
       - "--port=8080"
       # - "-A superpool.api.celery flower --port=8080"
