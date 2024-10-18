@@ -1,3 +1,4 @@
+steps:
   # Ship Celery to Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     args:
@@ -14,7 +15,10 @@
       - "--command"
       - "celery"
       - "--args"
-      - "-A superpool.api.celery worker --loglevel=info"
+      - "-A"
+      - "superpool.api.celery"
+      - "worker"
+      - "--loglevel=info"
 
   # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
@@ -33,6 +37,7 @@
       - "--command"
       - "celery"
       - "--args"
-      - "-A superpool.api.celery flower --port=8080"
-
-
+      - "-A"
+      - "superpool.api.celery"
+      - "flower"
+      - "--port=8080"
