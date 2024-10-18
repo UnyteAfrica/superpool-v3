@@ -64,7 +64,11 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A superpool.api.celery flower --port=8080"
+      - "-A"
+      - "superpool.api.celery"
+      - "flower"
+      - "--port=8080"
+      # - "-A superpool.api.celery flower --port=8080"
       # - "--port"
       # - "8080" #"5555"
 
