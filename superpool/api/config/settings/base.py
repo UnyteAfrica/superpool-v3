@@ -228,8 +228,8 @@ LOGGING = {
             "formatter": "verbose",
         },
         "file": {
-            "class": "logging.FileHandler",
-            "filename": f"{LOG_FILE_PATH}/{LOG_FILE_NAME}",
+            "class": "logging.StreamHandler",
+            # "filename": f"{LOG_FILE_PATH}/{LOG_FILE_NAME}",
             "formatter": "verbose",
         },
         "api_log_file": {
