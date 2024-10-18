@@ -22,6 +22,9 @@ django = "^5.0.6"
 django-redis = "^5.4.0"
 django-filter = "^24.2"
 pytest-django = "^4.8.0"
+celery = {extras = ["auth", "gcs", "gevent", "msgpack", "redis"], version = "^5.4.0"}
+flower = "^2.0.1"
+asgiref = "^3.8.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

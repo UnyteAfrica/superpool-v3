@@ -1,0 +1,54 @@
+# Property of Unyte Africa
+# This file is used to define the container services that will be run in the local environment
+services:
+  cache:
+    image: redis:6.2-alpine
+    container_name: cachebros
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data:rw
+      - ./superpool/logs:/app/logs
+    command: ["sh", "-c", "redis-server --logfile /app/logs/redis.log"]
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: jobberman
+    command: celery -A celery_app worker --pool=prefork --concurrency=4 --loglevel=info >> /app/logs/celery.log
+    working_dir: /app/superpool/api
+    depends_on:
+      - cache
+    environment:
+      CELERY_BROKER_URL: redis://cache:6379/0 # Redis broker URL
+      CELERY_RESULT_BACKEND: redis://cache:6379/0 # Use Redis as the result backend
+      DATABASE_URL: ${DATABASE_URL}
+    volumes:
+      # - ../../superpool/api:/app/superpool/api
+      # - ./superpool:/app/superpool
+      - ./../../:/app
+      - ./superpool/logs:/app/logs
+
+  flower:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: superpool_flower
+    command: celery -A celery_app flower --port=5555 --loglevel=info >> /app/logs/flower.log 2>&1
+    working_dir: /app/superpool/api
+    environment:
+      CELERY_BROKER_URL: redis://cache:6379/0 # Redis broker URL for Flower
+    ports:
+      - 5555:5555
+    depends_on:
+      - cache
+      - worker
+    volumes:
+      # - ../../superpool/api:/app/superpool/api
+      # - ./superpool:/app/superpool
+      - ./../..:/app
+      - ./superpool/logs:/app/logs
+
+volumes:
+  redis_data: {}

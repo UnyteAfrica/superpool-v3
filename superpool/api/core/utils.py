@@ -1,7 +1,9 @@
+import functools
 import hashlib
 import random
 import string
 import uuid
+from typing import Callable, Optional
 
 from django.conf import settings
 
@@ -69,3 +71,38 @@ def generate_tenant_id():
     prefix = "SUPERPOOL"
     hsahlib = hashlib.sha256().hexdigest().upper()
     return f"{prefix}_{hsahlib}"
+
+
+def cache_key_generator(*args, **kwargs):
+    """
+    Generates a cache key for a given set of arguments
+    """
+    return (
+        "_".join(map(str, args)) + "_" + "_".join(f"{k}={v}" for k, v in kwargs.items())
+    )
+
+
+def cache_result(timeout: int = 60, cache_key_func: Optional[Callable] = None):
+    """
+    Caches the result of a function call, view (Django view function) or (Django view class)
+    """
+    from django.core.cache import cache
+
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if cache_key_func:
+                cache_key = cache_key_func(*args, **kwargs)
+            else:
+                cache_key = f"{func.__module__}:{func.__name__}:{args}:{kwargs}"
+
+            result = cache.get(cache_key)
+            if result is None:
+                result = func(*args, **kwargs)
+                cache.set(cache_key, result, timeout)
+
+            return result
+
+        return wrapper
+
+    return decorator

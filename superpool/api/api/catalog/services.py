@@ -1,10 +1,12 @@
+import asyncio
 import logging
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 
+from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
 from django.db.models import Q, QuerySet
@@ -13,6 +15,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.serializers import ValidationError
 
 from api.catalog.exceptions import ProductNotFoundError, QuoteNotFoundError
+from api.catalog.providers import QuoteProviderFactory
 from api.catalog.serializers import QuoteSerializer
 from core.catalog.models import Policy, Price, Product, ProductTier, Quote
 from core.merchants.models import Merchant
@@ -33,7 +36,32 @@ class ProductService:
         """
         Returns a queryset of all products
         """
-        return Product.objects.all()
+        # qs = (
+        #     Product.objects.select_related("provider")
+        #     .prefetch_related(
+        #         Prefetch(
+        #             "tiers",
+        #             # queryset=ProductTier.objects.all(),
+        #             to_attr="prefetched_tiers",
+        #         ),
+        #         Prefetch(
+        #             "coverages",
+        #             # queryset=Coverage.objects.all(),
+        #             to_attr="prefetched_coverages",
+        #         ),
+        #     )
+        #     .distinct()
+        #     .only(
+        #         "id",
+        #         "name",
+        #         "product_type",
+        #         "updated_at",
+        #         "created_at",
+        #         "provider__id",
+        #         "provider__name",
+        #     )
+        # )
+        return Product.objects.all().distinct()
 
     @staticmethod
     def get_product_by_name(product_name: str) -> QuerySet:
@@ -928,19 +956,101 @@ class QuoteService(IQuote):
         )
         return quote
 
-    def request_quote(self, validated_data: dict):
+    def _retrieve_external_quotes(self, validated_data: Dict[str, Any]) -> QuerySet:
+        """
+        Retrieve quotes from external providers asynchronously.
+        """
+        provider_names = ["Heirs"]
+        quotes = []
+
+        async def gather_quotes():
+            tasks = []
+            for provider_name in provider_names:
+                provider = QuoteProviderFactory.get_provider(provider_name)
+                tasks.append(provider.fetch_and_save_quotes(validated_data))
+            results = await asyncio.gather(*tasks)
+            return results
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            provider_quotes = loop.run_until_complete(gather_quotes())
+        finally:
+            loop.close()
+
+        # Flatten the list of lists
+        external_quotes_data = [
+            quote for sublist in provider_quotes for quote in sublist
+        ]
+
+        # Process and store the quotes
+        quotes = self._create_quotes_from_external_data(external_quotes_data)
+        return Quote.objects.filter(pk__in=quotes)
+
+    async def request_quote(self, validated_data: dict) -> QuerySet:
         """
         Retrieve quotes based on validated data from the `QuoteRequestSerializerV2`
+
+        This function follows a four-step process:
+
+        1. Request Comes In:
+           - Extract product details from the incoming request using the validated data.
+           - The key product information includes the `product_type`, along with coverage preferences.
+
+        2. Asynchronous External Provider Requests:
+           - Based on the product type, we check if it matches specific product categories (e.g., Auto, Home, Personal Accident, Travel).
+           - For valid product types, we initiate concurrent external API requests to our insurance providers using the `ProviderNameService`.
+           - This involves:
+               a. Fetching all insurance products under a specific product type.
+               b. For each product, fetching the product description based on `productId`.
+               c. Fetching the premium and contribution details for the selected product.
+
+        3. Internal Quotes:
+           - Simultaneously, we retrieve internal quotes from our database using the product information.
+           - Providers are fetched based on the `product_type`, and quotes are generated for each matching product.
         """
+
         product_type = validated_data["insurance_details"]["product_type"]
         product_name = validated_data["insurance_details"].get("product_name")
-        coverage_preferences = validated_data["coverage_preferences"]
+        coverage_preferences = validated_data.get("coverage_preferences", {})
 
         providers = self._get_providers_for_product_type(product_type)
+
+        # NOTE: WE SHOULD MAKE AN API CALL TO THE EXTERNAL PROVIDERS
+        #
+        # however, we should only make external API calls for specific product types
+        #
+        # (Device, Motor, Home, Travel, Personal Accident)
+
+        external_quotes = []
+        external_product_class = self._is_external_provider_product(product_type)
+        if external_product_class:
+            external_quotes = self._retrieve_external_quotes(validated_data)
+        # external_quotes_task = (
+        #     self._retrieve_external_quotes(validated_data)
+        #     if external_product_class
+        #     else None
+        # )
+
         internal_quotes = self._retrieve_quotes_from_internal_providers(
-            providers, validated_data
+            product_type, coverage_preferences
         )
-        return internal_quotes
+
+        # # Gather external quotes
+        # tasks = [internal_quotes_task]
+        #
+        # if external_quotes_task:
+        #     tasks.append(external_quotes_task)
+        #
+        # results = asyncio.run(asyncio.gather(*tasks))
+
+        # internal_quotes = results[0]
+        # logger.info(f"Internal quotes: {internal_quotes}")
+        # external_quotes = results[1] if external_quotes_task else []
+        # logger.info(f"External quotes: {external_quotes}")
+
+        all_quotes = internal_quotes.union(external_quotes)
+        return all_quotes
 
     def _get_tier_by_coverage_type(self, product, coverage_type):
         """
@@ -966,19 +1076,34 @@ class QuoteService(IQuote):
         for this product type
         """
         return InsurancePartner.objects.filter(
-            products__product_type=product_type
+            product__product_type=product_type
         ).distinct()
 
-    def _retrieve_realtime_quotes(self, providers: List[str], validated_data: dict):
+    def _is_external_provider_product(self, product_type: str) -> bool:
         """
-        Requests for real-time quotes for this product type from external integrated
-        providers
+        Map internal product type to external product class for API calls
+        Determine if the product type requires external API calls
 
-        This method makes a request call to a integrated insurers' API
-        to request a quote for this product type and with some defaults from the incoming
-        request, before updating our database with the values
+        This approach is because of Heirs right now
         """
-        pass
+        VALID_EXTERNAL_PRODUCT_TYPES = {
+            "Motor",
+            "TenantProtect",
+            "HomeProtect",
+            "BusinessProtect",
+            "Personal Accident",
+            "Marine Cargo",
+            "Device",
+            "Travel",
+        }
+        mapping = {
+            "Auto": "Motor",
+            "Home": "HomeProtect",
+            "Personal_Accident": "Personal Accident",
+            "Gadget": "Device",
+            "Travel": "Travel",
+        }
+        return product_type in VALID_EXTERNAL_PRODUCT_TYPES
 
     def _retrieve_quotes_from_internal_providers(
         self, providers: QuerySet, validated_data: dict
@@ -991,9 +1116,112 @@ class QuoteService(IQuote):
             validated_data (dict): Validated data from the incoming request.
 
         Returns:
-            QuerySet of internal quotes
+            List of internal quotes
         """
-        return Quote.objects.filter(
-            product__provider__in=providers,
-            product__product_type=validated_data["insurance_details"]["product_type"],
+        # IN FUTURE WE ARE GOING TO BE DOING SOME DYNAMIC CALCULATION IN HERE
+        #
+        # FOR NOW WE ARE JUST GOING TO RETURN THE BASE PREMIUMS BACK TO THE MERCHANT
+        # AS THE AMOUNT TO BE PAID
+        quotes = []
+        providers_list = [provider.name for provider in providers]
+
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+
+        # Prefetch related product tiers and coverages in a single query
+        #
+        # fetch all products matching the product information (name, type, tier or something)
+        products = (
+            Product.objects.filter(
+                provider__name__in=providers_list,
+                product_type=product_type,
+            )
+            # .select_related("provider")
+            .prefetch_related("tiers", "tiers__coverages")
         )
+
+        logger.info(f"Found products: {products}")
+
+        # if product name is present in the incoming request, include search by name
+        if product_name:
+            products = products.filter(name__icontains=product_name)
+            logger.info(f"Filtered products: {products}")
+
+        # When a quote is being generated based on the product coverage,
+        # and provider, we are doing something interesting here,
+        # we would create a Quote object for each provider and tier.
+        #
+        # Such that when we pulling the pricing and currency values, we won't
+        # be hard-coding it, we wuld be pulling it from the Quote model
+        try:
+            for product in products:
+                # fetch all the tier nnmes for this product
+                all_tier_names = [tier.tier_name for tier in product.tiers.all()]
+                for tier in product.tiers.all():
+                    logger.info(
+                        f"Processing product: {product.name}, Tier: {tier.tier_name}"
+                    )
+                    print(f"Product: {product.name}")
+                    print(f"Tier: {tier.tier_name}")
+
+                    with transaction.atomic():
+                        premium = Price.objects.create(
+                            amount=tier.base_premium,
+                            description=f"{product.name} - {tier.tier_name} Premium",
+                        )
+
+                        logger.info(
+                            f"Created pricing object: {premium} for {product} in tier: {tier.tier_name}"
+                        )
+
+                        # pdb.set_trace()
+
+                        quote = Quote.objects.create(
+                            product=product,
+                            premium=premium,
+                            base_price=tier.base_premium,
+                            additional_metadata={
+                                "tier_name": tier.tier_name,
+                                "coverage_details": [
+                                    {
+                                        "coverage_name": coverage.coverage_name,
+                                        "coverage_description": coverage.description,
+                                        "coverage_type": coverage.coverage_name,
+                                        "coverage_limit": str(coverage.coverage_limit),
+                                    }
+                                    for coverage in tier.coverages.all()
+                                ],
+                                "exclusions": tier.exclusions or "",
+                                "benefits": tier.benefits or "",
+                                "product_type": product.product_type,
+                                "available_tiers": all_tier_names,  # All addons available for this product
+                            },
+                        )
+                        logger.info(
+                            f"Created quote: {quote.quote_code} for {product.name} - {tier.tier_name}"
+                        )
+                        quotes.append(quote.pk)
+            return Quote.objects.filter(pk__in=quotes)
+        except Exception as exc:
+            logger.error(f"Error while processing product tiers: {exc}")
+            raise exc
+
+    async def _retrieve_quotes_from_db(
+        self, validated_data: dict[str, Any]
+    ) -> QuerySet:
+        """
+        Retrieve quotes from the database based on the validated data
+        """
+        product_type = validated_data["insurance_details"]["product_type"]
+        product_name = validated_data["insurance_details"].get("product_name")
+
+        # fetch all products matching the product information (name, type, tier or something)
+        # products = Product.objects.filter(
+        #     product_type=product_type,
+        # )
+
+        # fetch all quotes for the products
+        quotes = await sync_to_async(
+            lambda: Quote.objects.filter(product__product_type=product_type)
+        )()
+        return quotes

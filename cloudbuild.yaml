@@ -1,0 +1,69 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/superpool-api", "."]
+
+  # Push Image to Google's Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push image to Artifact Registry"
+    args: ["push", "gcr.io/$PROJECT_ID/superpool-api"]
+
+  # Ship App Image to Cloud Run
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Ship app image to Cloud Run"
+    args:
+      - "run"
+      - "deploy"
+      - "superpool-api"
+      - "--image"
+      - "gcr.io/$PROJECT_ID/superpool-api"
+      - "--platform"
+      - "managed"
+      - "--region"
+      - "us-central1"
+      - "--allow-unauthenticated"
+      - "--port"
+      - "8080"
+      
+  # - name: "gcr.io/cloud-builders/gcloud"
+  #   id: "Ship celery"
+  #   args: 
+  #     # ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "celery -A superpool worker --loglevel=info"]
+  #     - "run"
+  #     - "deploy"
+  #     - "superpool-celery-worker"
+  #     - "--image"
+  #     - "gcr.io/$PROJECT_ID/superpool-api"
+  #     - "--platform"
+  #     - "managed"
+  #     - "--region"
+  #     - "us-central1"
+  #     - "--allow-unauthenticated"
+  #     - "--command"
+  #     - "celery"
+  #     - "--args"
+  #     - "-A superpool.api.celery worker --loglevel=info"
+        
+  #   # Deploy Flower on Cloud Run
+  # - name: "gcr.io/cloud-builders/gcloud"
+  #   id: "Deploy Flower"
+  #   args:
+  #       - "run"
+  #       - "deploy"
+  #       - "superpool-flower"
+  #       - "--image"
+  #       - "gcr.io/$PROJECT_ID/superpool-api"
+  #       - "--platform"
+  #       - "managed"
+  #       - "--region"
+  #       - "us-central1"
+  #       - "--allow-unauthenticated"
+  #       - "--command"
+  #       - "celery"
+  #       - "--args"
+  #       - "-A superpool flower --port=8080"
+      
+images:
+  - "gcr.io/$PROJECT_ID/superpool-api"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
