@@ -40,7 +40,7 @@ steps:
         - "--command"
         - "celery"
         - "--args"
-        - "-A api.celery_app worker --loglevel=info"
+        - "-A superpool.api.celery_app worker --loglevel=info"
         # - "--port"
         # - "8080"
         
