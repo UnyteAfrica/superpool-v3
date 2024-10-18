@@ -24,9 +24,9 @@ steps:
       - "--port"
       - "8080"
       
-   - name: "gcr.io/cloud-builders/gcloud"
-     id: "Ship celery"
-      args:
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Ship celery"
+    args:
         - "run"
         - "deploy"
         - "superpool-celery-worker"
@@ -45,9 +45,9 @@ steps:
         # - "8080"
         
     # Deploy Flower on Cloud Run
-    - name: "gcr.io/cloud-builders/gcloud"
-      id: "Deploy Flower"
-      args:
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Deploy Flower"
+    args:
         - "run"
         - "deploy"
         - "superpool-flower"
