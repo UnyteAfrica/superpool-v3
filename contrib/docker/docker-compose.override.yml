@@ -16,7 +16,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: jobberman
-    command: celery -A -E celery_app worker --pool=prefork --concurrency=4 --loglevel=info >> /app/logs/celery.log
+    command: celery -A celery_app worker --pool=prefork --concurrency=4 --loglevel=info >> /app/logs/celery.log
     working_dir: /app/superpool/api
     depends_on:
       - cache
