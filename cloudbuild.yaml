@@ -38,8 +38,10 @@ steps:
       - "--region"
       - "us-central1"
       - "--allow-unauthenticated"
-      - "--set-env-vars"
-      - "APP_COMMAND=celery"
+      - "--command"
+      - "celery"
+      - "--args"
+      - "-A superpool.api.celery_app"
       - "--port"
       - "8080"
 
@@ -60,7 +62,7 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A celery_app flower --port=8080"
+      - "-A superpool.api.celery_app flower --port=8080"
 
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
