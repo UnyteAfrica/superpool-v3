@@ -41,9 +41,9 @@ steps:
       - "--set-env-vars"
       - "APP_COMMAND=celery -A superpool.api.celery worker --loglevel=info"
       - "--command"
-      - "celery"
-      - "--args"
-      - "-A superpool.api.celery_app worker --loglevel=info"
+      # - "celery"
+      # - "--args"
+      # - "-A superpool.api.celery_app worker --loglevel=info"
       - "--port"
       - "8080"
 
