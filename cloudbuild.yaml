@@ -25,9 +25,9 @@ steps:
       - "8080"
 
   # Ship Celery to Cloud Run
-   - name: "gcr.io/cloud-builders/gcloud"
-     id: "ship celery"
-     args:
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "ship celery"
+    args:
       - "run"
       - "deploy"
       - "superpool-celery-worker"
@@ -61,8 +61,6 @@ steps:
       - "celery"
       - "--args"
       - "-A celery_app flower --port=8080"
-      # - "--port"
-      # - "8080" #"5555"
 
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
