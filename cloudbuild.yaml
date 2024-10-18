@@ -23,10 +23,10 @@ steps:
       - "--allow-unauthenticated"
       - "--port"
       - "8080"
-      
-  - name: "gcr.io/cloud-builders/gcloud"
-    id: "Ship celery"
-    args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "-A superpool worker -l INFO"]
+
+  # - name: "gcr.io/cloud-builders/gcloud"
+    # id: "Ship celery"
+    # args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "-A superpool worker -l INFO"]
       # - "run"
       # - "deploy"
       # - "superpool-celery-worker"
@@ -41,26 +41,26 @@ steps:
       # - "celery"
       # - "--args"
       # - "-A superpool.api.celery worker --loglevel=info"
-        
+
     # Deploy Flower on Cloud Run
-  - name: "gcr.io/cloud-builders/gcloud"
-    id: "Deploy Flower"
-    args:
-        - "run"
-        - "deploy"
-        - "superpool-flower"
-        - "--image"
-        - "gcr.io/$PROJECT_ID/superpool-api"
-        - "--platform"
-        - "managed"
-        - "--region"
-        - "us-central1"
-        - "--allow-unauthenticated"
-        - "--command"
-        - "celery"
-        - "--args"
-        - "-A superpool flower --port=8080"
-      
+  # - name: "gcr.io/cloud-builders/gcloud"
+  #   id: "Deploy Flower"
+  #   args:
+  #       - "run"
+  #       - "deploy"
+  #       - "superpool-flower"
+  #       - "--image"
+  #       - "gcr.io/$PROJECT_ID/superpool-api"
+  #       - "--platform"
+  #       - "managed"
+  #       - "--region"
+  #       - "us-central1"
+  #       - "--allow-unauthenticated"
+  #       - "--command"
+  #       - "celery"
+  #       - "--args"
+  #       - "-A superpool flower --port=8080"
+
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
 
