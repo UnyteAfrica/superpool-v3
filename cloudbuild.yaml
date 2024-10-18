@@ -23,10 +23,9 @@ steps:
       - "--allow-unauthenticated"
       - "--port"
       - "8080"
-
-  # Ship Celery to Cloud Run
-  - name: "gcr.io/cloud-builders/gcloud"
-    id: "ship celery"
+      
+ - name: "gcr.io/cloud-builders/gcloud"
+   id: "Ship celery"
     args:
       - "run"
       - "deploy"
@@ -41,10 +40,10 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A celery_app"
-      - "--port"
-      - "8080"
-
+      - "-A superpool.api.celery worker --loglevel=info"
+      # - "--port"
+      # - "8080"
+      
   # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy Flower"
@@ -62,8 +61,8 @@ steps:
       - "--command"
       - "celery"
       - "--args"
-      - "-A superpool.api.celery_app flower --port=8080"
-
+      - "-A superpool.api.celery flower --port=8080"
+      
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
 
