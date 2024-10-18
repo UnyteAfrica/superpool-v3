@@ -26,6 +26,7 @@ steps:
 
   # Ship Celery to Cloud Run
    - name: "gcr.io/cloud-builders/gcloud"
+     id: "ship celery"
      args:
       - "run"
       - "deploy"
