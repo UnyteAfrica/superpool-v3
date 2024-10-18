@@ -38,9 +38,9 @@ steps:
       - "--region"
       - "us-central1"
       - "--allow-unauthenticated"
-      - "--entrypoint"
-      - "celery"
       - "--command"
+      - "celery"
+      - "--args"
       - "-A superpool.api.celery worker --loglevel=info"
         
     # Deploy Flower on Cloud Run
