@@ -40,8 +40,8 @@ steps:
       - "celery"
       - "--args"
       - "-A superpool.api.celery worker --loglevel=info"
-      # - "--port"
-      # - "8080"
+      - "--port"
+      - "8080"
       
   # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
