@@ -79,6 +79,8 @@ class QuoteService:
         external_quotes_data = await self._retrieve_quotes_from_db(
             validated_data, origin="External"
         )
+        logger.info(f"Retrieved {len(external_quotes_data)} external quotes from db")
+        logger.debug(f"External quotes pulled from db: {external_quotes_data}")
         return external_quotes_data
 
     async def request_quote(self, validated_data: dict) -> QuerySet:
