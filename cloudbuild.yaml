@@ -26,7 +26,7 @@ steps:
       
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Ship celery"
-    args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "celery -A api.celery_app worker --loglevel=info"]
+    args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "celery -A superpool worker --loglevel=info"]
         
     # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
@@ -45,7 +45,7 @@ steps:
         - "--command"
         - "celery"
         - "--args"
-        - "-A api.celery_app flower --port=8080"
+        - "-A superpool flower --port=8080"
       
 images:
   - "gcr.io/$PROJECT_ID/superpool-api"
