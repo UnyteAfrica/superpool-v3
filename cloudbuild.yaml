@@ -41,7 +41,7 @@ steps:
   #     - "celery"
   #     - "--args"
   #     - "-A superpool.api.celery worker --loglevel=info"
-        
+
     # Deploy Flower on Cloud Run
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Deploy Flower"
