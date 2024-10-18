@@ -26,7 +26,7 @@ steps:
       
   - name: "gcr.io/cloud-builders/gcloud"
     id: "Ship celery"
-    args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "celery -A superpoolapi.celery-app worker --loglevel=info"]
+    args: ["run", "deploy", "superpool-celery-worker", "--image", "gcr.io/$PROJECT_ID/superpool-api", "--platform", "managed", "--region", "us-central1", "--allow-unauthenticated", "--command", "celery", "--args", "celery -A superpool.api.celery-app worker --loglevel=info"]
       # - "run"
       # - "deploy"
       # - "superpool-celery-worker"
