@@ -46,6 +46,6 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY . /app
 
 EXPOSE 8080
+EXPOSE 5555
 
 CMD ["gunicorn", "--chdir", "/app/superpool/api", "--workers", "3", "--bind", ":8080", "config.wsgi:application"]
-

@@ -1,20 +1,17 @@
 # Utility models that does not fit into domain-specific parts of the application
 
-from decimal import Decimal
 import hashlib
 import uuid
 
-from django.apps import apps
-from core.catalog.models import Product  # noqa: F401
-from core.merchants.models import Merchant  # noqa: F401
-from core.mixins import TimestampMixin, TrashableModelMixin
-from core.providers.models import Provider as Partner  # noqa: F401
-from core.user.models import User  # noqa: F401
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
-from django_stubs_ext.db.models import TypedModelMeta
-from django.core.exceptions import ValidationError
+
+from core.catalog.models import Product  # noqa: F401
+from core.merchants.models import Merchant  # noqa: F401
+from core.providers.models import Provider as Partner  # noqa: F401
+from core.user.models import User  # noqa: F401
 
 
 class Operation:
@@ -44,6 +41,7 @@ class Coverage(models.Model):
         PROPERTY = "Property", "Property Coverage"
         TRAVEL = "Travel", "Travel Coverage"
         ACCIDENTAL = "Accidental", "Accidental Coverage"
+        DAMAGES = "Damages", "Damages"
         OTHER = "Other", "Other Coverage"
 
     # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -51,6 +49,12 @@ class Coverage(models.Model):
         _("Coverage Name"),
         max_length=100,
         help_text=_("Name of the coverage e.g collision, hospitalization, etc."),
+    )
+    coverage_type = models.CharField(
+        help_text=_("Internal recognized of coverages"),
+        choices=CoverageType.choices,
+        null=True,
+        blank=True,
     )
     coverage_id: models.CharField = models.CharField(
         _("Coverage ID"),

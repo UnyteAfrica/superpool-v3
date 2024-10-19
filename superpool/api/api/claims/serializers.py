@@ -1,9 +1,9 @@
-from api.claims.services import ClaimService
+from rest_framework import serializers
+
 from core.catalog.models import Policy, Product
 from core.claims.models import Claim, ClaimDocument, ClaimWitness, StatusTimeline
 from core.providers.models import Provider
 from core.user.models import Customer
-from rest_framework import serializers
 
 
 class ProviderSerializer(serializers.ModelSerializer):
@@ -272,8 +272,8 @@ class ClaimRequestSerializer(serializers.Serializer):
 
         return attrs
 
-    def create(self, validated_data):
-        ClaimService.submit_claim(validated_data)
+    # def create(self, validated_data):
+    #     ClaimService.submit_claim(validated_data)
 
 
 class ClaimUpdateSerializer(serializers.Serializer):

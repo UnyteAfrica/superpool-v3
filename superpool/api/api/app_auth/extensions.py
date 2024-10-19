@@ -1,7 +1,5 @@
-from core.models import APIKey
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from drf_spectacular.utils import OpenApiParameter
-from rest_framework.exceptions import AuthenticationFailed
 
 from .authentication import APIKeyAuthentication
 

@@ -3,8 +3,8 @@ from typing import Any, Union
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.utils.translation import gettext as _
 from django.utils.html import strip_tags
+from django.utils.translation import gettext as _
 
 from core.merchants.models import Merchant
 
@@ -103,7 +103,7 @@ class PendingVerificationEmail(BaseEmailMessage):
     Email message class for sending an email to a merchant who has not yet verified their email address.
     """
 
-    template = "superpool/emails/verification_emailV2.html"
+    template = "superpool/emails/superpool-merchant-registration-verification.html"
 
     def __init__(
         self,

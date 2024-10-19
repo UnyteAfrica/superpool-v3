@@ -1,16 +1,4 @@
-import pdb
-import sys
-from copy import deepcopy
-
 import pytest
-from django.conf import settings
-from django.test.utils import (
-    setup_test_environment,
-    teardown_test_environment,
-    override_settings,
-)
-from django.db import connections
-from django.core.management import call_command
 
 #
 # @pytest.fixture(autouse=True)

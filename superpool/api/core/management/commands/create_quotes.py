@@ -1,9 +1,11 @@
-from django.core.management.base import BaseCommand
-from core.catalog.models import Product, Quote, Price
-from core.providers.models import Provider as InsuranceProvider
-from django.utils import timezone
-from datetime import timedelta
 import random
+from datetime import timedelta
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from core.catalog.models import Price, Product, Quote
+from core.providers.models import Provider as InsuranceProvider
 
 
 class Command(BaseCommand):

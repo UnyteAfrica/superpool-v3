@@ -1,5 +1,5 @@
-from drf_spectacular.utils import OpenApiExample
 from django.conf import settings
+from drf_spectacular.utils import OpenApiExample
 
 BASE_URL = settings.BASE_URL
 

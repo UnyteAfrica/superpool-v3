@@ -59,6 +59,9 @@ jobs:
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+          GOOGLE_SMTP_SERVER: ${{ secrets.GOOGLE_SMTP_SERVER }}
+          GOOGLE_EMAIL_USER: ${{ secrets.GOOGLE_EMAIL_USER }}
+          GOOGLE_EMAIL_PASSWORD: ${{ secrets.GOOGLE_EMAIL_PASSWORD }}
 
 
           # GCP related keys
@@ -90,6 +93,7 @@ jobs:
           DISABLE_AUTH: ${{ secrets.DISABLE_AUTH }}
           HEIRS_API_KEY: ${{ secrets.HEIRS_API_KEY }}
           HEIRS_APP_ID: ${{ secrets.HEIRS_APP_ID }}
+          SUPERPOOL_TEST_PROD_DB_URL: ${{secrets.SUPERPOOL_TEST_PROD_DB_URL}}
         run: |
           cd superpool/api
           poetry run pytest .

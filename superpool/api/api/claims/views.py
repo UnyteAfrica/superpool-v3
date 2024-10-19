@@ -1,7 +1,6 @@
+import logging
 import uuid
-from django.http import Http404
-from rest_framework.permissions import IsAuthenticated
-from core.claims.models import Claim
+
 from django.core.exceptions import ValidationError
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -15,23 +14,21 @@ from rest_framework import status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from .exceptions import NotFound
+from core.claims.models import Claim
+
+from .openapi import (
+    claim_request_payload_example,
+    full_claim_request_payload_example,
+    minimal_request_payload_example,
+    single_claim_response_example,
+)
 from .serializers import (
     ClaimRequestSerializer,
-    ClaimSerializer,
     ClaimResponseSerializer,
+    ClaimSerializer,
     ClaimUpdateSerializer,
 )
 from .services import ClaimService
-import logging
-from .openapi import (
-    full_claim_request_payload_example,
-    minimal_request_payload_example,
-    claim_request_payload_example,
-    single_claim_response_example,
-)
-from core.permissions import IsMerchant, IsMerchantOrSupport
-from api.app_auth.authentication import APIKeyAuthentication
 
 logger = logging.getLogger(__name__)
 
@@ -201,11 +198,13 @@ class ClaimsViewSet(viewsets.ViewSet):
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
             except ValidationError as err:
+                logger.error(f"ValidationError: \n{err}")
                 return Response(
                     {"error": str(err)},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             except Exception as exc:
+                logger.error(f"An error occurred: {str(exc)}")
                 return Response(
                     {"error": str(exc)},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,

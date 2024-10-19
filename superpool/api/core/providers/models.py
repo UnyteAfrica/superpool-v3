@@ -1,10 +1,9 @@
 import uuid
 
-from core.mixins import TimestampMixin
+from django.apps import apps
 from django.db import models  # type: ignore
 from django.utils.translation import gettext_lazy as _  # type: ignore
 from django_stubs_ext.db.models import TypedModelMeta
-from django.apps import apps
 
 
 class Provider(models.Model):
@@ -37,7 +36,10 @@ class Provider(models.Model):
         blank=True,
         null=True,
     )
-
+    is_internal = models.BooleanField(
+        default=False,
+        help_text="Indicates if the provider is an internal provider or not - that is if the provider does not have an API",
+    )
     products = models.ManyToManyField(
         "catalog.Product",  # noqa: F405
         related_name="providers",

@@ -1,13 +1,14 @@
-from rest_framework.test import APIClient
-from rest_framework import status
 import uuid
-from core.catalog.models import Policy
-from core.catalog.models import Product
+from datetime import datetime, timedelta
+
+import pytest
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
+
+from core.catalog.models import Policy, Product
 from core.providers.models import Provider as Partner
 from core.user.models import Customer
-from datetime import datetime, timedelta
-from django.urls import reverse
-import pytest
 
 
 @pytest.fixture

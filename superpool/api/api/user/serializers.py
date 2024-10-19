@@ -1,11 +1,11 @@
 import logging
+
 from django.contrib.auth import get_user_model
-from django.db.models import fields
-from django.db.models.functions import FirstValue
+from django.db import IntegrityError, transaction
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
-from core.user.models import CustomerSupport, Admin
-from django.db import IntegrityError, transaction
+
+from core.user.models import Admin, CustomerSupport
 
 User = get_user_model()
 

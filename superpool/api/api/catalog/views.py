@@ -1,30 +1,10 @@
 import logging
-from uuid import uuid4
-import uuid
+from datetime import timedelta
 
+from asgiref.sync import async_to_sync
 from django.core.exceptions import MultipleObjectsReturned
-from django_stubs_ext import types
-from rest_framework.pagination import LimitOffsetPagination
-
-from core.models import Coverage
-from .openapi import products_response_example
-from datetime import datetime, timedelta
-from core.permissions import (
-    IsAdminUser,
-    IsMerchant,
-    IsCustomerSupport,
-    IsMerchantOrSupport,
-)
-from rest_framework.permissions import IsAuthenticated
-
-from api.app_auth.authentication import APIKeyAuthentication
-from api.catalog.exceptions import QuoteNotFoundError
-from api.catalog.filters import QSearchFilter
-from api.catalog.serializers import PolicyPurchaseResponseSerializer
-from core.catalog.models import Policy, Product, Quote
-from core.user.models import Customer
-from django.db.models import QuerySet
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import DecimalField, F, Q, QuerySet, Value
+from django.db.models.functions import Cast, Coalesce, NullIf
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -34,50 +14,49 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 from rest_framework import generics, mixins, status, views, viewsets
-from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.request import Request
 from rest_framework.response import Response
-from django.db.models import Q
-from rest_framework import filters
+from typing_extensions import deprecated
+
+from api.catalog.exceptions import QuoteNotFoundError
+from api.catalog.permissions import AdminOnlyInsurerFilterPermission
+from api.catalog.serializers import PolicyPurchaseResponseSerializer
+from core.catalog.models import Policy, Product, Quote
+from core.models import Coverage
+
+from .exceptions import ProductNotFoundError
 from .openapi import (
-    travel_insurance_example,
-    travel_insurance_with_product_id_example,
-    health_insurance_example,
-    health_insurance_with_product_id_example,
-    home_insurance_example,
-    home_insurance_with_product_id_example,
-    gadget_insurance_example,
-    gadget_insurance_with_product_id_example,
-    auto_insurance_example,
-    auto_insurance_with_product_id_example,
+    full_policy_renewal_example,
     insurance_policy_purchase_req_example,
     insurance_policy_purchase_res_example,
     limited_policy_renewal_example,
-    full_policy_renewal_example,
     policy_cancellation_request_example,
     policy_cancellation_request_example_2,
+    products_response_example,
+    quote_request_example,
 )
-
-from .exceptions import ProductNotFoundError
+from .quote_service import QuoteService
+from .quote_service import QuoteService as QuoteServiceV2
 from .serializers import (
     CoverageSerializer,
     FullCoverageSerializer,
     PolicyCancellationRequestSerializer,
-    PolicyCancellationResponseSerializer,
-    PolicyCancellationSerializer,
     PolicyPurchaseSerializer,
+    PolicyRenewalRequestSerializer,
     PolicyRenewalSerializer,
     PolicySerializer,
+    PolicyUpdateSerializer,
     ProductSerializer,
     QuoteRequestSerializer,
+    QuoteRequestSerializerV2,
+    QuoteResponseSerializerV2,
     QuoteSerializer,
-    PolicyRenewalRequestSerializer,
-    PolicyUpdateSerializer,
 )
-from .services import PolicyService, ProductService, QuoteService
+from .services import PolicyService, ProductService
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +126,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductSerializer
+    pagination_class = LimitOffsetPagination
     # authentication_classes = [APIKeyAuthentication]
 
     def get_queryset(self):
@@ -156,12 +136,15 @@ class ProductListView(generics.ListAPIView):
         queryset = self.get_queryset()
 
         # if we do not have any products, we will return a 404
-        if not queryset.exists():
+        if not queryset:
             return Response(
                 {"error": "No products are currently available"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         serializer = self.get_serializer(queryset, many=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -640,12 +623,14 @@ class QuoteListView(generics.ListAPIView):
 
 class QuoteDetailView(views.APIView):
     def get_service(self):
+        from api.catalog.services import QuoteService
+
         return QuoteService()
 
     # permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
-        summary="Retrieve a specific quote by its ID",
+        summary="Retrieve a specific quote by its reference code",
         operation_id="retrieve-quote",
         tags=["Quotes"],
         responses={
@@ -705,78 +690,35 @@ class QuoteDetailView(views.APIView):
     )
     def get(self, request, quote_code):
         """
-        Endpoint to retrieve a specific quote by its ID
+        Endpoint to retrieve a specific quote by its reference code
         """
         service = self.get_service()
 
         try:
-            quote = service.get_quote(quote_code=quote_code)
-
-            # should fix the assertion error on the serializer instance
-            if isinstance(quote, QuoteSerializer):
-                quote = quote.data
-            return Response(quote, status=status.HTTP_200_OK)
-        except QuoteNotFoundError as api_err:
-            return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
-
-
-class QuoteAPIViewSet(viewsets.ViewSet):
-    def get_permissions(self):
-        if self.action in ("create", "update"):
-            self.permission_classes = [IsAdminUser]
-        elif self.action == "accept":
-            self.permission_classes = [IsAuthenticated]
-        return super().get_permissions()
-
-    def get_service(self):
-        return QuoteService()
-
-    @extend_schema(
-        summary="Request a policy quote",
-        responses={
-            201: OpenApiResponse(QuoteSerializer, "Quote information"),
-        },
-    )
-    @action(detail=False, methods=["post"])
-    def request_quote(self, request):
-        service = self.get_service()
-        quote_data = request.data
-
-        # we need the metadata to determine if the merchant is requesting for
-        # a list of quotes for a group of customers or for a single customer
-        customer_metadata = quote_data.get("customer_metadata", "INDIVIDUAL")
-
-        quote = service.get_quote(
-            product=quote_data.get("product_type"),
-            quote_code=quote_data.get("quote_code"),
-            batch=(customer_metadata == "BATCH"),
-        )
-        return Response(quote, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=["post"], url_name="request")
-    def accept_quote(self, request):
-        service = self.get_service()
-        quote_code = request.data.get("quote_code")
-
-        if not quote_code:
-            return Response(
-                {"error": "Quote code is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            # first we want to get the quote by the quote id from the database
-            # then we want to convert to a suitable policy, that is just generating a policy
+            # quote = service.get_quote(quote_code=quote_code)
             quote = Quote.objects.get(quote_code=quote_code)
 
-            # this is where actual conversion to policy takes place
-            #
-            # The idea here is that we take a previously retrieved quote, and create a corresponding
-            # policy
-            policy_id = service.accept_quote(quote)
-            return Response({"policy_id": policy_id}, status=status.HTTP_200_OK)
+            # # should fix the assertion error on the serializer instance
+            # if isinstance(quote, QuoteSerializer):
+            #     quote = quote.data
+            serializer = QuoteSerializer(quote)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Quote.DoesNotExist:
+            logger.error(f"Quote not found: {quote_code}")
             return Response(
                 {"error": "Quote not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except MultipleObjectsReturned as data_integrity_err:
+            logger.error(
+                f"Multiple quotes found for: {quote_code}. "
+                f"ERROR: {str(data_integrity_err)}"
+            )
+            quote = Quote.objects.filter(quote_code=quote_code).first()
+            return Response(quote, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"An error occurred while fetching quotes: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -840,18 +782,18 @@ class RequestQuoteView(views.APIView):
         tags=["Quotes"],
         request=OpenApiRequest(
             QuoteRequestSerializer,
-            examples=[
-                travel_insurance_example,
-                travel_insurance_with_product_id_example,
-                health_insurance_example,
-                health_insurance_with_product_id_example,
-                home_insurance_example,
-                home_insurance_with_product_id_example,
-                gadget_insurance_example,
-                gadget_insurance_with_product_id_example,
-                auto_insurance_example,
-                auto_insurance_with_product_id_example,
-            ],
+            # examples=[
+            #     travel_insurance_example,
+            #     travel_insurance_with_product_id_example,
+            #     health_insurance_example,
+            #     health_insurance_with_product_id_example,
+            #     home_insurance_example,
+            #     home_insurance_with_product_id_example,
+            #     gadget_insurance_example,
+            #     gadget_insurance_with_product_id_example,
+            #     auto_insurance_example,
+            #     auto_insurance_with_product_id_example,
+            # ],
         ),
         responses={
             200: OpenApiResponse(
@@ -911,11 +853,11 @@ class RequestQuoteView(views.APIView):
                 ],
             ),
         },
-        examples=[
-            travel_insurance_example,
-            health_insurance_example,
-            auto_insurance_example,
-        ],
+        # examples=[
+        #     travel_insurance_example,
+        #     health_insurance_example,
+        #     auto_insurance_example,
+        # ],
     )
     def post(self, request):
         # validate incoming data conforms to some predefined values
@@ -966,6 +908,142 @@ class RequestQuoteView(views.APIView):
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         logger.error(f"Request data is invalid: {req_serializer.errors}")
         return Response(req_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class QuoteRequestView(views.APIView):
+    """
+    View to handle insurance quote requests and return aggregated quotes.
+
+    This endpoint allows merchants to request insurance quotes for various insurance products.
+    The system aggregates quotes from different insurance providers based on the provided
+    product type, product name, and coverage preferences. The response includes a list of
+    available quotes, along with detailed information such as coverage, premium, exclusions,
+    and provider information.
+
+    The request body requires customer metadata, insurance product details, and coverage preferences.
+
+    Example Request Body: SEE API REQUEST EXAMPLE
+    """
+
+    # filterset_backend = [DjangoFilterBackend]
+    # filterset_class = QuoteFilter
+
+    @extend_schema(
+        summary="Request a quote for an insurance policy or product",
+        description="Submit a request to generate insurance quotes for a specified product type and customer details. Allows filtering by provider, coverage type, and sorting.",
+        tags=["Quotes"],
+        request=OpenApiRequest(
+            request=QuoteRequestSerializerV2(many=True),
+            examples=[quote_request_example],
+        ),
+        responses={
+            200: OpenApiResponse(
+                response=QuoteResponseSerializerV2(many=True),
+                description="The response contains a list of available quotes from different providers.",
+            )
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = QuoteRequestSerializerV2(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        validated_data = serializer.validated_data
+        service = QuoteServiceV2()
+
+        try:
+            quote_data = async_to_sync(service.request_quote)(validated_data)
+            logger.info(f"Retrieved Quote Data: {quote_data}")
+            print(f"Type of quote_data: {type(quote_data)}")
+            paginator = LimitOffsetPagination()
+            paginated_quotes = paginator.paginate_queryset(quote_data, request)
+
+            if quote_data == []:
+                return Response(
+                    {
+                        "error": "No quotes found for the provided criteria. Try query again"
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if paginated_quotes is not None:
+                response_serializer = QuoteResponseSerializerV2(
+                    paginated_quotes, many=True
+                )
+                serializer_data = response_serializer.data
+                return paginator.get_paginated_response(serializer_data)
+
+            response_serializer = QuoteResponseSerializerV2(quote_data, many=True)
+            serializer_data = response_serializer.data
+            return Response(
+                {
+                    "message": "Quote successfully retrieved",
+                    "data": serializer_data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ValueError as exc:
+            logger.error(f"Validation error: {exc}", exc_info=True)
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.critical(f"Error occurred: {exc}", exc_info=True)
+            return Response(
+                {"error": "An error occurred while processing your request."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @deprecated("This method is no longer supported")
+    def _apply_filters(self, request: Request, qs: QuerySet):
+        """
+        Uses QuoteFilter to apply filtering logic onto incoming request
+        """
+        filterset = self.filterset_class(request.query_params, queryset=qs)
+        return filterset.qs
+
+    @deprecated("This method is no longer supported")
+    def _sort_queryset(self, request: Request, filtered_qs: QuerySet):
+        """
+        Apply sorting onto a filtered queryset and returns a filtered quotes
+        """
+        query_params = request.query_params
+
+        # SORTING LOGIC
+        #
+        # SORT BY 'BEST_VALUE' OR 'CHEAPEST'
+        sort_by = query_params.get("sort_by")
+
+        if sort_by == "cheapest":
+            filtered_qs = filtered_qs.order_by("premium__amount")
+        elif sort_by == "best_coverage":
+            # HERE WE ARE RETRIEVEING THE LIMIT OF THE QUOTE COVERAGE
+            # FROM THE ADDITONAL_METADATA FIELD ON THE QUOTE OBJECT
+            # WHICH IS A JSON FILED, WE WANT TO HOWEVER PASS DECIMAL
+            # OBJECT INTO THE QUERYSET MANAGER
+            COVERAGE_LIMIT = F("additional_metadata__coverage_limit")
+            PREMIUM_AMOUNT = F("premium__amount")
+
+            # import pdb
+            #
+            # pdb.set_trace()
+            filtered_qs = filtered_qs.annotate(
+                # See: https://devdocs.io/django~5.0/ref/models/database-functions#django.db.models.functions.Cast
+                # Coalesce here, because initally its found that some of our coverage limit
+                # values have null values been passed into this function hence breaking the feature
+                # coverage_limit=Coalesce(
+                #     Cast(COVERAGE_LIMIT, DecimalField()), Cast(Value(0), DecimalField())
+                # ),
+                # NullIf is used to treat "none" as NULL, and Coalesce ensures it defaults to 0 if NULL.
+                coverage_limit=Coalesce(
+                    Cast(NullIf(COVERAGE_LIMIT, Value("none")), DecimalField()),
+                    Cast(Value(0), DecimalField()),
+                ),
+                value_ratio=(
+                    F("coverage_limit") / Cast(PREMIUM_AMOUNT, DecimalField())
+                ),
+            ).order_by("-value_ratio")
+            print(filtered_qs)
+        return filtered_qs
 
 
 class PolicyPurchaseView(generics.GenericAPIView):
@@ -1266,7 +1344,11 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
 
 @extend_schema(
     summary="Search for insurance coverages",
-    description="Search for insurance coverages using various parameters. Supports both partial and exact case-insensitive matches.",
+    description=(
+        "This API allows users to search for insurance coverages using various filters. "
+        "Admin users (staff - customer-support) have additional access to search using the insurer name and insurer ID. "
+        "Non-admin users can only search by coverage name, coverage ID, and product ID."
+    ),
     tags=["Coverage"],
     parameters=[
         OpenApiParameter(
@@ -1283,6 +1365,25 @@ class ProductCoverageRetrieveView(generics.RetrieveAPIView):
             "product_id",
             type=OpenApiTypes.UUID,
             description="Unique resource identifier of the product",
+        ),
+        OpenApiParameter(
+            "insurer_name",
+            description=(
+                "Admin-only filter. Case-insensitive search by insurer name. "
+                "This filter is accessible only to customer support users."
+            ),
+            required=False,
+            type=OpenApiTypes.STR,
+            examples=[
+                OpenApiExample("Partial match", value="Health Plus"),
+                OpenApiExample("Exact match", value="Global Insurers Ltd."),
+            ],
+        ),
+        OpenApiParameter(
+            "insurer_id",
+            type=OpenApiTypes.UUID,
+            description="Admin-only filter. Search by unique insurer ID (UUID). Accessible only to admin users.",
+            required=False,
         ),
     ],
     responses=OpenApiResponse(
@@ -1323,6 +1424,7 @@ class ProductCoverageSearchView(generics.ListAPIView):
     """
 
     serializer_class = CoverageSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, AdminOnlyInsurerFilterPermission]
 
     def get_queryset(self) -> QuerySet:
         # we want to allow both partial and exact case insentive matches
@@ -1333,6 +1435,8 @@ class ProductCoverageSearchView(generics.ListAPIView):
         coverage_name = query_params.get("coverage_name")
         coverage_id = query_params.get("coverage_id")
         product_id = query_params.get("product_id")
+        insurer_name = query_params.get("insurer_name")
+        insurer_id = query_params.get("insurer_id")
 
         if coverage_name:
             q &= Q(coverage_name__icontains=coverage_name)
@@ -1344,6 +1448,15 @@ class ProductCoverageSearchView(generics.ListAPIView):
 
         if product_id:
             q &= Q(product__id=product_id)
+
+        # filter by insurer naeme (this, is an indirect filteration process)
+        #
+        # We have to reverse-filter through Product -> Provider relationship
+        if insurer_name:
+            q &= Q(product__provider__name__icontains=insurer_name)
+
+        if insurer_id:
+            q &= Q(product__provider__id=insurer_id)
 
         try:
             queryset = Coverage.objects.filter(q)

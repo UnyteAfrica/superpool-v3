@@ -1,7 +1,7 @@
-from rest_framework.permissions import BasePermission
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth import get_user_model
+from rest_framework.permissions import BasePermission
 
 User = get_user_model()
 
@@ -17,10 +17,11 @@ class IsCustomerSupport(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return (
-            user.is_authenticated
+            user
+            and user.is_authenticated
             and user.groups.filter(name="CustomerSupport").exists()
             and user.role == User.USER_TYPES.SUPPORT
-            and user.role in VERIFIED_ROLES
+            # and user.role in VERIFIED_ROLES
         )
 
 
@@ -28,10 +29,11 @@ class IsMerchant(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         return (
-            user.is_authenticated
+            user
+            and user.is_authenticated
             and user.groups.filter(name="Merchant").exists()
             and user.role == User.USER_TYPES.MERCHANT
-            and user.role in VERIFIED_ROLES
+            # and user.role in VERIFIED_ROLES
         )
 
 

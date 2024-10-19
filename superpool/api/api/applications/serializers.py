@@ -1,5 +1,6 @@
-from core.models import Application
 from rest_framework import serializers
+
+from core.models import Application
 
 
 class ApplicationSerializer(serializers.ModelSerializer):

@@ -1,6 +1,5 @@
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from decimal import Decimal
-
 
 PRICING_DATA = {
     "Smart Motorist Protection Plan": {

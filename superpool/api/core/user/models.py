@@ -1,14 +1,10 @@
-from types import NoneType
 import uuid
 
-from core.mixins import TimestampMixin
-from django.contrib.auth.models import AbstractBaseUser, AbstractUser, PermissionsMixin
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models.constraints import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
-from typing_extensions import deprecated
 
-from .managers import UserManager
+from core.mixins import TimestampMixin
 
 
 class User(AbstractUser, TimestampMixin):

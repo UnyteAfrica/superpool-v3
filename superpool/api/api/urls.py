@@ -1,22 +1,21 @@
-from django.urls import URLPattern, URLResolver, include, path
+from django.conf import settings
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .applications.views import (
-    ApplicationView,
-    create_application_view,
-    ApplicationViewSetV2,
-)
-from .merchants.views import MerchantViewList, MerchantViewSet
+from .applications.views import ApplicationViewSetV2
+from .merchants.views import MerchantViewList
 from .user import urls as user_route
 from .user.views import MerchantLoginView
 from .views import (
-    MerchantSetPasswordView,
-    VerificationAPIView,
-    InsurerAPIView,
     InsuranceProviderDetailView,
     InsuranceProviderSearchView,
-    PasswordResetView,
+    InsurerAPIView,
+    MerchantForgotTenantIDView,
+    MerchantSetPasswordView,
     PasswordResetConfirmView,
+    PasswordResetView,
+    VerificationAPIView,
+    HealthAPIView,
 )
 
 router = DefaultRouter()
@@ -51,7 +50,7 @@ urlpatterns = [
         name="list_merchants",
     ),
     path(
-        "merchants/<str:short_code>/verify/",
+        "merchants/<str:merchant_id>/verify/",
         VerificationAPIView.as_view(),
         name="verify_merchant",
     ),
@@ -70,7 +69,20 @@ urlpatterns = [
         InsuranceProviderSearchView.as_view(),
         name="insurance-providers-search",
     ),
+    path(
+        "auth/merchant/forgot-credentials/",
+        MerchantForgotTenantIDView.as_view(),
+        name="merchant-forgot-credentials",
+    ),
+     path("health", HealthAPIView.as_view(), name="health"),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
 
 urlpatterns += router.urls
+# urlpatterns += customer_route
+# urlpatterns += customer_router.urls
+
+if settings.DEBUG:
+    import debug_toolbar
+
+    urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]

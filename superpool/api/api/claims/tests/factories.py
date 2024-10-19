@@ -1,6 +1,7 @@
 from factory.django import DjangoModelFactory
-from core.claims.models import Claim
 from faker import Faker
+
+from core.claims.models import Claim
 
 fake = Faker()
 

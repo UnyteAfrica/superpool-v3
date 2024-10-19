@@ -1,12 +1,26 @@
 import logging
 from typing import Any
 
+from django.core.exceptions import MultipleObjectsReturned
+from django.http.response import Http404
+from drf_spectacular.utils import OpenApiRequest, OpenApiResponse, extend_schema
+from rest_framework import mixins, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
+
 from api.app_auth.authentication import APIKeyAuthentication
 from api.merchants.exceptions import MerchantDeactivationError
 from api.merchants.serializers import (
     CreateMerchantSerializer,
     MerchantSerializer,
     MerchantSerializerV2,
+    MerchantUpdateResponseSerializer,
+    MerchantUpdateSerializer,
     MerchantWriteSerializerV2,
 )
 from api.merchants.services import MerchantService
@@ -16,15 +30,6 @@ from core.merchants.errors import (
     MerchantUpdateError,
 )
 from core.merchants.models import Merchant
-from django.http.response import Http404
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import mixins, permissions, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSet
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +116,7 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
     @extend_schema(
         operation_id="retrieve-a-single-merchant",
         tags=["Merchant"],
-        summary="Retrieve a merchant instance by its unique short code",
-        description="Retrieve a single merchant using its short code",
+        summary="Retrieve a merchant instance by its `merchant_id` (merchant id, refers to a unique merchant code assigned to the merchant)",
         responses={
             status.HTTP_200_OK: MerchantSerializer,
             status.HTTP_404_NOT_FOUND: {
@@ -123,14 +127,15 @@ class MerchantAPIViewsetV2(mixins.CreateModelMixin, viewsets.GenericViewSet):
             },
         },
     )
-    @action(detail=False, methods=["get"], url_path="(?P<short_code>[^/.]+)")
-    def retrieve_by_short_code(self, request, short_code=None):
+    @action(detail=False, methods=["get"], url_path="(?P<merchant_id>[^/.]+)")
+    def retrieve_by_short_code(self, request, merchant_id=None):
         """
-        This action allows you to retrieve a single merchant by its unique
-        short code
+        This action allows you to retrieve a single merchant by its unique merchant
+        code.
 
-        e.g AXA-5G36, WEM-GLE2, etc
+        e.g AXA-5G36, WEM-GLE2, MEYOU-2023, X3X-2X24", etc
         """
+        short_code = merchant_id
         try:
             merchant = get_object_or_404(Merchant, short_code=short_code)
         except Http404:
@@ -340,3 +345,75 @@ class MerchantViewSet(ViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@extend_schema(
+    tags=["Merchant", "Unyte Admin"],
+    summary="Update a merchant information as a customer support agent",
+    request=OpenApiRequest(
+        request=MerchantUpdateSerializer,
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=MerchantUpdateSerializer,
+            description="Successful response with updated merchant information.",
+        ),
+        400: OpenApiResponse(description="Validation error"),
+        404: OpenApiResponse(description="Merchant not found."),
+    },
+)
+class MerchantUpdateView(APIView):
+    """
+    API view to update a merchant's core information using the merchant's tenant ID.
+
+    Only accessible by users with customer support permissions.
+    """
+
+    # permission_classes = [
+    #     IsAuthenticated,
+    #     IsCustomerSupport,
+    # ]
+
+    def get_object(self, tenant_id):
+        """
+        Get a merchant by tenant_id.
+        """
+        try:
+            return Merchant.objects.get(tenant_id=tenant_id)
+        except Merchant.DoesNotExist:
+            raise Http404("Merchant not found")
+        except MultipleObjectsReturned:
+            return Merchant.objects.filter(tenant_id=tenant_id).first()
+
+    def patch(self, request, tenant_id):
+        merchant_instance = self.get_object(tenant_id)
+        serializer = MerchantUpdateSerializer(
+            merchant_instance, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            logger.info("successfully saved merchant information")
+
+            response_serializer = MerchantUpdateResponseSerializer(
+                data={
+                    "message": "Merchant information updated successfully.",
+                    "updated_merchant": serializer.data,
+                }
+            )
+            print("Attempting to serialize response....")
+            if response_serializer.is_valid():
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            else:
+                logger.error(
+                    f"Response serializer validation error: {response_serializer.errors}"
+                )
+                return Response(
+                    {
+                        "error": "Response serialization failed. Please reach out to customer support",
+                        "detail": response_serializer.errors["updated_merchant"],
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        else:
+            logger.error(f"Encountered an error: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

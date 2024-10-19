@@ -3,53 +3,50 @@ This module will contain the shared views (endpoints) for the application.
 """
 
 import logging
-from os import stat
 import uuid
-from django.core.exceptions import MultipleObjectsReturned, ValidationError
-from django.core.mail import EmailMultiAlternatives, send_mail
+
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import MultipleObjectsReturned
+from django.core.mail import send_mail
 from django.db import transaction
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext as _
-from drf_spectacular.types import OpenApiTypes
-from rest_framework import status
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiRequest,
+    OpenApiResponse,
+    extend_schema,
+)
+from rest_framework import generics, status
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from core.permissions import IsAdminUser
-from core.providers.models import Provider
-from api.serializers import ProviderSerializer
-from drf_spectacular.utils import (
-    OpenApiExample,
-    OpenApiParameter,
-    OpenApiRequest,
-    extend_schema,
-)
-from drf_spectacular.utils import OpenApiResponse
-from rest_framework import generics
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.exceptions import NotFound
-from django.db.models import Q
 
+from api.serializers import ProviderSerializer
 from core.emails import (
     OnboardingEmail,
-    send_password_reset_email,
     send_password_reset_confirm_email,
+    send_password_reset_email,
 )
 from core.merchants.models import Merchant
-from django.utils import timezone
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str, force_str
+from core.providers.models import Provider
+
 from .openapi import (
     BASE_URL,
-    insurance_provider_search_example,
     insurance_provider_list_example,
+    insurance_provider_search_example,
 )
 from .serializers import (
     CompleteRegistrationSerializer,
-    PasswordResetSerializer,
+    MerchantForgotCredentialSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,11 +76,61 @@ class VerificationAPIView(APIView):
             400: OpenApiResponse(description="Invalid verification token"),
         },
     )
-    def get(self, request, short_code, *args, **kwargs):
+    def get(self, request, merchant_id, *args, **kwargs):
         """
-        Verify the email address of the merchant
+
+        Verify the email address of a merchant based on their verification token.
+
+        This endpoint allows merchants to verify their email addresses after account creation.
+        It is triggered when the merchant clicks on the verification link sent to their email.
+
+        Args:
+            request (HttpRequest): The incoming HTTP request. The request must include a valid
+                `token` as a query parameter.
+            merchant_id (str): This parameter represents the merchant's unique identifier,
+                also referred to as the "short_code" internally. Though renamed to `merchant_id`,
+                the underlying functionality remains unchanged. It helps map merchants in the system.
+            *args: Additional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Response (JSON): Returns a JSON response indicating success or failure of the email
+            verification process.
+
+            Success Response (HTTP 200):
+            {
+                "message": (
+                    "Email verified successfully. Please check your email for onboarding instructions. "
+                    "If you do not receive an email, please check your spam folder. If you still do not receive an email, "
+                    "please contact support with error code: ONBOARDING_MSG_NOT_RECEIVED."
+                )
+            }
+
+            Failure Response (HTTP 400):
+            {
+                "error": "Invalid verification token"
+            }
+
+        Key Details for Non-Technical Stakeholders:
+        - This API is part of the merchant onboarding process, ensuring that the merchant's
+          email is verified before they can fully access the platform.
+        - The `merchant_id` in the URL is a placeholder that simplifies the naming convention
+          for external users but internally still maps to the original "short_code".
+        - The email verification token must be provided by the merchant via the verification link.
+        - If the email is successfully verified, the merchant receives onboarding instructions via email.
+
+        Key Details for Developers:
+        - The `merchant_id` parameter is simply an alias for `short_code`, preserving
+          backward compatibility with existing logic.
+        - The token is checked for validity, and if it has expired or is incorrect,
+          the request is rejected with a 400 response.
+        - Upon successful verification, the merchant's status is updated to verified, and
+          the onboarding email is sent. Errors during email dispatch are logged but do not block verification.
+        - Ensure the token expiration logic works properly to prevent expired tokens from being reused.
+
         """
         token = request.GET.get("token")
+        short_code = merchant_id  # a place holder to map short code to understandable term: merchant_id
 
         if not token:
             return Response(
@@ -521,3 +568,124 @@ class PasswordResetConfirmView(APIView):
                 )
         except Exception as e:
             raise e
+
+
+@extend_schema(
+    summary="Recover Tenant ID for merchant",
+    description=(
+        "This endpoint allows merchants to recover their Tenant ID by submitting their "
+        "registered business email address. If the email is valid and associated with "
+        "a merchant, the Tenant ID is sent to the email address. \n"
+        "NOTE: At the moment, only customer suport agents, can perform this action on behalf of merchants"
+    ),
+    tags=["Auth", "Unyte Admin"],
+    request=OpenApiRequest(
+        {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Registered business email address of the merchant.",
+                }
+            },
+            "required": ["email"],
+        }
+    ),
+    responses={
+        200: OpenApiResponse(
+            description="Tenant ID has been sent to the provided email address."
+        ),
+        400: OpenApiResponse(description="Bad Request: Email is missing or invalid."),
+        404: OpenApiResponse(
+            description="Not Found: No merchant found with the provided email address."
+        ),
+        500: OpenApiResponse(
+            description="Internal Server Error: Multiple records returned for the email address."
+        ),
+    },
+)
+class MerchantForgotTenantIDView(APIView):
+    """
+    Handles the 'Forget Tenant ID' functionality for merchants.
+
+    This endpoint allows merchants to recover their tenant ID by submitting their
+    registered business email. Upon successful validation of the provided email,
+    the tenant ID associated with the merchant's account will be emailed to them.
+
+    - Merchants submit a POST request with their email in the request body.
+    - If the email exists, an email with the tenant ID is sent to the merchant.
+    - If the email is not found or invalid, an appropriate error response is returned.
+
+    ```json
+        {
+            "email": "<merchant_business_email>"
+        }
+    ```
+
+    Possible Responses:
+    - 200 OK: Tenant ID has been sent to the provided email address.
+    - 404 Not Found: No merchant found with the provided email address.
+    - 400 Bad Request: Email is missing or invalid.
+
+
+    IMPORTANT NOTE: Due to security reasons, this action can only be performed on behalf of mechants by user with customer support permissons
+    """
+
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        serializer = MerchantForgotCredentialSerializer(data=request.data)
+
+        if serializer.is_valid():
+            merchant_email = serializer.validated_data["email"]
+            try:
+                merchant = Merchant.objects.get(business_email=merchant_email)
+
+                # we are extracting the messages into variables to enable for change
+                email_subject = "Unyte - Tenant ID Recovery!"
+                email_body = f"""
+                    Dear {merchant.name},
+
+                    We have received your request to recover your Tenant ID associated with your Unyte account.
+
+                    Your Tenant ID is: **{merchant.tenant_id}**
+
+                    Please keep this information safe for future reference. If you have any questions or require further assistance, feel free to reach out to our support team.
+
+                    Best regards,
+                    The Unyte Team
+
+                    ---
+                    This is an automated message. Please do not reply to this email.
+                    """
+                send_mail(
+                    subject=email_subject,
+                    message=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[merchant.business_email],
+                    fail_silently=True,
+                )
+                return Response(
+                    {"message": "Tenant ID sent successfully to merchant"},
+                    status=status.HTTP_200_OK,
+                )
+
+            except Merchant.DoesNotExist:
+                return Response(
+                    {"message": "No merchant found for the provided email address"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except MultipleObjectsReturned:
+                return Response(
+                    {
+                        "error": "We are experiencing some downtime with this service. Please contact support with error code, MERCHANT_RECOVERY_MULTI_OBJ"
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HealthAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({"message": "pong!"}, status=status.HTTP_200_OK)

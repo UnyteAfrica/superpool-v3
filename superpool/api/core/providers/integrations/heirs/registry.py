@@ -1,8 +1,8 @@
 import abc
 from dataclasses import dataclass
 from datetime import date
-from enum import StrEnum
-from typing import List, Optional, Required, TypedDict, Union
+from decimal import Decimal
+from typing import List, Literal, Optional, Required, TypeAlias, TypedDict, Union
 
 from api.integrations.heirs.client import HeirsLifeAssuranceClient
 
@@ -18,6 +18,7 @@ class Policy(abc.ABC):
 
 class QuoteAPIResponse(TypedDict):
     premium: str
+    contribution: Optional[str]
 
 
 class APIErrorResponse(TypedDict, total=False):
@@ -27,8 +28,26 @@ class APIErrorResponse(TypedDict, total=False):
     status: str
 
 
+class Error(TypedDict):
+    type: str
+    title: str
+    detail: str
+    status: int | str
+
+
+ErrorResponse: TypeAlias = dict[Literal["error"], Error]
+
+
 class Quote(TypedDict):
-    product_id: str
+    origin_product_id: int
+    product_name: str
+    premium: Decimal
+    additional_information: str
+    origin: Optional[str]
+    contribution: Optional[Decimal]
+
+
+QuoteResponse: TypeAlias = list[Quote]
 
 
 @dataclass
