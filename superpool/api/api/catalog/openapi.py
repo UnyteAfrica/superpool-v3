@@ -327,9 +327,9 @@ insurance_policy_purchase_req_example = OpenApiExample(
             "customer_email": "test@example.com",
             "first_name": "John",
             "last_name": "Doe",
-            "customer_phone": "1234567890",
-            "customer_address": "123 Elm St",
-            "customer_date_of_birth": "1980-01-01",
+            "phone": "1234567890",
+            "residential_address": "123 Elm St",
+            "date_of_birth": "1980-01-01",
             "customer_gender": "M",
         },
         "product_metadata": {
@@ -343,8 +343,6 @@ insurance_policy_purchase_req_example = OpenApiExample(
             "premium_amount": 1000.00,
         },
         "activation_metadata": {"policy_expiry_date": "2024-08-06", "renew": True},
-        "agreement": False,
-        "confirmation": False,
         "merchant_code": "MERCHANT123",
     },
 )
