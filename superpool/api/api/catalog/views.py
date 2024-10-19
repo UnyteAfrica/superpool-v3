@@ -623,12 +623,14 @@ class QuoteListView(generics.ListAPIView):
 
 class QuoteDetailView(views.APIView):
     def get_service(self):
+        from api.catalog.services import QuoteService
+
         return QuoteService()
 
     # permission_classes = [IsMerchant, IsMerchantOrSupport]
 
     @extend_schema(
-        summary="Retrieve a specific quote by its ID",
+        summary="Retrieve a specific quote by its reference code",
         operation_id="retrieve-quote",
         tags=["Quotes"],
         responses={
@@ -688,19 +690,36 @@ class QuoteDetailView(views.APIView):
     )
     def get(self, request, quote_code):
         """
-        Endpoint to retrieve a specific quote by its ID
+        Endpoint to retrieve a specific quote by its reference code
         """
         service = self.get_service()
 
         try:
-            quote = service.get_quote(quote_code=quote_code)
+            # quote = service.get_quote(quote_code=quote_code)
+            quote = Quote.objects.get(quote_code=quote_code)
 
-            # should fix the assertion error on the serializer instance
-            if isinstance(quote, QuoteSerializer):
-                quote = quote.data
+            # # should fix the assertion error on the serializer instance
+            # if isinstance(quote, QuoteSerializer):
+            #     quote = quote.data
+            serializer = QuoteSerializer(quote)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Quote.DoesNotExist:
+            logger.error(f"Quote not found: {quote_code}")
+            return Response(
+                {"error": "Quote not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except MultipleObjectsReturned as data_integrity_err:
+            logger.error(
+                f"Multiple quotes found for: {quote_code}. "
+                f"ERROR: {str(data_integrity_err)}"
+            )
+            quote = Quote.objects.filter(quote_code=quote_code).first()
             return Response(quote, status=status.HTTP_200_OK)
-        except QuoteNotFoundError as api_err:
-            return Response({"error": str(api_err)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"An error occurred while fetching quotes: {str(e)}")
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class RequestQuoteView(views.APIView):
