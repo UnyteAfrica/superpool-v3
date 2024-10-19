@@ -3,7 +3,6 @@
 import hashlib
 import uuid
 
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
@@ -162,9 +161,12 @@ class APIKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"#{self.display_key} for {self.merchant.name}"
+        return f"{self.display_key()} for {self.merchant.name}"
 
-    def __hash__(self, value):
+    def hash_key(self, value: str) -> str:
+        """
+        Hashes a given value using SHA-256.
+        """
         return hashlib.sha256(value.encode()).hexdigest()
 
     def generate_key(self) -> str:
@@ -175,17 +177,20 @@ class APIKey(models.Model):
 
     def save(self, *args, **kwargs):
         # only generate the key and the hash key if it is a new object
-        if not self.pk:
+        if not self.key:
             self.key = self.generate_key()
-            self.__hash__(self.key)
+            self.key_hash = self.hash_key(self.key)
 
         # if the key is present but the hash key is not, hash the key
         elif self.key and not self.key_hash:
-            self.__hash__(self.key)
+            self.key_hash = self.hash_key(self.key)
+
         super().save(*args, **kwargs)
 
     def display_key(self) -> str:
-        return self.key[:5] + "..." + self.key[-5:]
+        if self.key:
+            return self.key[:5] + "..." + self.key[-5:]
+        return "No key"
 
     def display_key_hash(self) -> str:
         return str(self.key_hash)
@@ -193,17 +198,19 @@ class APIKey(models.Model):
 
 class Application(models.Model):
     """
-    An application is a sandbox environment needed for interacting with Unyte's APIs
+    An application is a sandbox environment or a production environment for interacting with Unyte's APIs
     """
 
     merchant = models.ForeignKey(
         Merchant,
         on_delete=models.CASCADE,
+        related_name="applications",
     )
     application_id = models.CharField(
         max_length=100,
         primary_key=True,
         unique=True,
+        default=str(uuid.uuid4()),
     )
     api_key = models.OneToOneField(
         APIKey,
@@ -213,23 +220,34 @@ class Application(models.Model):
         related_name="applications",
     )
     name = models.CharField(max_length=255, null=True, blank=True)
-    test_mode = models.BooleanField(help_text="Whether the application is in test mode")
+    test_mode = models.BooleanField(
+        help_text="True if the application is in test mode (sandbox), otherwise false for production.",
+        default=True,
+    )
 
     def __str__(self) -> str:
-        return f"Environment: {self.name} by {self.merchant.name}"
+        return f"{self.name} ({'Sandbox' if self.test_mode else 'Production'}) - {self.merchant.name}"
 
-    def save(self, *args, **kwargs):
-        # Validate API keys
-        if not self.pk:  # Only check for new instances
-            existing_keys = APIKey.objects.filter(merchant=self.merchant).count()
-            if existing_keys >= 2:
-                raise ValidationError(
-                    "A merchant can only have a maximum of 2 API keys."
-                )
-            # no api key, no probs -  generate new one
-            if not self.api_key:
-                self.api_key = APIKey.objects.create(merchant=self.merchant)
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # # Validate API keys
+    #     if not self.pk:  # Only check for new instances
+    #         existing_keys = APIKey.objects.filter(merchant=self.merchant).count()
+    #         if existing_keys >= 2:
+    #             raise ValidationError(
+    #                 "A merchant can only have a maximum of 2 API keys."
+    #             )
+    #     # no api key, no probs -  generate new one
+    #     if not self.api_key:
+    #         self.api_key = APIKey.objects.create(merchant=self.merchant)
+    #     super().save(*args, **kwargs)
+
+    def generate_api_key(self):
+        """
+        Generates and assign new API key to the application
+        """
+        if not self.api_key:
+            self.api_key = APIKey.objects.create(merchant=self.merchant)
+            self.save(update_fields=["api_key"])
 
     @property
     def api_key_hash(self):

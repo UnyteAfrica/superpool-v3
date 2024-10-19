@@ -179,8 +179,8 @@ class Product(TimestampMixin, TrashableModelMixin, models.Model):
         """
         self.trash()
 
-    def full_delete(self) -> None:
-        return super().full_delete()
+    def full_delete(self, *args, **kwargs) -> None:
+        return super().full_delete(*args, **kwargs)
 
     class Meta:
         indexes = [

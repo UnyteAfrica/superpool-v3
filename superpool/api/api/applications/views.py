@@ -1,6 +1,6 @@
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.exceptions import NotAuthenticated, ValidationError
+from rest_framework.exceptions import NotAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -71,24 +71,18 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
     """
     V2 of the application viewset
 
-    Allows merchant to create a new application instance once they logon to their dashboards
-    of which they can then manage their api keys and other configurations
+    Allows merchants to create and manage sandbox and production environments.
     """
 
     serializer_class = ApplicationSerializer
-    # permission_classes = [IsAuthenticated]
     http_method_names = ["get", "post"]
 
     def get_queryset(self):
         user = self.request.user
 
-        if not user.is_authenticated:
+        if not user.is_authenticated or not hasattr(user, "merchant"):
             raise NotAuthenticated("You must be authenticated to view this resource.")
-
-        try:
-            return Application.objects.filter(merchant=user.merchant)
-        except AttributeError:
-            raise NotAuthenticated("You must be a merchant to view this resource.")
+        return Application.objects.filter(merchant=user.merchant)
 
     @extend_schema(
         summary="Retrieve all applications for the authenticated merchant",
@@ -137,11 +131,9 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
         },
         examples=[
             OpenApiExample(
-                "Create Request Example",
+                "Create a new application environment",
                 value={
-                    "application_id": "f0a2e4b6-33e5-451e-b90d-ea3a3d2a8e3e",
                     "name": "Sandbox Environment",
-                    "api_key_hash": "d9a8f82b123fe6e...",
                     "test_mode": "true",
                 },
                 request_only=True,
@@ -150,7 +142,7 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
                 "Success Response Example",
                 value={
                     "application_id": "f0a2e4b6-33e5-451e-b90d-ea3a3d2a8e3e",
-                    "name": "Production Environent",
+                    "name": "Sandbox Environent",
                     "api_key_hash": "d9a8f82b123fe6e...",
                     "test_mode": "false",
                 },
@@ -161,9 +153,8 @@ class ApplicationViewSetV2(viewsets.ModelViewSet):
     )
     def create(self, request: Request) -> Response:
         """
-        Create a new application instance for the authenticated merchant
+        Create a new environment instance for the authenticated merchant
         """
-        if Application.objects.filter(merchant=self.request.user.merchant).count() >= 2:
-            raise ValidationError("A merchant can only have a maximum of 2 API keys.")
-
+        # if Application.objects.filter(merchant=self.request.user.merchant).count() >= 2:
+        #     raise ValidationError("A merchant can only have a maximum of 2 API keys.")
         return super().create(request)
