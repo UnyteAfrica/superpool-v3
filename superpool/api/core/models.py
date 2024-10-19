@@ -177,9 +177,9 @@ class APIKey(models.Model):
 
     def save(self, *args, **kwargs):
         # only generate the key and the hash key if it is a new object
-        if not self.pk:
+        if not self.key:
             self.key = self.generate_key()
-            self.hash_key(self.key)
+            self.key_hash = self.hash_key(self.key)
 
         # if the key is present but the hash key is not, hash the key
         elif self.key and not self.key_hash:

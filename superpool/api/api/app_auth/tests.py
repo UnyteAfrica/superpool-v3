@@ -12,7 +12,10 @@ User = get_user_model()
 class APIKeyAuthenticationTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email="user@example.com", password="password", role="merchant"
+            email="user@example.com",
+            username="merchant_user",
+            password="password",
+            role="merchant",
         )
         self.merchant = Merchant.objects.create(user=self.user)
         self.api_key_model = APIKeyModel.objects.create(merchant=self.merchant)
@@ -26,7 +29,7 @@ class APIKeyAuthenticationTestCase(TestCase):
         """
         self.client.credentials(HTTP_AUTHORIZATION=f"SUPERPOOL {self.api_key}")
 
-        response = self.client.post("/api/v1/environments/")
+        response = self.client.get("/api/v1/environments/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.wsgi_request.user, self.user)

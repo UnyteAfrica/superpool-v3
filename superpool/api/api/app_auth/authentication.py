@@ -37,7 +37,7 @@ class APIKeyAuthentication(BaseAuthentication):
 
     def authenticate_credentials(self, key):
         try:
-            hashed = APIKeyModel().__hash__(key)
+            hashed = APIKeyModel().hash_key(key)
             key_obj = APIKeyModel.objects.get(key_hash=hashed)
         except APIKeyModel.DoesNotExist:
             raise AuthenticationFailed("Invalid API key")
