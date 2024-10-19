@@ -62,7 +62,7 @@ class TrashableModelMixin(models.Model):
         """
         self.trash()
 
-    def full_delete(self) -> None:
+    def full_delete(self, *args, **kwargs) -> None:
         """
         Perform a hard delete (permanent deletion) by calling the default delete method
         from Django's base model, bypassing the soft delete.

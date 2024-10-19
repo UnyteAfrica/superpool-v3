@@ -20,6 +20,7 @@ else:
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": [
             "api.app_auth.authentication.APIKeyAuthentication",
+            "rest_framework.authentication.TokenAuthentication",
         ],
         "DEFAULT_PERMISSION_CLASSES": [
             "rest_framework.permissions.AllowAny",

@@ -7,6 +7,7 @@ from .merchants.views import MerchantViewList
 from .user import urls as user_route
 from .user.views import MerchantLoginView
 from .views import (
+    HealthAPIView,
     InsuranceProviderDetailView,
     InsuranceProviderSearchView,
     InsurerAPIView,
@@ -15,11 +16,10 @@ from .views import (
     PasswordResetConfirmView,
     PasswordResetView,
     VerificationAPIView,
-    HealthAPIView,
 )
 
 router = DefaultRouter()
-router.register(r"sandbox", ApplicationViewSetV2, basename="application")
+router.register(r"environments", ApplicationViewSetV2, basename="application")
 # router.register(r"merchants", MerchantViewSet, basename="merchant")
 
 urlpatterns = [
@@ -74,7 +74,7 @@ urlpatterns = [
         MerchantForgotTenantIDView.as_view(),
         name="merchant-forgot-credentials",
     ),
-     path("health", HealthAPIView.as_view(), name="health"),
+    path("health", HealthAPIView.as_view(), name="health"),
     # TODO: path('insurers/<str:name>/products/', InsurerAPIView.as_view(), name='insurer_products'),
 ]
 

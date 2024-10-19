@@ -67,6 +67,8 @@ class User(AbstractUser, TimestampMixin):
         return super().get_full_name()
 
     def __str__(self):
+        if not self.first_name and not self.last_name:
+            return self.username or self.email
         try:
             return super().get_full_name()
         except AttributeError:
