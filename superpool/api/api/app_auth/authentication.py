@@ -13,8 +13,9 @@ class APIKeyAuthentication(BaseAuthentication):
     Custom authentication class that uses API Key from request headers.
     """
 
+    KEYWORD = "SUPERPOOL "
+
     def authenticate(self, request):
-        KEYWORD = "SUPERPOOL "
         auth_header = get_authorization_header(request).decode("utf-8")
         print(auth_header)
 
@@ -22,10 +23,10 @@ class APIKeyAuthentication(BaseAuthentication):
             return None
 
         # header has to start with the keyword!
-        if not auth_header.startswith(KEYWORD):
+        if not auth_header.startswith(self.KEYWORD):
             return None
 
-        api_key = auth_header[len(KEYWORD) :].strip()
+        api_key = auth_header[len(self.KEYWORD) :].strip()
 
         if not api_key:
             raise AuthenticationFailed(
@@ -36,12 +37,13 @@ class APIKeyAuthentication(BaseAuthentication):
 
     def authenticate_credentials(self, key):
         try:
-            hashed = APIKeyModel().hash_(key)
-            key_obj = APIKeyModel.objects.get(hashedkey=hashed)
+            hashed = APIKeyModel().hash_key(key)
+            key_obj = APIKeyModel.objects.get(key_hash=hashed)
         except APIKeyModel.DoesNotExist:
             raise AuthenticationFailed("Invalid API key")
 
-        return key_obj.merchant, key_obj
+        user = key_obj.merchant.user
+        return user, key_obj
 
     def authenticate_header(self, request) -> str | None:
-        return "SUPERPOOL"
+        return self.KEYWORD

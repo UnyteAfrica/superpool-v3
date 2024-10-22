@@ -228,13 +228,13 @@ LOGGING = {
             "formatter": "verbose",
         },
         "file": {
-            "class": "logging.FileHandler",
-            "filename": f"{LOG_FILE_PATH}/{LOG_FILE_NAME}",
+            "class": "logging.StreamHandler",
+            # "filename": f"{LOG_FILE_PATH}/{LOG_FILE_NAME}",
             "formatter": "verbose",
         },
         "api_log_file": {
-            "class": "logging.FileHandler",
-            "filename": f"{LOG_FILE_PATH}/api_client.log",
+            "class": "logging.StreamHandler",
+            # "filename": f"{LOG_FILE_PATH}/api_client.log",
             "formatter": "standard",
         },
     },
@@ -264,7 +264,7 @@ LOGGING = {
             "propagate": False,
         },
         "api_client": {
-            "handlers": ["console", "api_log_file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },

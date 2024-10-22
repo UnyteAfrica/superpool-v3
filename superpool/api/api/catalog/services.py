@@ -516,13 +516,13 @@ class PolicyService:
         Creates a new policy holder or retrieves an existing one
         """
         return Customer.objects.get_or_create(
-            email=customer_data["customer_email"],
+            email=customer_data["email"],
             defaults={
                 "first_name": customer_data["first_name"],
                 "last_name": customer_data["last_name"],
-                "phone_number": customer_data["customer_phone"],
-                "address": customer_data["customer_address"],
-                "dob": customer_data["customer_date_of_birth"],
+                "phone_number": customer_data["phone"],
+                "address": customer_data["residential_address"],
+                "dob": customer_data["date_of_birth"],
                 "gender": customer_data["customer_gender"],
             },
         )[0]

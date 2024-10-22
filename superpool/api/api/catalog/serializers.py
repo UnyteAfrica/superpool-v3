@@ -1000,25 +1000,25 @@ class PolicyPurchaseSerializer(serializers.Serializer):
     product_metadata = ProductMetadataSerializer()
     payment_metadata = PaymentInformationSerializer()
     activation_metadata = ActivationMetadataSerializer()
-    agreement = serializers.BooleanField()
-    confirmation = serializers.BooleanField()
+    # agreement = serializers.BooleanField()
+    # confirmation = serializers.BooleanField()
     merchant_code = serializers.CharField(
         max_length=50, help_text="Merchant short code"
     )
 
-    def validate_agreement(self, value):
-        if not value:
-            raise ValidationError(
-                "Agreement must be confirmed to proceed with the purchase of this policy"
-            )
-        return value
-
-    def validate_confirmation(self, value):
-        if not value:
-            raise ValidationError(
-                "Confirmation must be provided to proceed with the purchase of this policy"
-            )
-        return value
+    # def validate_agreement(self, value):
+    #     if not value:
+    #         raise ValidationError(
+    #             "Agreement must be confirmed to proceed with the purchase of this policy"
+    #         )
+    #     return value
+    #
+    # def validate_confirmation(self, value):
+    #     if not value:
+    #         raise ValidationError(
+    #             "Confirmation must be provided to proceed with the purchase of this policy"
+    #         )
+    #     return value
 
     def validate_quote_code(self, value):
         if not value.startswith("Q"):
