@@ -115,13 +115,14 @@ class Claim(TimestampMixin, models.Model):
         Returns the full name of the claimant, whether they are a customer (policyholder)
         or a beneficiary.
         """
-        if self.claimant_type == self.ClaimantType.CUSTOMER:
-            return self.claimant.full_name
-        if self.claimant_type == self.ClaimantType.BENEFICIARY:
-            if self.claimant.middle_name:
-                return f"{self.claimant.first_name} {self.claimant.middle_name} {self.claimant.last_name}"
-            else:
-                return f"{self.claimant.first_name} {self.claimant.last_name}"
+        if self.claimant:
+            if self.claimant_type == self.ClaimantType.CUSTOMER:
+                return self.claimant.full_name
+            if self.claimant_type == self.ClaimantType.BENEFICIARY:
+                if self.claimant.middle_name:
+                    return f"{self.claimant.first_name} {self.claimant.middle_name} {self.claimant.last_name}"
+                else:
+                    return f"{self.claimant.first_name} {self.claimant.last_name}"
 
     @property
     def latest_status(self):
