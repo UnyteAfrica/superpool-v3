@@ -74,13 +74,13 @@ jobs:
           GOOGLE_CLOUD_STORAGE_PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_STORAGE_PROJECT_ID }}
 
           # Database related keys
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USER: postgres #${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD: postgres #${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_NAME: postgres #${{ secrets.DATABASE_NAME }}
           INSTANCE_UNIX_SOCKET: ${{ secrets.INSTANCE_UNIX_SOCKET }}
           DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_HOST: localhost #${{ secrets.DATABASE_HOST }}
 
           # Redis and related envs
           REDIS_ENABLED: ${{ secrets.REDIS_ENABLED }}
