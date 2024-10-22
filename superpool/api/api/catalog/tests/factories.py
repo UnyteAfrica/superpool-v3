@@ -32,8 +32,10 @@ class ProductFactory(factory.django.DjangoModelFactory):
         model = Product
 
     name = fake.company()  # Use a company name for product name
-    product_type = factory.Iterator(["life", "health", "auto", "gadget", "travel"])
-    coverage_details = fake.paragraph()
+    description = fake.paragraph()
+    product_type = factory.Iterator(
+        ["Life", "Health", "Auto", "Gadget", "Travel", "Home", "Cargo", "Other"]
+    )
     provider = factory.SubFactory(PartnerFactory)
 
 
