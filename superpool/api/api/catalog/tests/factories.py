@@ -60,6 +60,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
         lambda _: fake.random.choice(["BVN", "NIN", "Passport"])[:20]
     )
     verification_id = factory.LazyAttribute(lambda _: str(uuid.uuid4())[0:20])
+    merchant = factory.SubFactory(MerchantFactory)
 
 
 class PolicyFactory(factory.django.DjangoModelFactory):
