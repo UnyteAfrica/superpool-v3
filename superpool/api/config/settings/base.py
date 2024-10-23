@@ -304,3 +304,6 @@ HEIRS_PRODUCT_MAPPING = {
         "MegaProtect Device Policy": 1306,
     },
 }
+
+# Backend config.
+BACKEND_API_KEY = env("BACKEND_API_KEY")
