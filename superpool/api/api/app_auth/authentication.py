@@ -1,8 +1,10 @@
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.request import Request
 
 # from rest_framework_api_key.models import APIKey
+from api.app_auth.services import KeyAuthService
 from core.models import APIKey as APIKeyModel
 
 User = settings.AUTH_USER_MODEL
@@ -47,3 +49,26 @@ class APIKeyAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request) -> str | None:
         return self.KEYWORD
+
+
+class ClientKeyAuthentication(BaseAuthentication):
+    """
+    Custom authentication class for API Key V2
+    """
+
+    def authenticate(self, request: Request):
+        auth_key = request.headers.get("Authorization") or request.headers.get(
+            "X-API-Key"
+        )
+
+        if not auth_key:
+            # proceed to thenext authentication class
+            return None
+
+        key_auth_service = KeyAuthService()
+        try:
+            key_obj = key_auth_service.validate(auth_key)
+
+            return key_obj, None
+        except ValueError as e:
+            raise AuthenticationFailed(f"Invalid API Key: {e}")
