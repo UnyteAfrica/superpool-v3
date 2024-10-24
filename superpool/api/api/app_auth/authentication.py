@@ -57,7 +57,11 @@ class APIKeyAuthentication(BaseAuthentication):
 
 class ClientKeyAuthenticationBackend(BaseAuthentication):
     """
-    Custom authentication class for API Key V2
+    Authentication Scheme for API Key V2
+
+    This backend is used to authenticate the incoming request using API Key provided
+    in the request headers. The key is validated against the APIKeyV2 model and the
+    corresponding user is returned.
     """
 
     def __init__(self):
@@ -78,4 +82,15 @@ class ClientKeyAuthenticationBackend(BaseAuthentication):
             logger.exception("API key validation failed")
             raise AuthenticationFailed("Invalid API Key")
 
-        return key_obj, None
+        user = self.get_user(key_obj)
+        return user, key_obj
+
+    def get_user(self, key_obj):
+        """
+        Retrieve the user from the key object
+        """
+        # validate the api key type
+        # if the key type is internal (that is, the key for Web-Facing Backend), then
+        # uhm... what hhould we  do?
+        # otherwise, if the key type is 'merchant' (it means, the key can be used for
+        # integration purpose,we should return the user object associated with the  merchant)
