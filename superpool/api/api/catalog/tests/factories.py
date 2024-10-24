@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 import factory
@@ -32,8 +33,10 @@ class ProductFactory(factory.django.DjangoModelFactory):
         model = Product
 
     name = fake.company()  # Use a company name for product name
-    product_type = factory.Iterator(["life", "health", "auto", "gadget", "travel"])
-    coverage_details = fake.paragraph()
+    description = fake.paragraph()
+    product_type = factory.Iterator(
+        ["Life", "Health", "Auto", "Gadget", "Travel", "Home", "Cargo", "Other"]
+    )
     provider = factory.SubFactory(PartnerFactory)
 
 
@@ -41,17 +44,23 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    first_name = fake.first_name()
-    middle_name = fake.first_name()
-    last_name = fake.last_name()
-    email = fake.email()
-    address = fake.address()
-    kyc_verified = fake.boolean()
-    dob = fake.date_of_birth()
-    phone_number = fake.phone_number()
+    id = factory.LazyFunction(uuid.uuid4)
+    first_name = factory.LazyAttribute(lambda _: fake.first_name()[:40])
+    middle_name = factory.LazyAttribute(lambda _: fake.first_name()[:40])
+    last_name = factory.LazyAttribute(lambda _: fake.last_name()[:40])
+    email = factory.LazyAttribute(
+        lambda obj: f"{obj.first_name.lower()}.{obj.last_name.lower()}@example.com"
+    )
+    address = factory.LazyAttribute(lambda _: fake.address()[:200])
+    kyc_verified = factory.Faker("boolean", chance_of_getting_true=50)
+    dob = factory.Faker("date_of_birth", minimum_age=18, maximum_age=90)
+    phone_number = factory.LazyAttribute(lambda _: fake.phone_number()[3:20])
     gender = factory.Iterator(["M", "F"])
-    verification_type = fake.word()
-    verification_id = fake.uuid4()
+    verification_type = factory.LazyAttribute(
+        lambda _: fake.random.choice(["BVN", "NIN", "Passport"])[:20]
+    )
+    verification_id = factory.LazyAttribute(lambda _: str(uuid.uuid4())[0:20])
+    merchant = factory.SubFactory(MerchantFactory)
 
 
 class PolicyFactory(factory.django.DjangoModelFactory):

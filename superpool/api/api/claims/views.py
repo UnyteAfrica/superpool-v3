@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 class ClaimsViewSet(viewsets.ViewSet):
     # authentication_classes = [APIKeyAuthentication]
     # permission_classes = [IsMerchantOrSupport, IsMerchant, IsAuthenticated]
+    # http_method_names = ["get", "post", "patch"]
 
     def get_service(self):
         """
@@ -302,7 +303,7 @@ class ClaimsViewSet(viewsets.ViewSet):
             ),
         },
     )
-    def update(self, request, pk=None):
+    def partial_update(self, request, pk=None):
         """
         Endpoint to update an existing filed claim
         """
@@ -323,7 +324,7 @@ class ClaimsViewSet(viewsets.ViewSet):
 
         service = self.get_service()
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(data=request.data, partial=True)
+        # serializer = serializer_class(data=request.data, partial=True)
 
         try:
             instance = service.get_claim(claim_id=pk)
