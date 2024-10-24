@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
@@ -8,6 +10,8 @@ from api.app_auth.services import KeyAuthService
 from core.models import APIKey as APIKeyModel
 
 User = settings.AUTH_USER_MODEL
+
+logger = logging.getLogger(__name__)
 
 
 class APIKeyAuthentication(BaseAuthentication):
@@ -56,19 +60,22 @@ class ClientKeyAuthenticationBackend(BaseAuthentication):
     Custom authentication class for API Key V2
     """
 
+    def __init__(self):
+        self.auth_service = KeyAuthService()
+
     def authenticate(self, request: Request):
         auth_key = request.headers.get("Authorization") or request.headers.get(
             "X-API-Key"
         )
 
         if not auth_key:
-            # proceed to thenext authentication class
+            # proceed to the next authentication class
             return None
 
-        key_auth_service = KeyAuthService()
         try:
-            key_obj = key_auth_service.validate(auth_key)
-
-            return key_obj, None
+            key_obj = self.auth_service.validate(auth_key)
         except ValueError as e:
-            raise AuthenticationFailed(f"Invalid API Key: {e}")
+            logger.exception("API key validation failed")
+            raise AuthenticationFailed("Invalid API Key")
+
+        return key_obj, None
