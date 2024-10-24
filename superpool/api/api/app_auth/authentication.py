@@ -51,7 +51,7 @@ class APIKeyAuthentication(BaseAuthentication):
         return self.KEYWORD
 
 
-class ClientKeyAuthentication(BaseAuthentication):
+class ClientKeyAuthenticationBackend(BaseAuthentication):
     """
     Custom authentication class for API Key V2
     """

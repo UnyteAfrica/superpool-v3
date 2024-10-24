@@ -3,6 +3,7 @@
 import hashlib
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
@@ -296,9 +297,9 @@ class APIKeyV2(models.Model):
     """
     API Key - Version 2
 
-        - Stores hashed versions of API keys.
-        - Supports revocation and rolling updates using flags.
-        - Associates with a specific environment.
+    - Stores hashed versions of API keys.
+    - Supports revocation and rolling updates using flags.
+    - Associates with a specific environment or client.
     """
 
     API_KEY_TYPES = (
@@ -366,3 +367,13 @@ class APIKeyV2(models.Model):
         keyhash = self.compute_hash(base_key)
         check_sum = hashlib.md5(keyhash.encode()).hexdigest()[:8]
         return f"{prefix}_{env_label}_{keyhash}_{check_sum}"
+
+    def clean(self):
+        if not self.client_id and not self.environment:
+            raise ValidationError(
+                "Either 'client_id' or 'environment' must be provided."
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
