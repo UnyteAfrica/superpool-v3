@@ -1,8 +1,11 @@
+import logging
 from abc import ABC, abstractmethod
 
 from django.core.cache import cache
 
 from core.models import APIKeyV2
+
+logger = logging.getLogger(__name__)
 
 
 def invariant_check(condition: bool, message: str) -> Exception | None:
@@ -78,7 +81,12 @@ class KeyAuthService(IAuthService):
         """
         Validate the provided key
         """
-        key_metadata = self._validate_format(key)
+        try:
+            key_metadata = self._validate_format(key)
+        except ValueError as e:
+            logger.critical(f"Key Validation Error: {e}")
+            raise e
+
         client_id = key_metadata["client_id"]
         hashed_part = key_metadata["hashed_part"]
 
