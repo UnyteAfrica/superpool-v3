@@ -1,16 +1,16 @@
 from abc import ABC, abstractmethod
 
 from django.core.cache import cache
-from django.db import Error
 
 from core.models import APIKeyV2
 
 
-def invariant_check(condition: bool, message: str) -> Exception | Error:
+def invariant_check(condition: bool, message: str) -> Exception | None:
     """
     Check the invariant edge cases
     """
-    return
+    if not condition:
+        raise ValueError(message)
 
 
 class IAuthService(ABC):
@@ -43,32 +43,47 @@ class KeyAuthService(IAuthService):
         """
         Verify the checksum of the key
         """
-        pass
+        return True
 
-    def _validate_format(self, provided_key: str) -> None:
-        prefix, env_label, client_id, hashed_part, _ = provided_key.split("_")
-        invariant_check(not prefix, "Invalid API Key format")
+    def _validate_format(self, provided_key: str) -> dict:
+        """
+        Validates the format of the provided key and extract its components
+        """
+        try:
+            prefix, env_label, client_id, hashed_part, checksum = provided_key.split(
+                "_"
+            )
+        except ValueError:
+            raise ValueError("Invalid API Key format: Incorrect number of components")
+
+        invariant_check(not prefix, "Invalid API Key format: Missing prefix")
+        invariant_check(prefix != "unyt", "Invalid API Key format: Incorrect prefix")
         invariant_check(
-            env_label not in ("uk_test", "uk_live"), "Invalid API Key format"
+            env_label not in ("uk_test", "uk_live"),
+            "Invalid API Key format: Invalid Environment Identifier",
         )
-        invariant_check(
-            hashed_part != (expected_hash := self._recompute_hash(provided_key)),
-            "Checksum validation failed",
-        )
+        invariant_check(not client_id, "Invalid API Key format: Missing client ID")
+        invariant_check(not hashed_part, "Invalid API Key format: Missing hashed part")
+        invariant_check(not checksum, "Invalid API Key format: Checksum not provided")
+
+        return {
+            "prefix": prefix,
+            "env_label": env_label,
+            "client_id": client_id,
+            "hashed_part": hashed_part,
+            "checksum": checksum,
+        }
 
     def validate(self, key: str) -> "APIKeyV2":
         """
         Validate the provided key
         """
-        try:
-            _, _, client_id, hashed_part, _ = key.split("_")
-        except ValueError:
-            raise ValueError("Invalid API Key format")
+        key_metadata = self._validate_format(key)
+        client_id = key_metadata["client_id"]
+        hashed_part = key_metadata["hashed_part"]
 
-        try:
-            api_key = self._validate_format(key)
-        except (ValueError, Exception):
-            raise
+        if not self.verify_checksum(key):
+            raise ValueError("Invalid API Key: Checksum mismatch")
 
         cache_prefix = "key"
         cache_key = f"{cache_prefix}_metadata:{key}"
@@ -83,17 +98,19 @@ class KeyAuthService(IAuthService):
 
         # retrieve corresponding api key obj and store metadata
         # in cache
-        api_key = APIKeyV2.objects.get(
-            key_hash=hashed_part, environment__client_id=client_id, is_active=True
-        )
+        try:
+            api_key = APIKeyV2.objects.get(
+                key_hash=hashed_part, client_id=client_id, is_active=True
+            )
+        except APIKeyV2.DoesNotExist:
+            raise ValueError("Invalid API Key: Key not found")
 
         cache.set(
             cache_key,
             {
-                "id": api_key.id,
+                "id": str(api_key.id),
                 "client_id": client_id,
-                "environment": api_key.environment.is_test_mode,
-                "type": api_key.api_key_type,
+                "key_type": api_key.api_key_type,
             },
             timeout=KeyAuthService.CACHE_TIMEOUT,
         )
