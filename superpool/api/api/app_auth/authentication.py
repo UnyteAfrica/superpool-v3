@@ -8,6 +8,7 @@ from rest_framework.request import Request
 # from rest_framework_api_key.models import APIKey
 from api.app_auth.services import KeyAuthService
 from core.models import APIKey as APIKeyModel
+from core.models import APIKeyV2
 
 User = settings.AUTH_USER_MODEL
 
@@ -85,7 +86,7 @@ class ClientKeyAuthenticationBackend(BaseAuthentication):
         user = self.get_user(key_obj)
         return user, key_obj
 
-    def get_user(self, key_obj):
+    def get_user(self, key_obj: APIKeyV2) -> User:
         """
         Retrieve the user from the key object
         """
