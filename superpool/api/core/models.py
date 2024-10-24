@@ -257,7 +257,9 @@ class Application(models.Model):
 
 class Environment(models.Model):
     """
-    Represents a test or production environment for interacting with Unyte's APIs.
+    Represents a test or production environment for interacting with the APIs.
+
+    This model is primarily used by merchants for managing different environments.
 
     This is an improved version of the `Application` model and as such,
     the `Application` model would be deprecated at some point.
@@ -266,7 +268,7 @@ class Environment(models.Model):
     client_id = models.CharField(
         max_length=100,
         unique=True,
-        help_text="Unique identifier for the client or environment (merchant ID or internal client ID).",
+        help_text="Unique identifier for the merchant client.",
         db_index=True,
     )
     merchant = models.ForeignKey(
@@ -307,11 +309,19 @@ class APIKeyV2(models.Model):
     id = models.UUIDField(
         unique=True, editable=False, primary_key=True, default=uuid.uuid4, db_index=True
     )
+    client_id = models.CharField(
+        max_length=100,
+        help_text="Unique identifier for the client or environment (merchant ID or internal client ID).",
+        db_index=True,
+        blank=True,
+    )
     environment = models.ForeignKey(
         Environment,
         on_delete=models.CASCADE,
         related_name="api_keys",
         help_text="The environment associated with this API key.",
+        null=True,
+        blank=True,
     )
     key_hash = models.CharField(
         max_length=200,
